@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inverse-alpha"
+version = "0.2.0"
+description = "Repository-local history ingestion and deterministic Python knowledge extraction"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Aditya Kaleeswar" }]
+dependencies = [
+  "PyYAML>=6,<7",
+  "tree-sitter==0.26.0",
+  "tree-sitter-python==0.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<10",
+]
+
+[project.scripts]
+inverse-alpha = "inverse_alpha.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
