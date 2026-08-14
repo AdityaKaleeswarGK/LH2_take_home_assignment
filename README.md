@@ -112,6 +112,12 @@ Every successful run creates or refreshes:
 │   ├── repo_graph.json
 │   ├── diagnostics.jsonl
 │   ├── annotations.jsonl
+│   ├── features.json
+│   ├── tests.jsonl
+│   ├── feature_test_links.jsonl
+│   ├── blueprint.md
+│   ├── test_map.md
+│   ├── observations.jsonl
 │   ├── validation.json
 │   ├── state.json
 │   └── .okf/
@@ -138,6 +144,20 @@ Every successful run creates or refreshes:
 - `diagnostics.jsonl` records deterministic parser and AST cross-check warnings.
 - `annotations.jsonl` is reserved for optional enrichment and is empty when the
   default `NullKnowledgeEnricher` is used.
+- `features.json` contains a deterministic repository purpose, declared README
+  capabilities, entry points, and source-grounded Python module feature areas.
+- `tests.jsonl` inventories conventionally discovered Python test functions.
+- `feature_test_links.jsonl` maps tests to feature areas through verified call
+  or test-file import evidence. These static links are not reported as runtime
+  coverage.
+- `blueprint.md` is the agent-facing repository overview, including an ASCII
+  folder tree, purpose, entry points, Python components, and internal file
+  connections.
+- `test_map.md` presents the test inventory by feature and explicitly separates
+  direct static calls, file-import context, and missing static evidence.
+- `observations.jsonl` is an append-only boundary for future agent observations.
+  Rebuilding knowledge preserves this file; unverified observations do not
+  modify structural facts or generated summaries.
 - `validation.json` records graph and OKF conformance results.
 - `knowledge/state.json` keys the generated artifacts by HEAD and aggregate
   source digest. Unchanged runs reuse byte-identical canonical artifacts.
@@ -175,6 +195,12 @@ Every resolved edge contains a repository-relative evidence path, exact byte and
 line span, source-text SHA-256, and extractor identity. Canonical artifacts
 contain no machine-specific absolute paths; the graph has no run timestamp.
 OKF verification timestamps are preserved while the source digest is unchanged.
+
+`blueprint.md` and `test_map.md` are generated views rather than authoritative
+stores. Their machine-readable inputs are `features.json`, `tests.jsonl`,
+`feature_test_links.jsonl`, and `repo_graph.json`. A README, pyproject, or
+repository-tree change invalidates the context view without forcing unchanged
+Python files to be reparsed.
 
 The `KnowledgeEnricher` protocol is the only LLM boundary in this milestone.
 The shipped `NullKnowledgeEnricher` performs no provider calls. Future

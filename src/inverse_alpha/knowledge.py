@@ -14,6 +14,11 @@ from inverse_alpha.atomic import (
     atomic_replace_directory,
     atomic_write_json,
     atomic_write_jsonl,
+    atomic_write_text,
+)
+from inverse_alpha.context_artifacts import (
+    aggregate_context_digest,
+    build_context_artifacts,
 )
 from inverse_alpha.errors import InputError, MetadataError
 from inverse_alpha.git_repository import GitRepository
@@ -103,6 +108,8 @@ def build_knowledge(
             raise InputError(
                 "No Python source files were found in the Git-aware working tree"
             )
+        repository_paths = discover_repository_paths(repository)
+        context_digest = aggregate_context_digest(repository.root, repository_paths)
         source_roots = detect_source_roots(repository.root, relative_paths)
         test_roots = detect_test_roots(relative_paths)
         sources = read_sources(repository.root, relative_paths, source_roots)
@@ -112,7 +119,11 @@ def build_knowledge(
         previous_state = _read_json(state_path)
 
         if _can_reuse(
-            previous_state, ingestion.head_sha, source_digest, knowledge_root
+            previous_state,
+            ingestion.head_sha,
+            source_digest,
+            context_digest,
+            knowledge_root,
         ):
             graph_data = _read_json(knowledge_root / "repo_graph.json")
             validation = _read_json(knowledge_root / "validation.json")
@@ -154,10 +165,11 @@ def build_knowledge(
             raise InputError(parse_failures[0]["message"])
 
         source_contents = {item.path: item.content for item in sources}
+        repository_name = _repository_name(metadata_root, repository.root.name)
         graph = build_repository_graph(
             parsed_files,
             source_contents,
-            repository_name=_repository_name(metadata_root, repository.root.name),
+            repository_name=repository_name,
             head_sha=ingestion.head_sha,
             source_digest=source_digest,
             dirty=dirty,
@@ -179,12 +191,27 @@ def build_knowledge(
                 "Generated OKF bundle failed validation: "
                 + "; ".join(okf_validation["errors"])
             )
+        context = build_context_artifacts(
+            repository_root=repository.root,
+            repository_name=repository_name,
+            source_digest=source_digest,
+            repository_paths=repository_paths,
+            parsed_files=parsed_files,
+            source_contents=source_contents,
+            graph=graph,
+        )
+        if context.validation["status"] != "valid":
+            raise MetadataError(
+                "Generated repository context failed validation: "
+                + "; ".join(context.validation["errors"])
+            )
 
         validation = {
             "schema_version": "0.2.0",
             "status": "valid",
             "graph": graph_validation,
             "okf": okf_validation,
+            "context": context.validation,
         }
         annotations = (enricher or NullKnowledgeEnricher()).enrich(graph)
         state = {
@@ -192,6 +219,7 @@ def build_knowledge(
             "status": "complete",
             "head_sha": ingestion.head_sha,
             "source_digest": source_digest,
+            "context_digest": context_digest,
             "verified_at": verified_at,
             "extractor": {"name": EXTRACTOR_NAME, "version": EXTRACTOR_VERSION},
             "files": [
@@ -207,6 +235,20 @@ def build_knowledge(
             knowledge_root / "annotations.jsonl",
             (annotation.to_dict() for annotation in annotations),
         )
+        atomic_write_json(knowledge_root / "features.json", context.features)
+        atomic_write_jsonl(
+            knowledge_root / "tests.jsonl",
+            (item.to_dict() for item in context.test_cases),
+        )
+        atomic_write_jsonl(
+            knowledge_root / "feature_test_links.jsonl",
+            (item.to_dict() for item in context.feature_test_links),
+        )
+        atomic_write_text(knowledge_root / "blueprint.md", context.blueprint)
+        atomic_write_text(knowledge_root / "test_map.md", context.test_map)
+        observations_path = knowledge_root / "observations.jsonl"
+        if not observations_path.exists():
+            atomic_write_jsonl(observations_path, [])
         atomic_write_json(knowledge_root / "validation.json", validation)
         atomic_write_json(knowledge_root / "state.json", state)
         atomic_replace_directory(knowledge_root / ".okf", okf_files)
@@ -221,6 +263,13 @@ def build_knowledge(
                 "inheritance": graph.statistics["inherits"],
                 "tests": graph.statistics["tests"],
                 "okf_documents": okf_validation["document_count"],
+                "features": context.validation["counts"]["features"],
+                "test_cases": context.validation["counts"]["test_cases"],
+                "feature_test_links": context.validation["counts"][
+                    "feature_test_links"
+                ],
+                "repository_blueprint": 1,
+                "test_map": 1,
             },
             reasons={},
         )
@@ -280,6 +329,23 @@ def discover_python_paths(repository: GitRepository) -> list[str]:
         if lower_parts & _EXCLUDED_PARTS:
             continue
         if path.name.endswith(_GENERATED_SUFFIXES) and not is_test_path(value):
+            continue
+        absolute = repository.root.joinpath(*path.parts)
+        if absolute.is_file() and not absolute.is_symlink():
+            values.append(path.as_posix())
+    return sorted(set(values))
+
+
+def discover_repository_paths(repository: GitRepository) -> list[str]:
+    output = repository.run_bytes(["ls-files", "-co", "--exclude-standard", "-z"])
+    values: list[str] = []
+    for raw_path in output.split(b"\0"):
+        if not raw_path:
+            continue
+        value = raw_path.decode("utf-8", errors="strict")
+        path = PurePosixPath(value)
+        lower_parts = {part.lower() for part in path.parts}
+        if lower_parts & _EXCLUDED_PARTS:
             continue
         absolute = repository.root.joinpath(*path.parts)
         if absolute.is_file() and not absolute.is_symlink():
@@ -505,6 +571,7 @@ def _can_reuse(
     state: dict[str, Any] | None,
     head_sha: str,
     source_digest: str,
+    context_digest: str,
     knowledge_root: Path,
 ) -> bool:
     return bool(
@@ -512,9 +579,16 @@ def _can_reuse(
         and state.get("status") == "complete"
         and state.get("head_sha") == head_sha
         and state.get("source_digest") == source_digest
+        and state.get("context_digest") == context_digest
         and (knowledge_root / "repo_graph.json").is_file()
         and (knowledge_root / "validation.json").is_file()
         and (knowledge_root / ".okf" / "index.md").is_file()
+        and (knowledge_root / "features.json").is_file()
+        and (knowledge_root / "tests.jsonl").is_file()
+        and (knowledge_root / "feature_test_links.jsonl").is_file()
+        and (knowledge_root / "blueprint.md").is_file()
+        and (knowledge_root / "test_map.md").is_file()
+        and (knowledge_root / "observations.jsonl").is_file()
     )
 
 
@@ -572,6 +646,11 @@ def _update_pipeline_metadata(
         "python_inheritance": counts.get("inheritance"),
         "python_tests": counts.get("tests"),
         "okf": counts.get("okf_documents"),
+        "feature_catalog": counts.get("features"),
+        "test_case_inventory": counts.get("test_cases"),
+        "feature_test_mapping": counts.get("feature_test_links"),
+        "repository_blueprint": counts.get("repository_blueprint"),
+        "test_map": counts.get("test_map"),
     }
     for name, count in capability_counts.items():
         reason = reasons.get(name)

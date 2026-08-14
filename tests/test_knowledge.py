@@ -28,8 +28,29 @@ def python_repository(tmp_path: Path) -> Path:
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "sample-project"
+version = "0.1.0"
+description = "A sample worker service used to validate repository knowledge."
+
+[project.scripts]
+sample-helper = "sample.service:helper"
+
 [tool.setuptools.packages.find]
 where = ["src"]
+""".lstrip(),
+        encoding="utf-8",
+    )
+    (repository / "README.md").write_text(
+        """
+# Sample Project
+
+This repository provides a small worker service for processing values.
+
+## Features
+
+- Run values through an asynchronous worker.
+- Normalize values before serialization.
 """.lstrip(),
         encoding="utf-8",
     )
@@ -149,6 +170,50 @@ def test_builds_verified_graph_and_okf(python_repository: Path) -> None:
     )
     assert validation["graph"]["status"] == "valid"
     assert validation["okf"]["status"] == "valid"
+    assert validation["context"]["status"] == "valid"
+    features = json.loads(
+        (result.knowledge_root / "features.json").read_text(encoding="utf-8")
+    )
+    assert features["purpose"]["text"].startswith(
+        "This repository provides a small worker service"
+    )
+    assert len(features["declared_capabilities"]) == 2
+    assert any(
+        item["id"] == "entrypoint:console_script:sample-helper"
+        for item in features["entry_points"]
+    )
+    assert any(
+        item["id"] == "feature:module:sample.service"
+        and item["static_test_evidence"] == "direct_static_call"
+        for item in features["features"]
+    )
+    tests = [
+        json.loads(line)
+        for line in (result.knowledge_root / "tests.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    assert {item["name"] for item in tests} == {"test_helper", "test_worker"}
+    assert all(item["evidence_level"] == "direct_static_call" for item in tests)
+    links = [
+        json.loads(line)
+        for line in (result.knowledge_root / "feature_test_links.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    assert any(item["relationship"] == "statically_calls" for item in links)
+    blueprint = (result.knowledge_root / "blueprint.md").read_text(encoding="utf-8")
+    assert "## Repository Structure" in blueprint
+    assert "python-repository/" in blueprint
+    assert "├── src/" in blueprint
+    assert "│   ├── sample/" in blueprint or "│   └── sample/" in blueprint
+    assert str(python_repository) not in blueprint
+    test_map = (result.knowledge_root / "test_map.md").read_text(encoding="utf-8")
+    assert "## Evidence Semantics" in test_map
+    assert "Runtime coverage: `not_collected`" in test_map
+    assert (result.knowledge_root / "observations.jsonl").read_text(
+        encoding="utf-8"
+    ) == ""
     assert (result.knowledge_root / ".okf" / "index.md").is_file()
     assert (
         result.knowledge_root / ".okf" / "modules" / "src" / "sample" / "service.py.md"
@@ -174,6 +239,12 @@ def test_repeated_run_reuses_byte_identical_artifacts(python_repository: Path) -
         first.knowledge_root / "annotations.jsonl",
         first.knowledge_root / "validation.json",
         first.knowledge_root / "state.json",
+        first.knowledge_root / "features.json",
+        first.knowledge_root / "tests.jsonl",
+        first.knowledge_root / "feature_test_links.jsonl",
+        first.knowledge_root / "blueprint.md",
+        first.knowledge_root / "test_map.md",
+        first.knowledge_root / "observations.jsonl",
         *sorted((first.knowledge_root / ".okf").rglob("*.md")),
     ]
     before = {
@@ -189,6 +260,42 @@ def test_repeated_run_reuses_byte_identical_artifacts(python_repository: Path) -
 
     assert second.action == "reused"
     assert after == before
+
+
+def test_readme_change_refreshes_context_without_reparsing_sources(
+    python_repository: Path,
+) -> None:
+    first = build_knowledge(str(python_repository))
+    source_digest = first.source_digest
+    observations = first.knowledge_root / "observations.jsonl"
+    observations.write_text(
+        '{"claim":"review CLI error handling","verification_state":"unverified"}\n',
+        encoding="utf-8",
+    )
+    readme = python_repository / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8").replace(
+            "small worker service", "deterministic worker service"
+        ),
+        encoding="utf-8",
+    )
+
+    second = build_knowledge(str(python_repository))
+
+    assert second.action == "built"
+    assert second.source_digest == source_digest
+    assert "deterministic worker service" in (
+        second.knowledge_root / "blueprint.md"
+    ).read_text(encoding="utf-8")
+    assert "review CLI error handling" in observations.read_text(encoding="utf-8")
+    records = [
+        json.loads(line)
+        for line in (python_repository / ".inverse_alpha" / "logs" / "knowledge.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    assert records[-1]["counts"]["cache_hits"] == 6
+    assert records[-1]["counts"]["cache_misses"] == 0
 
 
 def test_changed_file_reuses_unchanged_parse_cache(python_repository: Path) -> None:

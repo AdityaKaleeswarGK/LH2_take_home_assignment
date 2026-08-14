@@ -84,3 +84,5 @@ def _print_knowledge_result(result: KnowledgeResult) -> None:
     print(f"Unresolved references: {result.unresolved_count}")
     print(f"Validation: {result.validation_status}")
     print(f"Knowledge: {result.knowledge_root}")
+    print(f"Blueprint: {result.knowledge_root / 'blueprint.md'}")
+    print(f"Test map: {result.knowledge_root / 'test_map.md'}")
