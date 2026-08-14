@@ -3,11 +3,15 @@
 # inverse_alpha
 
 `inverse_alpha` ingests a public GitHub repository or an existing local Git
-repository and writes machine-readable history and deterministic Python
-knowledge into the repository's own `.inverse_alpha/` directory.
+repository and writes machine-readable history, deterministic Python knowledge,
+and optional OpenRouter semantic annotations into the repository's own
+`.inverse_alpha/` directory.
 
-It does not use an LLM for history, parsing, resolution, graph construction, or
-validation, and it does not modify tracked source files.
+It never uses an LLM for history, parsing, resolution, graph construction, or
+validation. OpenRouter can describe source-grounded file behavior and synthesize
+agent-facing repository/test views, but those annotations remain separate from
+authoritative structural facts. Inverse Alpha does not modify tracked source
+files.
 
 ## One-time installation
 
@@ -63,6 +67,44 @@ inverse-alpha complete https://github.com/mahmoud/glom
 
 `inverse-alpha completely` is also accepted as an alias for `complete`.
 
+## OpenRouter semantic enrichment
+
+Store an OpenRouter key once using a hidden prompt:
+
+```bash
+inverse-alpha config --set-key
+```
+
+The key is written to `~/.config/inverse-alpha/config.json` with user-only
+permissions. It is never written into an analyzed repository, generated
+metadata, logs, or Git history. `OPENROUTER_API_KEY` takes precedence over the
+stored key when set.
+
+The default model follows the AlphaStack configuration:
+`google/gemini-3.1-flash-lite-preview`. Configure or override it with:
+
+```bash
+inverse-alpha config --model google/gemini-3.1-flash-lite-preview
+inverse-alpha complete . --model another-provider/model
+```
+
+`knowledge` and `complete` use `--enrichment auto` by default. OpenRouter runs
+when a key is configured; otherwise the deterministic pipeline runs without an
+LLM. The choice can be made explicit:
+
+```bash
+inverse-alpha complete . --llm
+inverse-alpha complete . --no-llm
+inverse-alpha complete . --llm --refresh-llm
+```
+
+OpenRouter receives Python source, extracted symbols/imports, and test metadata.
+Do not enable it for code that must not leave the local machine. Each Python
+file is analyzed with a strict JSON schema, followed by one repository synthesis
+request. Responses are cached by model, prompt version, and source content, so
+unchanged runs do not spend tokens or rewrite artifacts. `--refresh-llm`
+explicitly bypasses this cache.
+
 `knowledge` first refreshes repository history through `ingest`, then analyzes
 the current Git-aware working tree. Tracked and untracked Python files are
 included; ignored files, `.inverse_alpha/`, environments, caches, build
@@ -112,6 +154,7 @@ Every successful run creates or refreshes:
 │   ├── repo_graph.json
 │   ├── diagnostics.jsonl
 │   ├── annotations.jsonl
+│   ├── semantic_context.json
 │   ├── features.json
 │   ├── tests.jsonl
 │   ├── feature_test_links.jsonl
@@ -142,8 +185,12 @@ Every successful run creates or refreshes:
 - `repo_graph.json` contains repository-relative file, class, function, method,
   and external-module nodes with evidence-backed structural edges.
 - `diagnostics.jsonl` records deterministic parser and AST cross-check warnings.
-- `annotations.jsonl` is reserved for optional enrichment and is empty when the
-  default `NullKnowledgeEnricher` is used.
+- `annotations.jsonl` contains one unverified, provenance-bearing semantic
+  annotation per Python file plus the repository synthesis when OpenRouter is
+  enabled. It is empty when enrichment is disabled.
+- `semantic_context.json` contains the validated structured OpenRouter result,
+  provider/model identity, source digest, and per-file descriptions. It never
+  contains credentials.
 - `features.json` contains a deterministic repository purpose, declared README
   capabilities, entry points, and source-grounded Python module feature areas.
 - `tests.jsonl` inventories conventionally discovered Python test functions.
@@ -197,14 +244,18 @@ contain no machine-specific absolute paths; the graph has no run timestamp.
 OKF verification timestamps are preserved while the source digest is unchanged.
 
 `blueprint.md` and `test_map.md` are generated views rather than authoritative
-stores. Their machine-readable inputs are `features.json`, `tests.jsonl`,
-`feature_test_links.jsonl`, and `repo_graph.json`. A README, pyproject, or
-repository-tree change invalidates the context view without forcing unchanged
-Python files to be reparsed.
+stores. Their deterministic machine-readable inputs are `features.json`,
+`tests.jsonl`, `feature_test_links.jsonl`, and `repo_graph.json`. With OpenRouter
+enabled, they begin with semantic architecture, capability, navigation, test
+intent, and candidate-gap sections, followed by the complete deterministic
+evidence views. A README, pyproject, or repository-tree change invalidates the
+context view without forcing unchanged Python files to be reparsed.
 
-The `KnowledgeEnricher` protocol is the only LLM boundary in this milestone.
-The shipped `NullKnowledgeEnricher` performs no provider calls. Future
-annotations remain separate from structural facts and cannot mutate graph edges.
+The `KnowledgeEnricher` protocol remains the LLM boundary. The shipped
+`NullKnowledgeEnricher` performs no provider calls; the OpenRouter implementation
+uses strict structured outputs and validates every referenced path against the
+graph. Semantic annotations cannot add or mutate structural graph edges and are
+marked `unverified` until a later verification stage accepts or rejects them.
 
 ## Development
 

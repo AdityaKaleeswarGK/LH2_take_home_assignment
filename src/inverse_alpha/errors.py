@@ -13,3 +13,6 @@ class GitError(InverseAlphaError):
 class MetadataError(InverseAlphaError):
     """Raised when generated metadata cannot be validated or written."""
 
+
+class EnrichmentError(InverseAlphaError):
+    """Raised when optional semantic enrichment cannot complete safely."""

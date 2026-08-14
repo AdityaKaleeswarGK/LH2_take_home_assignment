@@ -237,6 +237,7 @@ def test_repeated_run_reuses_byte_identical_artifacts(python_repository: Path) -
         first.knowledge_root / "repo_graph.json",
         first.knowledge_root / "diagnostics.jsonl",
         first.knowledge_root / "annotations.jsonl",
+        first.knowledge_root / "semantic_context.json",
         first.knowledge_root / "validation.json",
         first.knowledge_root / "state.json",
         first.knowledge_root / "features.json",

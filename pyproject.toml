@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "inverse-alpha"
 version = "0.2.0"
-description = "Repository-local history ingestion and deterministic Python knowledge extraction"
+description = "Repository-local history, verified Python knowledge, and semantic enrichment"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }

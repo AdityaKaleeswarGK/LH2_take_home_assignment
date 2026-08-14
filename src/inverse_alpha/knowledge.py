@@ -20,6 +20,13 @@ from inverse_alpha.context_artifacts import (
     aggregate_context_digest,
     build_context_artifacts,
 )
+from inverse_alpha.config import load_openrouter_settings
+from inverse_alpha.enrichment import (
+    PROMPT_VERSION,
+    StructuredClient,
+    enrich_repository,
+    enrichment_identity,
+)
 from inverse_alpha.errors import InputError, MetadataError
 from inverse_alpha.git_repository import GitRepository
 from inverse_alpha.graph_builder import build_repository_graph
@@ -81,6 +88,10 @@ class KnowledgeResult:
     unresolved_count: int
     validation_status: str
     action: str
+    enrichment_status: str
+    enrichment_provider: str | None
+    enrichment_model: str | None
+    annotation_count: int
 
 
 def utc_now() -> str:
@@ -92,7 +103,32 @@ def build_knowledge(
     *,
     cwd: Path | None = None,
     enricher: KnowledgeEnricher | None = None,
+    enrichment_mode: str = "none",
+    enrichment_model: str | None = None,
+    refresh_enrichment: bool = False,
+    openrouter_client: StructuredClient | None = None,
 ) -> KnowledgeResult:
+    if enrichment_mode not in {"none", "auto", "openrouter"}:
+        raise InputError(f"Unsupported enrichment mode: {enrichment_mode}")
+    openrouter_settings = load_openrouter_settings(model_override=enrichment_model)
+    effective_enrichment = enrichment_mode
+    if enrichment_mode == "auto":
+        effective_enrichment = (
+            "openrouter" if openrouter_settings.configured else "none"
+        )
+    if effective_enrichment == "openrouter" and not openrouter_settings.configured:
+        raise InputError(
+            "OpenRouter enrichment was requested but no API key is configured; "
+            "run `inverse-alpha config --set-key` or set OPENROUTER_API_KEY"
+        )
+    if enricher is not None:
+        active_enrichment_identity = {
+            "provider": f"custom:{type(enricher).__module__}.{type(enricher).__qualname__}"
+        }
+    elif effective_enrichment == "openrouter":
+        active_enrichment_identity = enrichment_identity(openrouter_settings)
+    else:
+        active_enrichment_identity = {"provider": "none"}
     started_at = utc_now()
     start_clock = time.monotonic()
     ingestion = ingest(source_value, cwd=cwd)
@@ -124,6 +160,8 @@ def build_knowledge(
             source_digest,
             context_digest,
             knowledge_root,
+            active_enrichment_identity,
+            refresh_enrichment,
         ):
             graph_data = _read_json(knowledge_root / "repo_graph.json")
             validation = _read_json(knowledge_root / "validation.json")
@@ -135,6 +173,7 @@ def build_knowledge(
                     source_digest,
                     graph_data,
                     validation,
+                    previous_state,
                     "reused",
                 )
                 _append_log(
@@ -213,7 +252,62 @@ def build_knowledge(
             "okf": okf_validation,
             "context": context.validation,
         }
-        annotations = (enricher or NullKnowledgeEnricher()).enrich(graph)
+        semantic_context: dict[str, Any] = {
+            "schema_version": "0.2.0",
+            "status": "not_collected",
+            "reason": "disabled_or_unconfigured",
+        }
+        blueprint = context.blueprint
+        test_map = context.test_map
+        enrichment_status = "not_collected"
+        enrichment_provider: str | None = None
+        enrichment_model_value: str | None = None
+        enrichment_cache_hits = 0
+        enrichment_cache_misses = 0
+        prompt_tokens = 0
+        completion_tokens = 0
+        if effective_enrichment == "openrouter" and enricher is None:
+            enrichment_run = enrich_repository(
+                graph=graph,
+                context=context,
+                source_contents=source_contents,
+                source_digest=source_digest,
+                cache_root=metadata_root / "cache" / "knowledge" / "enrichment",
+                settings=openrouter_settings,
+                force_refresh=refresh_enrichment,
+                client=openrouter_client,
+            )
+            annotations = list(enrichment_run.annotations)
+            semantic_context = enrichment_run.semantic_context
+            blueprint = enrichment_run.blueprint
+            test_map = enrichment_run.test_map
+            validation["enrichment"] = enrichment_run.validation
+            enrichment_status = "available"
+            enrichment_provider = enrichment_run.provider
+            enrichment_model_value = enrichment_run.model
+            enrichment_cache_hits = enrichment_run.cache_hits
+            enrichment_cache_misses = enrichment_run.cache_misses
+            prompt_tokens = enrichment_run.prompt_tokens
+            completion_tokens = enrichment_run.completion_tokens
+        else:
+            annotations = (enricher or NullKnowledgeEnricher()).enrich(graph)
+            if annotations:
+                enrichment_status = "available"
+                enrichment_provider = annotations[0].provider
+                enrichment_model_value = annotations[0].model
+                semantic_context = {
+                    "schema_version": "0.2.0",
+                    "status": "available",
+                    "provider": enrichment_provider,
+                    "model": enrichment_model_value,
+                    "verification_state": "unverified",
+                    "reason": "custom_annotation_enricher",
+                }
+            validation["enrichment"] = {
+                "status": enrichment_status,
+                "verification_state": "unverified" if annotations else None,
+                "errors": [],
+            }
         state = {
             "schema_version": "0.2.0",
             "status": "complete",
@@ -222,6 +316,16 @@ def build_knowledge(
             "context_digest": context_digest,
             "verified_at": verified_at,
             "extractor": {"name": EXTRACTOR_NAME, "version": EXTRACTOR_VERSION},
+            "enrichment": {
+                "identity": active_enrichment_identity,
+                "status": enrichment_status,
+                "provider": enrichment_provider,
+                "model": enrichment_model_value,
+                "prompt_version": (
+                    PROMPT_VERSION if enrichment_provider == "openrouter" else None
+                ),
+                "annotations": len(annotations),
+            },
             "files": [
                 {"path": item.path, "content_hash": item.content_hash}
                 for item in sorted(sources, key=lambda value: value.path)
@@ -235,6 +339,7 @@ def build_knowledge(
             knowledge_root / "annotations.jsonl",
             (annotation.to_dict() for annotation in annotations),
         )
+        atomic_write_json(knowledge_root / "semantic_context.json", semantic_context)
         atomic_write_json(knowledge_root / "features.json", context.features)
         atomic_write_jsonl(
             knowledge_root / "tests.jsonl",
@@ -244,8 +349,8 @@ def build_knowledge(
             knowledge_root / "feature_test_links.jsonl",
             (item.to_dict() for item in context.feature_test_links),
         )
-        atomic_write_text(knowledge_root / "blueprint.md", context.blueprint)
-        atomic_write_text(knowledge_root / "test_map.md", context.test_map)
+        atomic_write_text(knowledge_root / "blueprint.md", blueprint)
+        atomic_write_text(knowledge_root / "test_map.md", test_map)
         observations_path = knowledge_root / "observations.jsonl"
         if not observations_path.exists():
             atomic_write_jsonl(observations_path, [])
@@ -270,8 +375,15 @@ def build_knowledge(
                 ],
                 "repository_blueprint": 1,
                 "test_map": 1,
+                "semantic_annotations": (
+                    len(annotations) if enrichment_status == "available" else None
+                ),
             },
-            reasons={},
+            reasons=(
+                {}
+                if enrichment_status == "available"
+                else {"semantic_enrichment": "disabled_or_unconfigured"}
+            ),
         )
         result = KnowledgeResult(
             repository.root,
@@ -284,6 +396,10 @@ def build_knowledge(
             graph.statistics["unresolved_references"],
             validation["status"],
             "built",
+            enrichment_status,
+            enrichment_provider,
+            enrichment_model_value,
+            len(annotations),
         )
         _append_log(
             log_path,
@@ -294,6 +410,10 @@ def build_knowledge(
             cache_hits,
             cache_misses,
             [item["message"] for item in diagnostics],
+            enrichment_cache_hits=enrichment_cache_hits,
+            enrichment_cache_misses=enrichment_cache_misses,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
         )
         return result
     except Exception as exc:
@@ -573,15 +693,21 @@ def _can_reuse(
     source_digest: str,
     context_digest: str,
     knowledge_root: Path,
+    active_enrichment_identity: dict[str, str],
+    refresh_enrichment: bool,
 ) -> bool:
     return bool(
-        state
+        not refresh_enrichment
+        and state
         and state.get("status") == "complete"
         and state.get("head_sha") == head_sha
         and state.get("source_digest") == source_digest
         and state.get("context_digest") == context_digest
+        and isinstance(state.get("enrichment"), dict)
+        and state["enrichment"].get("identity") == active_enrichment_identity
         and (knowledge_root / "repo_graph.json").is_file()
         and (knowledge_root / "validation.json").is_file()
+        and (knowledge_root / "semantic_context.json").is_file()
         and (knowledge_root / ".okf" / "index.md").is_file()
         and (knowledge_root / "features.json").is_file()
         and (knowledge_root / "tests.jsonl").is_file()
@@ -599,9 +725,13 @@ def _result_from_graph(
     source_digest: str,
     graph: dict[str, Any],
     validation: dict[str, Any],
+    state: dict[str, Any],
     action: str,
 ) -> KnowledgeResult:
     statistics = graph["statistics"]
+    enrichment = state.get("enrichment")
+    if not isinstance(enrichment, dict):
+        enrichment = {}
     return KnowledgeResult(
         root,
         knowledge_root,
@@ -613,6 +743,14 @@ def _result_from_graph(
         statistics["unresolved_references"],
         validation["status"],
         action,
+        str(enrichment.get("status", "not_collected")),
+        enrichment.get("provider")
+        if isinstance(enrichment.get("provider"), str)
+        else None,
+        enrichment.get("model") if isinstance(enrichment.get("model"), str) else None,
+        enrichment.get("annotations")
+        if isinstance(enrichment.get("annotations"), int)
+        else 0,
     )
 
 
@@ -620,7 +758,7 @@ def _update_pipeline_metadata(
     metadata_root: Path,
     *,
     status: str,
-    counts: dict[str, int],
+    counts: dict[str, int | None],
     reasons: dict[str, str],
 ) -> None:
     manifest_path = metadata_root / "manifest.json"
@@ -651,18 +789,19 @@ def _update_pipeline_metadata(
         "feature_test_mapping": counts.get("feature_test_links"),
         "repository_blueprint": counts.get("repository_blueprint"),
         "test_map": counts.get("test_map"),
+        "semantic_enrichment": counts.get("semantic_annotations"),
     }
     for name, count in capability_counts.items():
         reason = reasons.get(name)
-        entry_status = (
-            "partial"
-            if reason
-            else ("available" if count is not None else "not_collected")
-        )
+        if name == "semantic_enrichment" and count is None:
+            entry_status = "not_collected"
+        else:
+            entry_status = (
+                "partial"
+                if reason
+                else ("available" if count is not None else "not_collected")
+            )
         capabilities[name] = AvailabilityEntry(entry_status, count, reason).to_dict()
-    capabilities["semantic_enrichment"] = AvailabilityEntry(
-        "not_collected", None, "interface_only_no_provider"
-    ).to_dict()
     availability["generated_at"] = utc_now()
     atomic_write_json(availability_path, availability)
 
@@ -676,6 +815,11 @@ def _append_log(
     cache_hits: int,
     cache_misses: int,
     warnings: list[str],
+    *,
+    enrichment_cache_hits: int = 0,
+    enrichment_cache_misses: int = 0,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
 ) -> None:
     append_jsonl(
         path,
@@ -697,6 +841,16 @@ def _append_log(
                 "unresolved_references": result.unresolved_count,
                 "cache_hits": cache_hits,
                 "cache_misses": cache_misses,
+                "semantic_annotations": result.annotation_count,
+                "enrichment_cache_hits": enrichment_cache_hits,
+                "enrichment_cache_misses": enrichment_cache_misses,
+                "openrouter_prompt_tokens": prompt_tokens,
+                "openrouter_completion_tokens": completion_tokens,
+            },
+            "enrichment": {
+                "status": result.enrichment_status,
+                "provider": result.enrichment_provider,
+                "model": result.enrichment_model,
             },
             "warnings": warnings,
         },

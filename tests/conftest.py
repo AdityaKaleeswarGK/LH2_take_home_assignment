@@ -7,6 +7,18 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def isolated_inverse_alpha_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(
+        "INVERSE_ALPHA_CONFIG_DIR", str(tmp_path / "inverse-alpha-config")
+    )
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+    monkeypatch.delenv("OPENROUTER_BASE_URL", raising=False)
+
+
 def run_git(repository: Path, *arguments: str) -> str:
     environment = os.environ.copy()
     environment.update(
@@ -61,4 +73,3 @@ def history_repository(tmp_path: Path) -> Path:
     )
     run_git(repository, "tag", "v0.1.0")
     return repository
-
