@@ -52,6 +52,17 @@ inverse-alpha knowledge /path/to/repository
 inverse-alpha knowledge .
 ```
 
+Run both stages together. With no source argument, the current directory is
+used:
+
+```bash
+inverse-alpha complete
+inverse-alpha complete /path/to/repository
+inverse-alpha complete https://github.com/mahmoud/glom
+```
+
+`inverse-alpha completely` is also accepted as an alias for `complete`.
+
 `knowledge` first refreshes repository history through `ingest`, then analyzes
 the current Git-aware working tree. Tracked and untracked Python files are
 included; ignored files, `.inverse_alpha/`, environments, caches, build

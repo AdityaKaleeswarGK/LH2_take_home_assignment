@@ -257,6 +257,34 @@ def test_knowledge_cli_prints_summary(
     assert "Validation: valid" in output
 
 
+@pytest.mark.parametrize("command", ["complete", "completely"])
+def test_complete_cli_runs_both_stages(
+    command: str,
+    python_repository: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main([command, str(python_repository)]) == 0
+    output = capsys.readouterr().out
+    assert "Validation: valid" in output
+    assert (
+        python_repository / ".inverse_alpha" / "history" / "commits.jsonl"
+    ).is_file()
+    assert (
+        python_repository / ".inverse_alpha" / "knowledge" / "repo_graph.json"
+    ).is_file()
+
+
+def test_complete_cli_defaults_to_current_repository(
+    python_repository: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(python_repository)
+
+    assert main(["complete"]) == 0
+    assert "Validation: valid" in capsys.readouterr().out
+
+
 def test_flat_layout_multiline_conditional_imports_and_unittest(tmp_path: Path) -> None:
     repository = tmp_path / "flat-python"
     repository.mkdir()
