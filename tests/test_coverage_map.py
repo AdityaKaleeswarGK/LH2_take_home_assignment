@@ -111,7 +111,35 @@ def test_focus_score_prefers_well_covered_but_not_central() -> None:
     central = covered(12, ratio=0.9)
 
     assert focused.focus_score > central.focus_score
-    assert covered(60).focus_score == 0.0
+    # Infrastructure ranks below both, but is not scored out of existence: on a
+    # repository where everything is broadly covered it is all there is.
+    assert covered(60, ratio=0.9).focus_score < central.focus_score
+    assert covered(60, ratio=0.9).focus_score > 0.0
+
+
+def test_a_symbol_without_a_docstring_still_scores() -> None:
+    """A repository that docstrings nothing must not yield an empty pool."""
+    documented = covered(3, name="a")
+    bare = covered(3, doc=False, name="b")
+
+    assert bare.excision_possible is True
+    assert 0.0 < bare.focus_score < documented.focus_score
+
+
+def test_a_single_covering_test_still_scores() -> None:
+    """One test per function is a testing style, not an absence of tasks."""
+    lonely = covered(1, name="a")
+    paired = covered(3, name="b")
+
+    assert lonely.excision_possible is True
+    assert 0.0 < lonely.focus_score < paired.focus_score
+
+
+def test_a_non_callable_is_the_one_thing_that_cannot_be_excised() -> None:
+    symbol = covered(3)
+    object.__setattr__(symbol, "kind", "class")
+    assert symbol.excision_possible is False
+    assert symbol.focus_score == 0.0
 
 
 def calibrated(counts: list[int]) -> cm.CoverageMap:
@@ -149,13 +177,16 @@ def test_a_pool_with_no_infrastructure_loses_nothing() -> None:
     assert len(coverage_map.excision_candidates()) == 40
 
 
-def test_the_widest_symbols_are_still_rejected() -> None:
+def test_the_widest_symbols_rank_last_rather_than_vanishing() -> None:
     """glom's real shape: two symbols carry most of the suite, the rest do not."""
     coverage_map = calibrated([3, 3, 6, 10, 10, 12, 14, 21, 28, 100, 119])
-    kept = {len(s.covering_tests) for s in coverage_map.excision_candidates()}
+    order = [len(s.covering_tests) for s in coverage_map.excision_candidates()]
 
-    assert 100 not in kept and 119 not in kept
-    assert {3, 6, 10, 12, 14, 21, 28} <= kept
+    assert set(order[-2:]) == {100, 119}, "infrastructure must sort to the bottom"
+    assert {3, 6, 10, 12, 14, 21, 28} <= set(order)
+    # The preferred band is what the old filter would have returned.
+    preferred = {len(s.covering_tests) for s in coverage_map.preferred_candidates()}
+    assert 100 not in preferred and 119 not in preferred
 
 
 def test_calibration_survives_a_round_trip(tmp_path: Path) -> None:

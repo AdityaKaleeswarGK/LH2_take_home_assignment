@@ -78,37 +78,86 @@ class CoveredSymbol:
     covered_lines: int = 0
     covering_tests: list[str] = field(default_factory=list)
     has_docstring: bool = False
+    is_test: bool = False
     covering_ceiling: int = _FALLBACK_CEILING
     """Breadth above which a symbol counts as infrastructure, set by the map."""
 
     @property
     def ratio(self) -> float:
-        return round(self.covered_lines / self.body_lines, 3) if self.body_lines else 0.0
+        """Covered share of the symbol's span, which cannot exceed one.
+
+        The denominator counts the span inclusively because the numerator does:
+        lines are attributed from ``line`` through ``end_line``, the ``def``
+        itself included, since defining a function executes it. Measuring
+        against ``end_line - line`` instead produced ratios above 1.0 for every
+        short function — invisible while a ``ratio >= 0.6`` filter was in front
+        of it, and a silent distortion of the ranking once that filter became a
+        score.
+        """
+        return round(min(1.0, self.covered_lines / self.body_lines), 3) if self.body_lines else 0.0
+
+    @property
+    def excision_possible(self) -> bool:
+        """Whether a task could exist here at all — the only structural bar.
+
+        A body to remove, at least one measured test to notice its absence, and
+        not itself a test — excising a test deletes the verifier, so there is
+        nothing left to judge the answer with. Everything else about a candidate
+        is a prediction of quality and belongs in :attr:`focus_score`, because a
+        repository that docstrings nothing, or writes exactly one test per
+        function, is not thereby a repository with no excision tasks in it.
+        """
+        return (
+            self.kind in {"function", "method"}
+            and bool(self.covering_tests)
+            and not self.is_test
+        )
 
     @property
     def excision_ready(self) -> bool:
-        """A cheap pre-filter, not the gate.
+        """The preferred band: enough contract and coverage to instruct from.
 
-        The real test is empirical: remove the body and confirm the covering
-        tests fail on behaviour. This only avoids spending a validation run on
-        a function whose contract or coverage is obviously too thin.
+        Retained as a *label*, not a filter. It marks the candidates most likely
+        to survive the empirical gate — remove the body, confirm the covering
+        tests fail on behaviour — so ranking can prefer them without the pool
+        collapsing when a repository does not share the sample's habits.
         """
         return (
-            _MIN_TESTS_FOR_EXCISION <= len(self.covering_tests) <= self.covering_ceiling
+            self.excision_possible
+            and _MIN_TESTS_FOR_EXCISION <= len(self.covering_tests) <= self.covering_ceiling
             and self.has_docstring
             and self.ratio >= _MIN_RATIO_FOR_EXCISION
             and self.body_lines >= _MIN_BODY_LINES_FOR_EXCISION
-            and self.kind in {"function", "method"}
         )
 
     @property
     def focus_score(self) -> float:
-        """Rank within the band: well-exercised, but not infrastructure."""
-        if not self.excision_ready:
+        """How promising this symbol is, on a continuum rather than a cliff.
+
+        Each term is a measured proxy that degrades gracefully: a symbol with
+        one covering test scores lower than one with four, rather than scoring
+        nothing at all.
+        """
+        if not self.excision_possible:
             return 0.0
+        count = len(self.covering_tests)
         span = max(1, self.covering_ceiling - _MIN_TESTS_FOR_EXCISION)
-        centrality = 1.0 - (len(self.covering_tests) - _MIN_TESTS_FOR_EXCISION) / span
-        return round(self.ratio * 0.6 + centrality * 0.4, 3)
+        if count < _MIN_TESTS_FOR_EXCISION:
+            # One test either over-constrains or under-constrains; still a
+            # candidate, but the weakest kind.
+            breadth = 0.25
+        elif count > self.covering_ceiling:
+            breadth = 0.1
+        else:
+            breadth = 1.0 - (count - _MIN_TESTS_FOR_EXCISION) / span * 0.5
+        substance = min(1.0, self.body_lines / 12.0)
+        return round(
+            self.ratio * 0.35
+            + breadth * 0.30
+            + substance * 0.20
+            + (0.15 if self.has_docstring else 0.0),
+            4,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -121,7 +170,9 @@ class CoveredSymbol:
             "ratio": self.ratio,
             "has_docstring": self.has_docstring,
             "covering_tests": sorted(self.covering_tests),
+            "is_test": self.is_test,
             "covering_ceiling": self.covering_ceiling,
+            "excision_possible": self.excision_possible,
             "excision_ready": self.excision_ready,
             "focus_score": self.focus_score,
         }
@@ -145,10 +196,15 @@ class CoverageMap:
         return sorted(symbol.covering_tests) if symbol else []
 
     def excision_candidates(self) -> list[CoveredSymbol]:
+        """Every symbol a task could be built from, best first."""
         return sorted(
-            (s for s in self.symbols.values() if s.excision_ready),
+            (s for s in self.symbols.values() if s.excision_possible),
             key=lambda s: (-s.focus_score, s.symbol_id),
         )
+
+    def preferred_candidates(self) -> list[CoveredSymbol]:
+        """The subset in the comfortable band, for reporting rather than gating."""
+        return [s for s in self.excision_candidates() if s.excision_ready]
 
     def calibrate(self) -> int:
         """Set the infrastructure ceiling from this repository's own suite size.
@@ -175,6 +231,7 @@ class CoverageMap:
             "symbols_covered": len(covered),
             "tests_observed": len(self.tests_index()),
             "excision_candidates": len(self.excision_candidates()),
+            "excision_preferred": len(self.preferred_candidates()),
             "covering_ceiling": max(ceilings) if ceilings else _FALLBACK_CEILING,
             "mean_tests_per_covered_symbol": (
                 round(sum(len(s.covering_tests) for s in covered) / len(covered), 2)
@@ -285,8 +342,9 @@ def build(graph: RepositoryGraph, lines: dict[str, dict[int, list[str]]]) -> Cov
                 path=parsed.path,
                 kind=symbol.kind,
                 qualified_name=symbol.qualified_name,
-                body_lines=max(1, symbol.anchor.end_line - symbol.anchor.line),
+                body_lines=max(1, symbol.anchor.end_line - symbol.anchor.line + 1),
                 has_docstring=bool(symbol.docstring),
+                is_test=parsed.is_test or symbol.is_test,
             )
         for line, contexts in lines.get(parsed.path, {}).items():
             owner = owners.get(line)
@@ -334,6 +392,7 @@ def load(path: Path) -> CoverageMap:
             covered_lines=int(record.get("covered_lines") or 0),
             covering_tests=list(record.get("covering_tests") or []),
             has_docstring=bool(record.get("has_docstring")),
+            is_test=bool(record.get("is_test")),
         )
     coverage_map.calibrate()
     return coverage_map

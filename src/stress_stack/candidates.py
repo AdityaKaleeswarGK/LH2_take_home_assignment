@@ -35,18 +35,25 @@ from stress_stack.git_repository import GitRepository
 HISTORY = "history"
 EXCISION = "excision"
 
-# A change in the top decile of a repository's own size distribution is a
-# refactor: too broad to instruct behaviourally and too broad to attribute a
-# failure to. The percentile is the threshold; the resulting line count is
-# whatever this repository happens to make it.
-_CHURN_PERCENTILE = 0.90
-
-# Documentation, packaging and CI changes carry no behaviour to verify. Matched
-# by extension and by directory, never by repository-specific file names.
-_NON_BEHAVIOURAL_SUFFIXES = frozenset(
-    {".md", ".rst", ".txt", ".cfg", ".ini", ".toml", ".yaml", ".yml", ".lock", ".in"}
-)
-_NON_BEHAVIOURAL_DIRECTORIES = ("docs/", ".github/", "doc/")
+# Mining ranks; it does not judge.
+#
+# Earlier versions of this module rejected a pull request that changed no test
+# file, one that changed no file outside a documentation directory, and one
+# whose diff exceeded the ninetieth percentile of the repository's change sizes.
+# Each looked like a measurement and was actually a prediction, and each fails
+# on a repository shaped differently from the sample:
+#
+# * a bug fix whose failing test was already committed touches no test file, and
+#   its fail-before evidence is stronger than a new test's, not weaker;
+# * a directory named ``docs/`` holds real, imported, tested code in plenty of
+#   projects;
+# * a large diff is expensive to validate, not disqualified from being a task.
+#
+# What survives as a rejection is only what makes a task impossible to build at
+# all: no commit to materialise, no parent to diff against, and no Python
+# changed for a solver to write. Everything else is a ranking signal, where
+# being wrong costs a candidate a position instead of its existence, and the
+# empirical gates decide.
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,13 +197,6 @@ def is_python(path: str) -> bool:
     return path.endswith(".py")
 
 
-def is_behavioural(path: str) -> bool:
-    """Whether a changed path can carry verifiable behaviour."""
-    if any(path.startswith(prefix) or f"/{prefix}" in path for prefix in _NON_BEHAVIOURAL_DIRECTORIES):
-        return False
-    return Path(path).suffix not in _NON_BEHAVIOURAL_SUFFIXES
-
-
 def percentile(values: list[int], fraction: float) -> int:
     """Nearest-rank percentile. Empty input yields 0, one value yields itself."""
     if not values:
@@ -300,17 +300,16 @@ def mine_history(
         base_sha = parents[1]
 
         deltas = numstat(repository, base_sha, head_sha)
-        behavioural = [d for d in deltas if is_behavioural(d.path) and not d.binary]
-        python_changes = [d for d in behavioural if is_python(d.path)]
+        python_changes = [d for d in deltas if is_python(d.path) and not d.binary]
+        # The only structural requirement: something a solver could write. A
+        # change touching no Python at all has no code for a golden answer to
+        # contain, whatever else it may be worth.
+        if not python_changes:
+            funnel.drop("no_python_change", identifier)
+            continue
+
         changed_tests = [d for d in python_changes if d.path in tests or _looks_like_test(d.path)]
         changed_source = [d for d in python_changes if d not in changed_tests]
-
-        if not changed_source:
-            funnel.drop("no_source_change", identifier)
-            continue
-        if not changed_tests:
-            funnel.drop("no_test_change", identifier)
-            continue
 
         added, modified = _test_function_delta(
             repository, base_sha, head_sha, [d.path for d in changed_tests]
@@ -325,28 +324,21 @@ def mine_history(
                 "changed_tests": changed_tests,
                 "added_tests": added,
                 "modified_tests": modified,
-                "churn": sum(d.churn for d in behavioural),
+                "churn": sum(d.churn for d in python_changes),
             }
         )
 
-    ceiling = percentile([item["churn"] for item in staged], _CHURN_PERCENTILE)
-    candidates: list[Candidate] = []
-    for item in staged:
-        record = item["record"]
-        identifier = f"PR#{record['number']}"
-        if ceiling and item["churn"] > ceiling:
-            funnel.drop("churn_ceiling", identifier)
-            continue
-        candidates.append(_history_candidate(item, modules, ceiling))
-
+    candidates = [_history_candidate(item, modules) for item in staged]
     _rank(candidates)
     return (
         candidates,
         funnel,
         {
-            "churn_percentile": _CHURN_PERCENTILE,
-            "churn_ceiling": ceiling,
             "churn_distribution": _distribution([item["churn"] for item in staged]),
+            "note": (
+                "Churn is recorded for difficulty tiering and validation cost, "
+                "and is not used to reject a candidate."
+            ),
         },
     )
 
@@ -417,16 +409,20 @@ def _resolve_head(
     return None
 
 
-def _history_candidate(
-    item: dict[str, Any], modules: ModuleResolver, ceiling: int
-) -> Candidate:
+def _history_candidate(item: dict[str, Any], modules: ModuleResolver) -> Candidate:
     record = item["record"]
     source_paths: list[str] = [str(d.path) for d in item["changed_source"]]
     test_paths_changed: list[str] = [str(d.path) for d in item["changed_tests"]]
     touched_modules = sorted({modules.of(path) for path in source_paths})
     # The primary module is the one carrying the most changed lines: it is what
-    # the task is *about*, and it is what diversity is counted on.
-    primary = str(max(item["changed_source"], key=lambda d: (d.churn, d.path)).path)
+    # the task is *about*, and it is what diversity is counted on. A change that
+    # edited only test files still needs a module, or it cannot be counted
+    # against the diversity floor at all — fall back to the whole Python change
+    # set rather than dropping the candidate.
+    ranked_by_churn = item["changed_source"] or item["changed_tests"]
+    primary = str(max(ranked_by_churn, key=lambda d: (d.churn, d.path)).path)
+    if not touched_modules:
+        touched_modules = [modules.of(primary)]
     body = str(record.get("body") or "")
 
     return Candidate(
@@ -448,7 +444,6 @@ def _history_candidate(
             "test_paths": sorted(test_paths_changed),
             "primary_path": primary,
             "churn": item["churn"],
-            "churn_ceiling": ceiling,
             "files_changed": len(item["deltas"]),
             "source_files_changed": len(source_paths),
             "test_files_changed": len(test_paths_changed),
@@ -474,7 +469,7 @@ def mine_excision(coverage: CoverageMap, graph: RepositoryGraph) -> tuple[list[C
 
     for symbol in coverage.symbols.values():
         funnel.considered += 1
-        if not symbol.excision_ready:
+        if not symbol.excision_possible:
             funnel.drop(_excision_reason(symbol), symbol.symbol_id)
             continue
         module = modules.of(symbol.path)
@@ -507,20 +502,17 @@ def mine_excision(coverage: CoverageMap, graph: RepositoryGraph) -> tuple[list[C
 
 
 def _excision_reason(symbol: Any) -> str:
-    """Which pre-filter a symbol failed, most disqualifying first."""
+    """Why no task could be built here at all.
+
+    Only two answers remain. Thin coverage, a missing docstring and a short body
+    used to appear in this list; each is now a term in ``focus_score``, because
+    each described glom rather than repositories in general.
+    """
     if not symbol.covering_tests:
         return "no_covering_test"
-    if symbol.kind not in {"function", "method"}:
-        return "not_a_callable"
-    if len(symbol.covering_tests) < 2:
-        return "single_covering_test"
-    if len(symbol.covering_tests) > symbol.covering_ceiling:
-        return "infrastructure_breadth"
-    if not symbol.has_docstring:
-        return "no_docstring_contract"
-    if symbol.body_lines < 4:
-        return "body_too_small"
-    return "coverage_ratio_too_low"
+    if symbol.is_test:
+        return "is_itself_a_test"
+    return "not_a_callable"
 
 
 def _rank(candidates: list[Candidate]) -> None:
@@ -533,36 +525,44 @@ def _rank(candidates: list[Candidate]) -> None:
     if not candidates:
         return
     if candidates[0].source == HISTORY:
-        # New behaviour dominates deliberately. An earlier weighting rewarded
-        # breadth — files touched, modules touched, test files touched — which
+        # Ranking now carries the weight the filters used to. Two signals were
+        # measured against validated outcomes rather than assumed:
+        #
+        # New behaviour dominates because breadth does not predict viability.
+        # An earlier weighting rewarded files touched and modules touched, which
         # is the exact profile of a maintenance sweep, and it put glom's
-        # "Add Python 3.12" pull request at the top of the pool with 31 files
-        # changed and not one new assertion. Measured against the validated
-        # outcomes, the count of *added* test functions separates a feature
-        # from a sweep and breadth does not.
+        # "Add Python 3.12" at the top of the pool — 31 files changed, not one
+        # new assertion, and every designated test passing before the change.
+        #
+        # Recency is here because the container is built from HEAD's declared
+        # Python version while the trees are historical. A 2018 commit under a
+        # 3.12 interpreter fails its own suite, which the gates catch correctly
+        # and expensively; ranking spends the validation budget where it is
+        # likely to pay.
         weights = {
-            "new_behaviour": 0.45,
-            "coordination": 0.20,
-            "cross_module": 0.15,
-            "documentation": 0.20,
+            "new_behaviour": 0.35,
+            "verifier_presence": 0.15,
+            "coordination": 0.10,
+            "cross_module": 0.10,
+            "documentation": 0.10,
+            "recency": 0.20,
         }
         raw = {
             "new_behaviour": [float(c.signals["added_test_functions"]) for c in candidates],
+            "verifier_presence": [float(c.signals["test_files_changed"]) for c in candidates],
             "coordination": [float(c.signals["source_files_changed"]) for c in candidates],
             "cross_module": [float(c.signals["modules_touched"]) for c in candidates],
             "documentation": [float(c.signals["body_length"]) for c in candidates],
+            "recency": [_merged_ordinal(c.signals.get("merged_at")) for c in candidates],
         }
     else:
-        weights = {
-            "contract_clarity": 0.30,
-            "coverage_depth": 0.40,
-            "substance": 0.30,
-        }
-        raw = {
-            "contract_clarity": [float(c.signals["focus_score"]) for c in candidates],
-            "coverage_depth": [float(c.signals["coverage_ratio"]) for c in candidates],
-            "substance": [float(c.signals["body_lines"]) for c in candidates],
-        }
+        # focus_score already weighs coverage ratio, breadth, body size and the
+        # presence of a docstring against each other. Re-normalising those same
+        # inputs here as separate components counted body size twice and drowned
+        # the breadth penalty: glom's `_t_eval`, executed by 114 of 202 tests,
+        # ranked second on the strength of being long.
+        weights = {"focus": 1.0}
+        raw = {"focus": [float(c.signals["focus_score"]) for c in candidates]}
 
     normalized = {name: _normalize(values) for name, values in raw.items()}
     for index, candidate in enumerate(candidates):
@@ -571,6 +571,16 @@ def _rank(candidates: list[Candidate]) -> None:
             candidate.components[name] * weight for name, weight in weights.items()
         )
     candidates.sort(key=lambda c: (-c.score, c.candidate_id))
+
+
+def _merged_ordinal(merged_at: Any) -> float:
+    """An ISO timestamp as a sortable number; an absent one sorts oldest."""
+    text = str(merged_at or "")[:10]
+    try:
+        year, month, day = (int(part) for part in text.split("-"))
+    except ValueError:
+        return 0.0
+    return year * 372.0 + month * 31.0 + day
 
 
 def _normalize(values: list[float]) -> list[float]:

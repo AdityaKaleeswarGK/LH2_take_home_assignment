@@ -291,15 +291,11 @@ def _print_index_result(report: dict) -> int:
 def _print_mining_result(report: dict) -> int:
     print(f"Repository: {report['repository_root']}")
     print(f"Coverage: {report['coverage_status']}")
-    thresholds = report["thresholds"]
-    print(
-        f"Churn ceiling: {thresholds['churn_ceiling']} lines "
-        f"(p{int(thresholds['churn_percentile'] * 100)} of {thresholds['churn_distribution']})"
-    )
+    print(f"Churn distribution: {report['thresholds']['churn_distribution']}")
     for name in ("history", "excision"):
         funnel = report[f"{name}_funnel"]
         print(
-            f"{name.capitalize()}: {report[f'{name}_count']} viable "
+            f"{name.capitalize()}: {report[f'{name}_count']} ranked "
             f"of {funnel['considered']} considered"
         )
         for reason, count in funnel["dropped_counts"].items():

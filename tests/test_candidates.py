@@ -16,7 +16,6 @@ import pytest
 
 from stress_stack.candidates import (
     ModuleResolver,
-    is_behavioural,
     mine_history,
     module_index,
     numstat,
@@ -116,13 +115,25 @@ def test_percentile_handles_degenerate_inputs() -> None:
     assert percentile([1, 2, 3, 4, 5], 0.5) == 3
 
 
-def test_docs_python_file_is_not_behavioural() -> None:
-    assert not is_behavioural("docs/example.py")
-    assert not is_behavioural("nested/docs/example.py")
-    assert not is_behavioural("README.md")
-    assert not is_behavioural(".github/workflows/ci.yml")
-    assert is_behavioural("glom/core.py")
-    assert is_behavioural("tests/test_core.py")
+def test_a_python_file_under_docs_is_still_source(src_layout_repository: Path) -> None:
+    """Where a file lives says nothing about whether it carries behaviour.
+
+    An earlier version skipped a hardcoded list of directory names, which threw
+    away real, imported, tested code in any project that keeps some under
+    ``docs/``.
+    """
+    write(src_layout_repository / "docs" / "example.py", "VALUE = 2\n")
+    run_git(src_layout_repository, "add", "-A")
+    run_git(src_layout_repository, "commit", "-m", "Change docs tooling")
+    history_root = history_for(src_layout_repository, pr_number=9)
+
+    repository = GitRepository.discover(src_layout_repository)
+    candidates, funnel, _ = mine_history(
+        repository, build_graph(src_layout_repository), history_root
+    )
+
+    assert [c.subject for c in candidates] == ["PR#9"]
+    assert funnel.dropped == {}
 
 
 def test_module_resolver_strips_the_layout_prefix_it_measured(src_layout_repository: Path) -> None:
@@ -187,23 +198,24 @@ def test_mining_keeps_a_pull_request_that_changed_source_and_tests(
     assert candidate.signals["test_paths"] == ["tests/test_core.py"]
     # docs/example.py was untouched here; the source set must hold only real source.
     assert candidate.signals["source_paths"] == ["src/pkg/core.py", "src/pkg/legacy.py"]
-    assert thresholds["churn_ceiling"] >= candidate.signals["churn"]
+    # Churn is recorded for difficulty and cost, and rejects nothing.
+    assert thresholds["churn_distribution"]["max"] >= candidate.signals["churn"]
 
 
-def test_documentation_only_change_is_dropped_with_a_reason(
+def test_a_change_touching_no_python_is_dropped_with_a_reason(
     src_layout_repository: Path,
 ) -> None:
-    write(src_layout_repository / "docs" / "example.py", "print('changed')\n")
+    """The one content-based rejection left: no code for a golden answer."""
     write(src_layout_repository / "README.md", "# changed\n")
     run_git(src_layout_repository, "add", "-A")
-    run_git(src_layout_repository, "commit", "-m", "Docs only")
+    run_git(src_layout_repository, "commit", "-m", "Prose only")
     history_root = history_for(src_layout_repository, pr_number=8)
 
     repository = GitRepository.discover(src_layout_repository)
     candidates, funnel, _ = mine_history(repository, build_graph(src_layout_repository), history_root)
 
     assert candidates == []
-    assert funnel.dropped["no_source_change"] == ["PR#8"]
+    assert funnel.dropped["no_python_change"] == ["PR#8"]
 
 
 def test_unmerged_pull_requests_are_never_considered(src_layout_repository: Path) -> None:
