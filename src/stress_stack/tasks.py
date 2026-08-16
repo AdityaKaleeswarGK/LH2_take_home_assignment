@@ -39,6 +39,7 @@ from stress_stack.graph import RepositoryGraph, blast_radius
 from stress_stack.runner import RunOutcome, Runner, pytest_argument
 from stress_stack.snapshot import (
     OVERLAY_FILES,
+    synthesize_version_modules,
     Transition,
     apply_overlay,
     audit_solver_bundle,
@@ -201,6 +202,8 @@ def stage_history_task(
     materialize_tree(repository, transition.head_sha, solution_dir)
     apply_overlay(repository.root, input_dir)
     apply_overlay(repository.root, solution_dir)
+    synthesize_version_modules(repository, transition.base_sha, input_dir)
+    synthesize_version_modules(repository, transition.head_sha, solution_dir)
 
     # A change that touched no test file gets an empty verifier, and that is a
     # complete task rather than a broken one: the tests that prove it are
@@ -276,6 +279,8 @@ def stage_excision_task(
     materialize_tree(repository, head_sha, solution_dir)
     apply_overlay(repository.root, input_dir)
     apply_overlay(repository.root, solution_dir)
+    synthesize_version_modules(repository, transition.base_sha, input_dir)
+    synthesize_version_modules(repository, transition.head_sha, solution_dir)
 
     path = str(candidate.signals["path"])
     qualified = str(candidate.signals["qualified_name"])
@@ -446,7 +451,7 @@ def validate_task(
     after_full = runner.execute(solution_dir, evidence, "after_full")
     built.outcomes.append(after_full)
     if not after_full.usable:
-        built.rejected = f"reference_run_failed: {after_full.infrastructure_failure}"
+        built.rejected = _reference_failure(built, after_full)
         return built
 
     before_full = runner.execute(evaluation_tree, evidence, "before_full")
@@ -535,6 +540,43 @@ def validate_task(
         if target in before_targets[0].report.results
     }
     return built
+
+
+# Packages the test runner itself imports. A repository that *is* one of these
+# cannot be verified by putting its tree on PYTHONPATH: doing so shadows the
+# copy pytest is running on, and a historical version of it will not satisfy a
+# modern pytest. pluggy's pre-src-layout commits fail exactly this way, and the
+# generic "reference run failed" hid why.
+_RUNNER_DEPENDENCIES = frozenset(
+    {"pluggy", "iniconfig", "packaging", "exceptiongroup", "tomli", "pytest", "_pytest"}
+)
+
+
+def _reference_failure(built: BuiltTask, outcome: RunOutcome) -> str:
+    """Name the cause when the reference tree cannot even be collected."""
+    # `usable` is False for an empty run while `infrastructure_failure` stays
+    # None — the descriptive string only exists in to_dict(). Testing the
+    # attribute meant this never fired and the funnel said "None".
+    if outcome.empty:
+        tree = built.task_root / "solution"
+        from stress_stack.runner import source_roots
+
+        for root in source_roots(tree).split(":"):
+            relative = root.removeprefix("/work").strip("/")
+            directory = tree / relative if relative else tree
+            if not directory.is_dir():
+                continue
+            for entry in directory.iterdir():
+                name = entry.name.removesuffix(".py")
+                if name in _RUNNER_DEPENDENCIES and (
+                    entry.is_dir() or entry.suffix == ".py"
+                ):
+                    return (
+                        "runner_dependency_shadowed: the task tree provides "
+                        f"{name!r}, which the test runner imports, so mounting it "
+                        "replaces the copy pytest is running on"
+                    )
+    return f"reference_run_failed: {outcome.infrastructure_failure or 'collected_no_tests'}"
 
 
 def _gate_alternative(built: BuiltTask, runner: Runner, evidence: Path) -> GateVerdict:

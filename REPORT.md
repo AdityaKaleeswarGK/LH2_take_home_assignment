@@ -274,6 +274,28 @@ modules from the in-memory graph. The `shared_tests` query would answer somethin
 currently unaskable — whether two "diverse" tasks share verifier tests — and is
 not yet wired in.
 
+**A repository the test runner depends on cannot be verified this way.**
+Validation puts the task tree on `PYTHONPATH` so the mounted code wins over the
+installed copy. When the repository under test *is* a dependency of pytest —
+`pluggy`, `iniconfig`, `packaging` — that shadows the copy pytest is itself
+running on, and a historical version will not satisfy a modern pytest. Running
+`pytest-dev/pluggy` end to end, 16 of 30 history candidates failed exactly here:
+pre-`src`-layout commits ship a flat `pluggy.py` at the root, pytest imports it
+instead of its own, and cannot start. The funnel now names this
+`runner_dependency_shadowed` rather than reporting a generic infrastructure
+failure, so the cause is visible rather than mysterious. Fixing it properly
+means running the verifier under an interpreter whose runner dependencies come
+from a separate, unshadowed path — a real change to the execution model, and
+deliberately not attempted at this stage. pluggy consequently yields 7 eligible
+tasks rather than 10, and that shortfall is reported rather than papered over.
+
+A related fix did land: setuptools-scm writes `_version.py` at build time and
+git never contains it, so a package whose `__init__` imports from it cannot be
+imported from any materialised tree. That version module is now synthesised into
+both sides from `git describe` at the task's own commit, which repaired every
+modern pluggy tree and affects the large fraction of Python projects using that
+build backend.
+
 **Second-repository findings.** Running `pallets/click` end to end found four
 bugs invisible on glom, each of which would have produced confident wrong output
 on a held-out repository: a container built without a test runner because click
