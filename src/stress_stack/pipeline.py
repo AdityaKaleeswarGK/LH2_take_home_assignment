@@ -95,6 +95,14 @@ def run_pipeline(
 
     working = cwd or Path.cwd()
     result = PipelineResult()
+
+    def _record(current: PipelineResult) -> None:
+        if current.repository_root:
+            atomic_write_json(
+                Path(current.repository_root) / ".stress_stack" / "pipeline_run.json",
+                current.to_dict(),
+            )
+
     here = {"source": source_value}
 
     stages: list[tuple[str, Callable[[], Any]]] = [
@@ -138,7 +146,9 @@ def run_pipeline(
             )
             if name in _OPTIONAL:
                 result.stages[-1].status = "degraded"
+                _record(result)
                 continue
+            _record(result)
             break
         except Exception as exc:  # noqa: BLE001 — a stage crash is a stage result
             result.stages.append(
@@ -148,7 +158,9 @@ def run_pipeline(
             )
             if name in _OPTIONAL:
                 result.stages[-1].status = "degraded"
+                _record(result)
                 continue
+            _record(result)
             break
 
         semantic_error = _semantic_failure(name, produced)
@@ -172,6 +184,13 @@ def run_pipeline(
                 result.repository_root = root
         if name == "emit" and isinstance(produced, dict):
             result.manifest = produced
+        # Persisted after every stage, not once at the end. bundle runs inside
+        # this loop and reads the file, so writing it only afterwards handed the
+        # report an empty stage table on a clean run — and a stale one whenever
+        # an earlier run had left a file behind, which is how a since-fixed
+        # `validate: failed` leaked into a later report. Recording per stage
+        # also means a crashed run leaves a record of how far it reached.
+        _record(result)
         if semantic_error and name not in _OPTIONAL:
             break
 
