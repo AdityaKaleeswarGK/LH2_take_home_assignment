@@ -173,13 +173,23 @@ def run_sandboxed(
 
 
 def pytest_command(report_name: str, targets: list[str] | None = None) -> list[str]:
-    """The verifier invocation, with tracebacks retained for failure classification."""
+    """The verifier invocation, with tracebacks retained for failure classification.
+
+    ``--continue-on-collection-errors`` is what makes the pre-change run usable
+    at all. A feature's new test file imports the symbol the feature adds, so it
+    cannot be collected before the change; without this flag that one file
+    aborts the entire run and eighty-six other tests report nothing, which
+    destroys the collateral baseline along with the fail-before evidence. With
+    it, the uncollectable file is recorded as an error and everything else still
+    produces a verdict.
+    """
     command = [
         "python",
         "-m",
         "pytest",
         "-p",
         "no:cacheprovider",
+        "--continue-on-collection-errors",
         "--tb=short",
         "-q",
         f"--junit-xml=/evidence/{report_name}.xml",

@@ -24,6 +24,7 @@ from stress_stack.git_repository import GitRepository
 from stress_stack.graph import RepositoryGraph
 from stress_stack.runner import Runner
 from stress_stack.tasks import (
+    STRICT,
     BuiltTask,
     TaskBuildError,
     build_evaluation_tree,
@@ -67,6 +68,7 @@ def build_and_validate(
     runner: Runner,
     *,
     repeats: int,
+    policy: str = STRICT,
 ) -> BuiltTask:
     """Stage one candidate and put it through every gate.
 
@@ -107,14 +109,17 @@ def build_and_validate(
     evaluation_tree = work_root / task_id
     build_evaluation_tree(task_root, evaluation_tree)
     try:
-        validate_task(built, runner, evaluation_tree=evaluation_tree, repeats=repeats)
+        validate_task(
+            built, runner, evaluation_tree=evaluation_tree, repeats=repeats, policy=policy
+        )
         if (
             candidate.source == EXCISION
             and not built.eligible
             and _should_retry_explicit(built)
         ):
             built = _retry_with_explicit_stub(
-                repository, graph, candidate, tasks_root, work_root, runner, repeats=repeats
+                repository, graph, candidate, tasks_root, work_root, runner,
+                repeats=repeats, policy=policy,
             )
     finally:
         shutil.rmtree(evaluation_tree, ignore_errors=True)
@@ -131,6 +136,7 @@ def validate_pool(
     *,
     limit: int,
     repeats: int,
+    policy: str = STRICT,
     stop_after: int | None = None,
 ) -> tuple[list[BuiltTask], ValidationSummary]:
     """Validate down the ranked pool until enough survive, or the budget runs out."""
@@ -141,7 +147,8 @@ def validate_pool(
     for candidate in candidates[:limit]:
         summary.attempted += 1
         result = build_and_validate(
-            repository, graph, candidate, tasks_root, work_root, runner, repeats=repeats
+            repository, graph, candidate, tasks_root, work_root, runner,
+            repeats=repeats, policy=policy,
         )
         built.append(result)
         if result.eligible:
@@ -189,6 +196,7 @@ def _retry_with_explicit_stub(
     runner: Runner,
     *,
     repeats: int,
+    policy: str = STRICT,
 ) -> BuiltTask:
     task_id = task_identifier(candidate)
     task_root = tasks_root / task_id
@@ -213,7 +221,9 @@ def _retry_with_explicit_stub(
     evaluation_tree = work_root / task_id
     build_evaluation_tree(task_root, evaluation_tree)
     try:
-        validate_task(built, runner, evaluation_tree=evaluation_tree, repeats=repeats)
+        validate_task(
+            built, runner, evaluation_tree=evaluation_tree, repeats=repeats, policy=policy
+        )
     finally:
         shutil.rmtree(evaluation_tree, ignore_errors=True)
     return built

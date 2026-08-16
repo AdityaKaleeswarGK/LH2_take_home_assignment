@@ -49,8 +49,10 @@ from stress_stack.snapshot import (
 from stress_stack.verification import (
     ASSERTION,
     BEHAVIORAL_EXCEPTION,
+    INFRASTRUCTURE,
+    PASSED,
     GateVerdict,
-    RunReport,
+
     gate_collateral,
     gate_determinism,
     gate_fail_before,
@@ -172,27 +174,6 @@ def changed_test_functions(
     return designated
 
 
-def resolve_targets(
-    tree: Path, designated: dict[str, list[str]], observed: set[str]
-) -> tuple[list[str], list[str]]:
-    """Match discovered test functions to the node ids the runner actually reported.
-
-    The dotted ``classname`` pytest writes into JUnit depends on packaging, root
-    directory and configuration. Rather than reconstruct it, every observed id
-    is translated back into a path form and looked up — measured both ways.
-    """
-    by_argument = {pytest_argument(tree, node_id): node_id for node_id in observed}
-    resolved: list[str] = []
-    missing: list[str] = []
-    for path, names in sorted(designated.items()):
-        for name in names:
-            argument = "::".join([path, *name.split(".")])
-            node_id = by_argument.get(argument)
-            if node_id is None:
-                missing.append(argument)
-            else:
-                resolved.append(node_id)
-    return sorted(set(resolved)), sorted(set(missing))
 
 
 # --------------------------------------------------------------------------
@@ -215,11 +196,14 @@ def stage_history_task(
     apply_overlay(repository.root, input_dir)
     apply_overlay(repository.root, solution_dir)
 
+    # A change that touched no test file gets an empty verifier, and that is a
+    # complete task rather than a broken one: the tests that prove it are
+    # already in `input/`, committed alongside the bug they pin. Refusing here
+    # was the last static filter in the path, and it discarded exactly the
+    # candidates whose fail-before evidence needs no construction at all.
     designated = changed_test_functions(
         repository, transition, [str(p) for p in candidate.signals["test_paths"]]
     )
-    if not designated:
-        raise TaskBuildError("the change added or rewrote no test function")
 
     verifier_root = task_root / "verifier"
     _reset(verifier_root)
@@ -316,7 +300,100 @@ def build_evaluation_tree(task_root: Path, destination: Path) -> Path:
 
 
 # --------------------------------------------------------------------------
-# Validation
+# Phase A: the screen
+# --------------------------------------------------------------------------
+
+STRICT = "strict"
+MEASURED = "measured"
+
+
+@dataclass
+class Screen:
+    """Which tests changed verdict across the transition, and in what way.
+
+    This is the ground truth a task rests on, and it replaces every static
+    guess about which tests "belong" to a change. Two classes are counted
+    separately because they are not equally strong evidence:
+
+    ``ran_and_failed``
+        The test executed against the pre-change code and failed on an
+        assertion or an exception raised from inside the repository, then
+        passed against the reference. Nothing is inferred anywhere.
+
+    ``absent_before``
+        The test could not be collected before the change, because its file
+        imports a name the change introduces. The feature really is missing —
+        but the evidence is file-level rather than test-level, since pytest
+        never reached the test body. Whether this counts is a reading of the
+        brief's "a failure caused by an import error ... does not count", so it
+        is recorded either way and a policy decides.
+    """
+
+    ran_and_failed: list[str] = field(default_factory=list)
+    absent_before: list[str] = field(default_factory=list)
+    failed_on_load: list[str] = field(default_factory=list)
+    passing_both: int = 0
+    collection_errors: list[str] = field(default_factory=list)
+
+    def designated(self, policy: str) -> list[str]:
+        if policy == MEASURED:
+            return sorted(set(self.ran_and_failed) | set(self.absent_before))
+        return sorted(self.ran_and_failed)
+
+    def rejection(self, policy: str) -> str:
+        if policy == STRICT and self.absent_before:
+            return "only_uncollectable_tests_changed_verdict"
+        return "no_test_changed_verdict"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "screen": {
+                "ran_and_failed": sorted(self.ran_and_failed),
+                "absent_before": sorted(self.absent_before),
+                "failed_on_load": sorted(self.failed_on_load),
+                "passing_both": self.passing_both,
+                "collection_errors": sorted(self.collection_errors)[:10],
+            }
+        }
+
+
+def screen_transition(
+    before: RunOutcome, after: RunOutcome, *, policy: str = STRICT
+) -> Screen:
+    """Compare the two full runs and classify every verdict change.
+
+    Designation is by measurement rather than by which files the diff touched.
+    That matters in both directions: glom's Python 3.12 sweep rewrote two dozen
+    test bodies without changing a single outcome, and a bug fix whose failing
+    test was already committed changes an outcome without touching a test file
+    at all. Only the run knows.
+    """
+    del policy  # classification is policy-free; only designation is not
+    screen = Screen()
+    before_results = before.report.results
+    passing_after = after.report.passing()
+
+    for test_id in sorted(passing_after):
+        result = before_results.get(test_id)
+        if result is None:
+            screen.absent_before.append(test_id)
+        elif result.status == PASSED:
+            screen.passing_both += 1
+        elif result.failure_class in {ASSERTION, BEHAVIORAL_EXCEPTION}:
+            screen.ran_and_failed.append(test_id)
+        else:
+            screen.failed_on_load.append(test_id)
+
+    screen.collection_errors = sorted(
+        test_id
+        for test_id, result in before_results.items()
+        if result.failure_class == INFRASTRUCTURE
+    )
+    return screen
+
+
+# --------------------------------------------------------------------------
+# Phase B: the gates
 # --------------------------------------------------------------------------
 
 
@@ -326,6 +403,7 @@ def validate_task(
     *,
     evaluation_tree: Path,
     repeats: int = DEFAULT_REPEATS,
+    policy: str = STRICT,
 ) -> BuiltTask:
     """Run every gate and record both the verdicts and the runs behind them."""
     evidence = built.task_root / "evidence"
@@ -337,28 +415,6 @@ def validate_task(
         built.rejected = f"reference_run_failed: {after_full.infrastructure_failure}"
         return built
 
-    observed = set(after_full.report.results)
-    considered, missing = resolve_targets(
-        solution_dir, built.detail.get("designated", {}), observed
-    )
-    built.detail["considered_tests"] = considered
-    built.detail["unresolved_targets"] = missing
-    if not considered:
-        built.rejected = "no_target_test_resolved"
-        return built
-
-    # Collateral is a question about the *unmodified* pre-change tree: did the
-    # reference solution break something that was passing before? Measuring it
-    # on the evaluation tree was wrong — that tree carries the post-change test
-    # files, so a verifier that cannot even import yet destroys the baseline
-    # along with the fail-before evidence, and two unrelated questions fail
-    # together.
-    baseline_full = runner.execute(built.task_root / "input", evidence, "baseline_full")
-    built.outcomes.append(baseline_full)
-    if not baseline_full.usable:
-        built.rejected = f"baseline_run_failed: {baseline_full.infrastructure_failure}"
-        return built
-
     before_full = runner.execute(evaluation_tree, evidence, "before_full")
     built.outcomes.append(before_full)
     if not before_full.usable:
@@ -366,26 +422,26 @@ def validate_task(
         built.detail["fail_before_detail"] = before_full.detail
         return built
 
-    # Designate by measurement, not by assumption. A change touches tests for
-    # reasons that have nothing to do with behaviour — glom's Python 3.12 pull
-    # request rewrote `class X(object):` to `class X:` and `set([])` to `set()`
-    # across two dozen tests, all of which pass against the old source. Treating
-    # every touched test as a target would sink genuine candidates on one
-    # cosmetic edit, and would credit a modernisation sweep as a task.
-    #
-    # So the designated set is exactly the touched tests that actually fail for
-    # a behavioural reason. The rest are not discarded: they stay in the full
-    # before/after comparison, where the collateral gate still requires them to
-    # keep passing.
-    resolved = sorted(
-        test_id
-        for test_id in considered
-        if _fails_behaviourally(before_full.report, test_id)
-    )
+    # --- Phase A ends here. Two runs have answered the only question that
+    # decides whether this candidate can be a task at all, and a rejection
+    # below costs nothing further.
+    screen = screen_transition(before_full, after_full, policy=policy)
+    built.detail.update(screen.to_dict())
+    resolved = screen.designated(policy)
     built.targets = resolved
-    built.detail["considered_not_designated"] = sorted(set(considered) - set(resolved))
     if not resolved:
-        built.rejected = "no_touched_test_fails_before"
+        built.rejected = screen.rejection(policy)
+        return built
+
+    # Collateral is a question about the *unmodified* pre-change tree: did the
+    # reference solution break something that was passing before? Measuring it
+    # on the evaluation tree was wrong — that tree carries the post-change test
+    # files, so a verifier that cannot import yet destroys the baseline along
+    # with the fail-before evidence, and two unrelated questions fail together.
+    baseline_full = runner.execute(built.task_root / "input", evidence, "baseline_full")
+    built.outcomes.append(baseline_full)
+    if not baseline_full.usable:
+        built.rejected = f"baseline_run_failed: {baseline_full.infrastructure_failure}"
         return built
 
     before_targets: list[RunOutcome] = []
@@ -455,20 +511,6 @@ def _deliberately_removed(
         if pytest_argument(built.task_root / "input", test_id).split("::", 1)[0] in rewritten
     }
 
-
-def _fails_behaviourally(report: RunReport, test_id: str) -> bool:
-    """Whether this test failed, and for a reason the brief accepts.
-
-    An import error, a collection error or a syntax error means the code never
-    loaded, so no behaviour was ever exercised — the brief excludes exactly that
-    category, and a test that failed that way must not be designated.
-    """
-    result = report.results.get(test_id)
-    return (
-        result is not None
-        and result.status == "failed"
-        and result.failure_class in {ASSERTION, BEHAVIORAL_EXCEPTION}
-    )
 
 
 def scope_files(
@@ -548,6 +590,8 @@ def _reset(directory: Path) -> None:
 
 
 __all__ = [
+    "MEASURED",
+    "STRICT",
     "BuiltTask",
     "DEFAULT_REPEATS",
     "EXCISION",
@@ -558,7 +602,7 @@ __all__ = [
     "changed_test_functions",
     "collected_tests",
     "plan_excision",
-    "resolve_targets",
+    "screen_transition",
     "scope_files",
     "stage_excision_task",
     "stage_history_task",

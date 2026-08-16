@@ -87,6 +87,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--repeats", type=int, default=2, help="Fresh repeats per side for the determinism gate"
     )
     validate_parser.add_argument("--only", choices=("history", "excision"), default=None)
+    validate_parser.add_argument(
+        "--import-policy", choices=("strict", "measured"), default="strict",
+        help="Whether a verifier that could not be collected before the change "
+             "counts as failing (default: strict, it does not)",
+    )
     enrich_parser = subparsers.add_parser(
         "enrich", help="Build coverage, per-file semantic cards, and the repository blueprint"
     )
@@ -138,6 +143,7 @@ def main(arguments: list[str] | None = None) -> int:
                     excision_limit=namespace.excision_limit,
                     repeats=namespace.repeats,
                     only=namespace.only,
+                    policy=namespace.import_policy,
                 )
             )
         elif namespace.command == "enrich":
@@ -311,6 +317,7 @@ def _print_mining_result(report: dict) -> int:
 def _print_validation_result(report: dict) -> int:
     print(f"Repository: {report['repository_root']}")
     print(f"Runner: {report['backend']} ({report['image']})")
+    print(f"Import policy: {report['policy']}")
     for name, entry in report["by_source"].items():
         print(
             f"{name.capitalize()}: {entry['eligible']} eligible of {entry['attempted']} "

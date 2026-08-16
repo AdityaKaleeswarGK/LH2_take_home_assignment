@@ -738,6 +738,7 @@ def build_validation_artifacts(
     excision_limit: int = 8,
     repeats: int = 2,
     only: str | None = None,
+    policy: str = "strict",
 ) -> dict[str, Any]:
     """Stage the ranked candidates and put each through every gate."""
     from stress_stack.candidates import EXCISION, HISTORY, load_candidates
@@ -782,6 +783,7 @@ def build_validation_artifacts(
             runner,
             limit=limit,
             repeats=repeats,
+            policy=policy,
         )
         built.extend(results)
         summaries[name] = summary.to_dict()
@@ -804,6 +806,7 @@ def build_validation_artifacts(
         "repository_root": str(repository.root),
         "backend": runner.backend,
         "image": runner.image,
+        "policy": policy,
         "by_source": summaries,
         "summary": combined.to_dict(),
         "eligible": [task.task_id for task in built if task.eligible],
