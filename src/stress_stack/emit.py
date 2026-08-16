@@ -199,16 +199,34 @@ def emit_bundle(
             pr_body=bodies.get(int((task.get("signals") or {}).get("pr_number") or 0), ""),
         )
         written = mechanical_instruction(task, evidence)
+        origin = "mechanical"
+        generated_meta: dict[str, Any] = {}
 
         diff_path = task_root / "goldenSolution.diff"
         diff = diff_path.read_text(encoding="utf-8") if diff_path.is_file() else ""
         input_dir = task_root / "input"
-        report = leak_check(
-            written["instruction"],
-            diff,
-            base_identifiers(input_dir),
-            base_source_text(input_dir),
-        )
+        names = base_identifiers(input_dir)
+        text = base_source_text(input_dir)
+        report = leak_check(written["instruction"], diff, names, text)
+
+        # The template is the floor. Generated prose has to clear the same leak
+        # check to replace it, and anything else — a model error, a short or
+        # unusable answer, a leak — leaves the template standing.
+        if client is not None and report.clean:
+            produced = generated_instruction(
+                client,
+                task,
+                evidence,
+                diff=diff,
+                base_names=names,
+                base_text=text,
+                written_so_far="\n".join(f"- {entry['title']}" for entry in entries[-4:]),
+            )
+            if produced is not None:
+                written, generated_meta = produced
+                origin = "generated"
+                report = leak_check(written["instruction"], diff, names, text)
+
         if not report.clean:
             leaks.append(task_id)
 

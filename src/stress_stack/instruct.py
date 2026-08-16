@@ -324,8 +324,12 @@ def generated_instruction(
         )
 
     try:
+        # Budgeted for a reasoning model, which spends tokens thinking before
+        # emitting a character. At 2000 two of glom's ten tasks came back having
+        # consumed the entire budget on reasoning and produced no content at
+        # all — a truncation that arrives as a successful 200.
         payload, completion = client.complete_json(
-            messages, schema=INSTRUCTION_SCHEMA, role=role, max_tokens=2000
+            messages, schema=INSTRUCTION_SCHEMA, role=role, max_tokens=8000
         )
     except (ModelError, Exception) as exc:  # noqa: BLE001 - any failure keeps the template
         return None if isinstance(exc, ModelError) else None
