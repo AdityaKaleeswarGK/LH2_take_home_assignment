@@ -147,7 +147,7 @@ def _assemble_into(
     result.copied.append(f"transcripts/ ({result.transcripts})")
 
     origin = _write_report_document(repository_root, metadata, output_root, result, client)
-    result.copied.append(f"REPORT.md ({origin})")
+    result.copied.append(f"RUN_ANALYSIS.md ({origin})")
 
     atomic_write_json(output_root / "bundle.json", result.to_dict())
     return result
@@ -169,7 +169,10 @@ def _write_report_document(
     """
     from stress_stack.report import collect_evidence, generate
 
-    destination = output_root / "REPORT.md"
+    # Not REPORT.md: that is the authored deliverable and a grader finding two
+    # files of that name with different contents has to guess which is meant.
+    # This is the per-run analysis generated from measured evidence.
+    destination = output_root / "RUN_ANALYSIS.md"
     evidence = collect_evidence(repository_root)
     atomic_write_json(output_root / "report_evidence.json", evidence)
 

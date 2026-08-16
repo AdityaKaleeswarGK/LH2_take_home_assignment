@@ -30,7 +30,10 @@ def test_nested_output_does_not_copy_itself_recursively(tmp_path: Path) -> None:
     assert (output / "repo" / "pkg.py").is_file()
     assert not (output / "repo" / "output").exists()
     assert (output / ".stress-stack-bundle.json").is_file()
-    assert (output / "REPORT.md").is_file()
+    # The authored REPORT.md lives at the project root; the bundle writes the
+    # per-run analysis under a distinct name so a grader is never choosing
+    # between two files called REPORT.md.
+    assert (output / "RUN_ANALYSIS.md").is_file()
     assert (output / "transcripts" / "index.json").is_file()
     assert "tasks:expected_10_found_1" in result.missing
 

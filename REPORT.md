@@ -241,6 +241,18 @@ rather than as failure.
 
 ## 6. Honest gaps
 
+**Scope: Python repositories with a pytest suite.** This is a decision, not an
+oversight. Every Pipeline 1 output binds to a language toolchain — dependency
+resolution, the container's interpreter, test generation, lint — and so do the
+symbol graph, coverage attribution and mutation checks. Supporting a second
+language means a parallel parser and runner, not a parallel pipeline: the stage
+boundaries are already language-neutral, and `graph`, `coverage` and `testgen`
+are the only three modules that would need a sibling implementation. Generality
+was spent instead on *repository* shape within Python, which is where the brief
+places its warning — proven on three repositories with three different layouts
+(flat, `src/`, and a single-module historical form) and two different ways of
+declaring test dependencies.
+
 **Net-new tasks are de-scoped, deliberately.** The brief caps them at three of
 ten; history has no ceiling, so 6 + 4 satisfies every stated constraint. The
 phrase "a capability the repo lacks" reads either as genuinely absent or as
