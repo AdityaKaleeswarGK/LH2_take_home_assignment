@@ -274,3 +274,75 @@ def build_evidence(
         "targets": task.get("targets") or [],
         "files_in_scope": task.get("files_in_scope") or [],
     }
+
+
+def generated_instruction(
+    client: Any,
+    task: dict[str, Any],
+    evidence: dict[str, Any],
+    *,
+    diff: str,
+    base_names: set[str],
+    base_text: str,
+    written_so_far: str = "",
+    role: str = "worker",
+) -> tuple[dict[str, str], dict[str, Any]] | None:
+    """Ask a model to phrase the instruction, and keep it only if it is clean.
+
+    The model sees the same evidence the mechanical writer does and nothing
+    more — no diff, no solution tree, no source of the changed functions. Its
+    output then goes through the identical leak check, so generated prose is
+    held to the standard the template meets by construction rather than to a
+    weaker one. A failure returns ``None`` and the template stands, which is why
+    the deliverable never depends on a model being reachable.
+    """
+    from stress_stack.openrouter import ModelError
+    from stress_stack.prompts import INSTRUCTION_SCHEMA, instruction_messages
+
+    contract = [line for line in [evidence.get("signature"), evidence.get("docstring")] if line]
+    messages = instruction_messages(
+        behaviour=(
+            f"{evidence.get('module_purpose', '')}\n"
+            f"{evidence.get('change_summary', '')}\n"
+            f"The verifier checks: {behaviour_summary(task.get('targets') or [])}."
+        ).strip(),
+        feature=task.get("primary_module") or "",
+        contract_lines=contract,
+        verifier_tests=[humanise(test_id) for test_id in (task.get("targets") or [])],
+    )
+    if written_so_far:
+        messages.append(
+            {
+                "role": "user",
+                "content": (
+                    "# Task statements already written for this set\n"
+                    f"{written_so_far}\n\n"
+                    "Avoid reusing their phrasing. This is context about the set, "
+                    "not a requirement to match or differ from any of them."
+                ),
+            }
+        )
+
+    try:
+        payload, completion = client.complete_json(
+            messages, schema=INSTRUCTION_SCHEMA, role=role, max_tokens=2000
+        )
+    except (ModelError, Exception) as exc:  # noqa: BLE001 - any failure keeps the template
+        return None if isinstance(exc, ModelError) else None
+
+    text = str(payload.get("instruction") or "").strip()
+    title = str(payload.get("title") or "").strip()
+    if len(text) < 80:
+        return None
+    report = leak_check(text, diff, base_names, base_text)
+    if not report.clean:
+        return None
+    return (
+        {"title": title or task.get("title") or task["task_id"], "instruction": text},
+        {
+            "leak_check": report.to_dict(),
+            "model": completion.model,
+            "cached": completion.cached,
+            "cache_key": completion.cache_key,
+        },
+    )

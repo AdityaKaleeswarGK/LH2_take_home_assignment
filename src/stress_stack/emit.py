@@ -19,7 +19,12 @@ from pathlib import Path
 from typing import Any
 
 from stress_stack.atomic import atomic_write_json
-from stress_stack.instruct import build_evidence, leak_check, mechanical_instruction
+from stress_stack.instruct import (
+    build_evidence,
+    generated_instruction,
+    leak_check,
+    mechanical_instruction,
+)
 from stress_stack.selection import Quota, score_difficulty, select
 
 SCHEMA_VERSION = "0.1.0"
@@ -167,6 +172,7 @@ def emit_bundle(
     tasks_root: Path,
     manifest_path: Path,
     history_root: Path | None = None,
+    client: Any | None = None,
 ) -> dict[str, Any]:
     """Write each task's statement and manifest, then the top-level manifest."""
     by_id = {task["task_id"]: task for task in eligible}
@@ -211,7 +217,8 @@ def emit_bundle(
             "source": task["source"],
             "title": written["title"],
             "instruction": written["instruction"],
-            "instruction_origin": "mechanical",
+            "instruction_origin": origin,
+            "generation": generated_meta,
             "leak_check": report.to_dict(),
             "difficulty": difficulty.get(task_id, {}),
             "primary_module": task.get("primary_module"),

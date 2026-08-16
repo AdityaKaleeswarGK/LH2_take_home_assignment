@@ -835,7 +835,9 @@ def build_selection_artifacts(source_value: str, *, cwd: Path | None = None) -> 
             **selection}
 
 
-def build_emission_artifacts(source_value: str, *, cwd: Path | None = None) -> dict[str, Any]:
+def build_emission_artifacts(
+    source_value: str, *, cwd: Path | None = None, use_model: bool = True
+) -> dict[str, Any]:
     """Write each task's statement and manifest, then tasks.json."""
     from stress_stack.emit import emit_bundle, load_eligible, run_selection
 
@@ -852,6 +854,12 @@ def build_emission_artifacts(source_value: str, *, cwd: Path | None = None) -> d
             "No validated tasks found. Run `stress-stack validate` before emitting."
         )
     graph = build_graph(repository.root)
+    client = None
+    if use_model:
+        from stress_stack.openrouter import OpenRouterClient
+
+        candidate_client = OpenRouterClient(cache_dir=metadata_root / "cache" / "llm")
+        client = candidate_client if candidate_client.configured else None
     # Recomputed, never reused. Selection is deterministic and cheap, and
     # reading a stale report silently emitted tasks whose difficulty
     # justifications predated a fix to how they are written.
@@ -864,6 +872,7 @@ def build_emission_artifacts(source_value: str, *, cwd: Path | None = None) -> d
         tasks_root,
         metadata_root / "tasks.json",
         history_root=metadata_root / "history",
+        client=client,
     )
     update_stage(metadata_root, "task_generation", "emitted")
     return {

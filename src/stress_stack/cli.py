@@ -22,6 +22,7 @@ from stress_stack.graph import (
     build_validation_artifacts,
 )
 from stress_stack.hygiene import HygieneResult, run_hygiene
+from stress_stack.pipeline import PipelineResult, run_pipeline
 from stress_stack.ingest import ingest
 
 _SOURCE_HELP = (
@@ -94,6 +95,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Whether a verifier that could not be collected before the change "
              "counts as failing (default: strict, it does not)",
     )
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Run every stage in dependency order and emit the task bundle",
+    )
+    run_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
+    run_parser.add_argument("--history-limit", type=int, default=30)
+    run_parser.add_argument("--excision-limit", type=int, default=12)
+    run_parser.add_argument("--repeats", type=int, default=2)
+    run_parser.add_argument(
+        "--skip", action="append", default=[], metavar="STAGE",
+        help="Skip a stage by name; repeatable (e.g. --skip enrich)",
+    )
     select_parser = subparsers.add_parser(
         "select",
         help="Choose the final ten under the brief's quotas and record compliance",
@@ -156,6 +169,17 @@ def main(arguments: list[str] | None = None) -> int:
                     repeats=namespace.repeats,
                     only=namespace.only,
                     policy=namespace.import_policy,
+                )
+            )
+        elif namespace.command == "run":
+            return _print_pipeline(
+                run_pipeline(
+                    namespace.source,
+                    cwd=Path.cwd(),
+                    history_limit=namespace.history_limit,
+                    excision_limit=namespace.excision_limit,
+                    repeats=namespace.repeats,
+                    skip=tuple(namespace.skip),
                 )
             )
         elif namespace.command == "select":
@@ -348,6 +372,24 @@ def _print_validation_result(report: dict) -> int:
     print(f"Tasks: {report['tasks_root']}")
     print(f"Evidence: {report['knowledge_root']}/validation.json")
     return 0 if summary["eligible"] else 1
+
+
+def _print_pipeline(result: PipelineResult) -> int:
+    print(f"Repository: {result.repository_root or '(not resolved)'}")
+    for stage in result.stages:
+        line = f"  {stage.name:<10} {stage.status:<9} {stage.seconds:>7.1f}s"
+        print(line if not stage.detail else f"{line}  {stage.detail.splitlines()[0][:90]}")
+    manifest = result.manifest
+    if manifest:
+        print(f"Tasks: {manifest.get('task_count')} {manifest.get('by_source')}")
+        print(
+            f"Modules: {manifest.get('distinct_modules')} | "
+            f"difficulty {manifest.get('difficulty_spread')} | "
+            f"quota satisfied {manifest.get('quota_satisfied')}"
+        )
+        print(f"Leaking instructions: {manifest.get('instructions_leaking') or 'none'}")
+    print(f"Pipeline: {'ok' if result.ok else 'failed'}")
+    return 0 if result.ok and manifest.get("quota_satisfied") else 1
 
 
 def _print_selection(report: dict) -> int:
