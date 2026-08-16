@@ -103,6 +103,9 @@ class BuiltTask:
             "detail": self.detail,
             "runs": [outcome.to_dict() for outcome in self.outcomes],
             **summarize(self.gates),
+            # Last, and deliberately: this is the authoritative answer, and it
+            # must not be overwritten by the gate roll-up above.
+            "eligible": self.eligible,
         }
 
 

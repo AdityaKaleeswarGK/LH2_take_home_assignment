@@ -149,3 +149,31 @@ def test_collection_errors_are_reported_for_auditing() -> None:
     assert screen_transition(before, after).to_dict()["screen"]["collection_errors"] == [
         "m::broken"
     ]
+
+
+def test_a_task_rejected_before_any_gate_is_not_reported_eligible(tmp_path) -> None:
+    """The artifact and the command line must agree.
+
+    `all()` over an empty verdict list is vacuously true, so a roll-up merged
+    into the task record published `eligible: true` for a candidate that had
+    been rejected before a single gate ran. The command line read the property
+    and said "rejected"; the JSON a grader reads said the opposite.
+    """
+    from stress_stack.candidates import Candidate
+    from stress_stack.tasks import BuiltTask
+    from stress_stack.verification import summarize
+
+    built = BuiltTask(
+        task_id="pr-285",
+        source="history",
+        candidate=Candidate(
+            candidate_id="pr-285", source="history", subject="PR#285",
+            title="Add Python 3.12", modules=["glom.core"], primary_module="glom.core",
+        ),
+        task_root=tmp_path,
+    )
+    built.rejected = "no_test_changed_verdict"
+
+    assert built.eligible is False
+    assert built.to_dict()["eligible"] is False
+    assert summarize([])["all_gates_passed"] is False

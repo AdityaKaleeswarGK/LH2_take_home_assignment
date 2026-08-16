@@ -365,9 +365,19 @@ def gate_verifier_integrity(verifier_files: dict[str, str]) -> GateVerdict:
 
 
 def summarize(verdicts: list[GateVerdict]) -> dict[str, Any]:
+    """Roll up a set of verdicts.
+
+    The key is ``all_gates_passed`` rather than ``eligible`` because those are
+    not the same claim and conflating them published a false one: a candidate
+    rejected before any gate ran has an empty verdict list, ``all()`` over which
+    is vacuously true. Merged into a task record it overwrote the real answer,
+    so the artifact reported a task with no designated tests as eligible while
+    the command line correctly called it rejected. Eligibility needs the
+    rejection reason too, and only the task knows that.
+    """
     failed = [verdict for verdict in verdicts if not verdict.passed]
     return {
-        "eligible": not failed,
+        "all_gates_passed": bool(verdicts) and not failed,
         "failed_gates": [verdict.gate for verdict in failed],
         "reason_codes": [verdict.reason_code for verdict in failed if verdict.reason_code],
         "gates": [verdict.to_dict() for verdict in verdicts],

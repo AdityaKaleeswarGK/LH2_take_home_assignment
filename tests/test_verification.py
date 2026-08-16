@@ -227,7 +227,7 @@ def test_summary_lists_every_failed_gate() -> None:
     ]
     summary = summarize(verdicts)
 
-    assert summary["eligible"] is False
+    assert summary["all_gates_passed"] is False
     assert summary["failed_gates"] == ["fail_before"]
     assert summary["reason_codes"] == ["failed_for_wrong_reason"]
 
