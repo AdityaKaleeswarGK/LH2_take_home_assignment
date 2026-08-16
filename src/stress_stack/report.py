@@ -113,6 +113,9 @@ def collect_evidence(repository_root: Path) -> dict[str, Any]:
     testgen = _read_json(metadata / "test_generation" / "test_generation.json")
     pipeline = _read_json(metadata / "pipeline_run.json")
     graph = _read_json(knowledge / "repo_graph.json")
+    blueprint = _read_json(knowledge / "blueprint.json")
+    enrichment = _read_json(knowledge / "enrichment.json")
+    index = _read_json(knowledge / "index.json")
 
     return {
         "repository": repository_root.name,
@@ -126,6 +129,58 @@ def collect_evidence(repository_root: Path) -> dict[str, Any]:
             "maximum_net_new": 3,
             "minimum_distinct_modules": 4,
             "scale_question_repositories": 100,
+        },
+        # What the repository actually is, so the report can describe the
+        # subject rather than only the process. This is the generated knowledge
+        # layer being consumed as machine input, which is what Pipeline 2 exists
+        # for.
+        "repository_purpose": blueprint.get("project_purpose"),
+        "repository_features": [
+            {
+                "name": feature.get("name"),
+                "definition": feature.get("definition"),
+                "files": feature.get("files"),
+            }
+            for feature in (blueprint.get("features") or [])
+            if isinstance(feature, dict)
+        ],
+        "blueprint_grounding": (blueprint.get("_meta") or {}).get("status"),
+        "enrichment": {
+            "cards": (enrichment.get("cards") or {}).get("files"),
+            "grounded_cards": (enrichment.get("cards") or {}).get("grounded"),
+            "model_usage": enrichment.get("usage"),
+        },
+        "knowledge_index": {
+            "tests": index.get("tests"),
+            "coverage_rows": index.get("coverage_rows"),
+            "modules_exercised": len(index.get("module_test_matrix") or {}),
+        },
+        # What each gate proves, and which outcome is the passing one. Stating
+        # only what is checked was not enough: given "renaming private symbols
+        # still leaves the verifier passing", the model reported the
+        # alternative-implementation gate as a weakness, having read the pass
+        # condition as a failure to discriminate. Each entry now says what a
+        # pass means.
+        "gate_semantics": {
+            "_reading": "Every gate listed here PASSES for the task to ship. A "
+            "task appearing in the deliverable satisfied all of them.",
+            "fail_before": "designated tests fail against input/, for an assertion "
+            "or an exception raised from repository code — not an import or "
+            "collection error",
+            "pass_after": "the same tests pass against solution/",
+            "collateral": "every test passing on the unmodified pre-change tree "
+            "still passes under the reference solution",
+            "determinism_before/after": "repeated fresh container runs agree on "
+            "test ids, statuses and failure signatures",
+            "verifier_integrity": "the verifier cannot read the answer — no git "
+            "history, no solution path, no diff artifact",
+            "solver_bundle": "input/ carries no .git, no diff and no stale bytecode",
+            "alternative_implementation": "PASSES when a semantics-preserving "
+            "rename of the private symbols the change introduced leaves the "
+            "verifier still passing — that is the evidence the verifier tests "
+            "behaviour rather than internal structure. It FAILS when the rename "
+            "breaks the verifier, which would mean a different but correct "
+            "implementation could not pass it.",
         },
         "pipeline_stages": [
             {"stage": s.get("stage"), "status": s.get("status"), "seconds": s.get("seconds")}
@@ -228,6 +283,19 @@ def collect_evidence(repository_root: Path) -> dict[str, Any]:
             "quota_satisfied": manifest.get("quota_satisfied"),
             "shortfalls": manifest.get("shortfalls"),
             "instructions_leaking": manifest.get("instructions_leaking"),
+            "shipped_tasks": [
+                {
+                    "id": task.get("id"),
+                    "source": task.get("source"),
+                    "title": task.get("title"),
+                    "module": task.get("primary_module"),
+                    "difficulty": (task.get("difficulty") or {}).get("tier"),
+                    "justification": (task.get("difficulty") or {}).get("justification"),
+                    "provenance_kind": (task.get("provenance") or {}).get("kind"),
+                    "verifier_tests": len((task.get("verifier") or {}).get("node_ids") or []),
+                }
+                for task in manifest.get("tasks") or []
+            ],
             "instruction_origins": sorted(
                 {task.get("instruction_origin") for task in manifest.get("tasks") or []}
             ),
@@ -325,7 +393,7 @@ def generate(
     ]
     try:
         payload, completion = client.complete_json(
-            messages, schema=REPORT_SCHEMA, role=role, max_tokens=16000
+            messages, schema=REPORT_SCHEMA, role=role, max_tokens=32000
         )
     except ModelError as exc:
         return None, {"fell_back": "model_error", "detail": str(exc)[:200]}

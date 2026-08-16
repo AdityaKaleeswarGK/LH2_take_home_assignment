@@ -427,6 +427,24 @@ def emit_bundle(
             golden_solution_markdown(task, diff, provenance), encoding="utf-8"
         )
 
+        # The brief describes verifier/ as "tests + run command that decide
+        # pass/fail". Recording the command only in task.json satisfies the
+        # letter and not the shape: the directory should be self-contained.
+        verifier_root = task_root / "verifier"
+        verifier_root.mkdir(parents=True, exist_ok=True)
+        (verifier_root / "run.sh").write_text(
+            "#!/usr/bin/env bash\n"
+            "# Copy input/ elsewhere, lay these files over it, and run this from\n"
+            "# the tree root. These ids must fail before the change, pass after.\n"
+            "set -euo pipefail\n"
+            + " ".join(command)
+            + "\n",
+            encoding="utf-8",
+        )
+        (verifier_root / "targets.txt").write_text(
+            "\n".join(task.get("targets") or []) + "\n", encoding="utf-8"
+        )
+
         record = {
             "id": task_id,
             "source": task["source"],
