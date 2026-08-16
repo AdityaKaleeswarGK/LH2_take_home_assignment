@@ -164,3 +164,21 @@ def test_a_history_instruction_uses_sanitised_prose() -> None:
     assert "Adds lazy iteration." in written["instruction"]
     assert "_chunked" not in written["instruction"]
     assert "iter basic" in written["instruction"]
+
+
+def test_the_signature_is_not_reported_as_copied_code() -> None:
+    """An excision instruction must name its own contract.
+
+    glom's GROUP body calls something with the same argument names as GROUP
+    itself, so the signature the instruction is required to state collided with
+    the removed body and was flagged as a copy.
+    """
+    base = "def GROUP(target, spec, scope):\n    ...\n"
+    diff = "+def GROUP(target, spec, scope):\n+    return _group(target, spec, scope)\n"
+    instruction = "The body of `GROUP(target, spec, scope)` has been removed."
+
+    assert leak_check(instruction, diff, set(), base).clean is True
+    # A span genuinely absent from the base tree is still caught.
+    assert leak_check(
+        "Call return _group(target, spec, scope) directly.", diff, set(), base
+    ).clean is False

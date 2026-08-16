@@ -858,7 +858,12 @@ def build_emission_artifacts(source_value: str, *, cwd: Path | None = None) -> d
     selection = run_selection(eligible, graph)
     atomic_write_json(knowledge_root / "selection_report.json", selection)
     manifest = emit_bundle(
-        selection, eligible, graph, tasks_root, metadata_root / "tasks.json"
+        selection,
+        eligible,
+        graph,
+        tasks_root,
+        metadata_root / "tasks.json",
+        history_root=metadata_root / "history",
     )
     update_stage(metadata_root, "task_generation", "emitted")
     return {

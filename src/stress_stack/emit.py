@@ -52,6 +52,46 @@ def lookalike_counts(graph_symbols: list[str], tasks: list[dict[str, Any]]) -> d
     return counts
 
 
+def pull_request_bodies(history_root: Path) -> dict[int, str]:
+    """Pull request descriptions, keyed by number.
+
+    Mining records the body's *length* as a difficulty signal but not its text,
+    since nothing in mining needs prose. The instruction writer does, and the
+    ingested history already holds it — cheaper to read here than to widen the
+    candidate record and re-validate.
+    """
+    path = history_root / "pull_requests.jsonl"
+    if not path.is_file():
+        return {}
+    bodies: dict[int, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(record.get("number"), int):
+            bodies[record["number"]] = str(record.get("body") or "")
+    return bodies
+
+
+def base_source_text(input_dir: Path, *, limit: int = 4_000_000) -> str:
+    """The pre-change tree as one blob, for the copied-span check to exclude."""
+    chunks: list[str] = []
+    total = 0
+    for path in sorted(input_dir.rglob("*.py")):
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        chunks.append(text)
+        total += len(text)
+        if total > limit:
+            break
+    return "\n".join(chunks)
+
+
 def base_identifiers(input_dir: Path) -> set[str]:
     """Every name defined in the pre-change tree.
 
@@ -126,10 +166,12 @@ def emit_bundle(
     graph: Any,
     tasks_root: Path,
     manifest_path: Path,
+    history_root: Path | None = None,
 ) -> dict[str, Any]:
     """Write each task's statement and manifest, then the top-level manifest."""
     by_id = {task["task_id"]: task for task in eligible}
     purposes = module_purposes(graph)
+    bodies = pull_request_bodies(history_root) if history_root else {}
     difficulty = selection["difficulty"]
     entries: list[dict[str, Any]] = []
     leaks: list[str] = []
@@ -148,14 +190,18 @@ def emit_bundle(
             signature=contract["signature"],
             docstring=contract["docstring"],
             qualified_name=contract["qualified_name"],
-            pr_body=str((task.get("signals") or {}).get("body") or ""),
+            pr_body=bodies.get(int((task.get("signals") or {}).get("pr_number") or 0), ""),
         )
         written = mechanical_instruction(task, evidence)
 
         diff_path = task_root / "goldenSolution.diff"
         diff = diff_path.read_text(encoding="utf-8") if diff_path.is_file() else ""
+        input_dir = task_root / "input"
         report = leak_check(
-            written["instruction"], diff, base_identifiers(task_root / "input")
+            written["instruction"],
+            diff,
+            base_identifiers(input_dir),
+            base_source_text(input_dir),
         )
         if not report.clean:
             leaks.append(task_id)
@@ -191,6 +237,20 @@ def emit_bundle(
         atomic_write_json(task_root / "task.json", record)
         entries.append({key: record[key] for key in record if key != "gates"})
 
+    # A previous selection leaves its statements behind. Validation owns the
+    # trees and keeps them all as evidence, but a task.json is a claim that this
+    # task ships — and after a re-run the pool can shift, which left glom with
+    # thirteen statements on disk beside a manifest listing ten. Stale claims
+    # are removed so the directory and the manifest cannot disagree.
+    shipped = set(selection["task_ids"])
+    withdrawn: list[str] = []
+    if tasks_root.is_dir():
+        for candidate in sorted(tasks_root.iterdir()):
+            statement = candidate / "task.json"
+            if candidate.is_dir() and statement.is_file() and candidate.name not in shipped:
+                statement.unlink()
+                withdrawn.append(candidate.name)
+
     ledger = selection["ledger"]
     manifest = {
         "schema_version": SCHEMA_VERSION,
@@ -205,6 +265,10 @@ def emit_bundle(
         "difficulty_spread": _spread(difficulty),
         "instructions_leaking": leaks,
         "pool_size": selection["pool_size"],
+        "validated_not_shipped": sorted(
+            task["task_id"] for task in eligible if task["task_id"] not in shipped
+        ),
+        "withdrawn_statements": withdrawn,
         "tasks": entries,
     }
     atomic_write_json(manifest_path, manifest)

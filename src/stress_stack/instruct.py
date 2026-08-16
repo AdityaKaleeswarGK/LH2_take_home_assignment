@@ -94,19 +94,32 @@ def tokens(text: str) -> list[str]:
     return _TOKEN.findall(text or "")
 
 
-def leak_check(instruction: str, diff: str, base_names: set[str]) -> LeakReport:
-    """Two mechanical checks, both derived from artifacts that already exist."""
+def leak_check(
+    instruction: str, diff: str, base_names: set[str], base_text: str = ""
+) -> LeakReport:
+    """Two mechanical checks, both derived from artifacts that already exist.
+
+    ``base_text`` is the pre-change tree. A span that already appears there is
+    not something the change introduced, and repeating it cannot give anything
+    away — the solver is looking at it. Without this the check flagged its own
+    contract: an excision instruction names ``GROUP(target, spec, scope)``,
+    which it must, and glom's removed body calls something with the same
+    argument names, so the signature was reported as copied code.
+    """
     report = LeakReport()
-    instruction_tokens = tokens(instruction)
-    window = " ".join(instruction_tokens).lower()
+    window = " ".join(tokens(instruction)).lower()
+    baseline = " ".join(tokens(base_text)).lower()
 
     for line in added_lines(diff):
         line_tokens = tokens(line)
         for start in range(0, max(0, len(line_tokens) - _LEAK_NGRAM + 1)):
             span = " ".join(line_tokens[start : start + _LEAK_NGRAM]).lower()
-            if span and span in window:
-                report.copied_spans.append(" ".join(line_tokens[start : start + _LEAK_NGRAM]))
-                break
+            if not span or span not in window:
+                continue
+            if baseline and span in baseline:
+                continue
+            report.copied_spans.append(" ".join(line_tokens[start : start + _LEAK_NGRAM]))
+            break
 
     mentioned = set(_IDENTIFIER.findall(instruction or ""))
     for name in sorted(solution_only_names(diff, base_names) & mentioned):
