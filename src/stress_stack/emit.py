@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import ast
 import json
+import re
+import statistics
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +24,7 @@ from stress_stack.atomic import atomic_write_json
 from stress_stack.instruct import (
     build_evidence,
     generated_instruction,
+    instruction_quality,
     leak_check,
     mechanical_instruction,
 )
@@ -117,7 +120,7 @@ def base_identifiers(input_dir: Path) -> set[str]:
     return names
 
 
-def module_purposes(graph: Any) -> dict[str, str]:
+def module_purposes(graph: Any, blueprint_path: Path | None = None) -> dict[str, str]:
     """One line per module, taken from its own docstring.
 
     This is where the generated blueprint would supply a richer sentence. Until
@@ -130,6 +133,25 @@ def module_purposes(graph: Any) -> dict[str, str]:
             if symbol.kind == "module" and symbol.docstring:
                 purposes[parsed.module] = symbol.docstring
                 break
+    # Pipeline 2 is machine input to Pipeline 3: a grounded feature definition
+    # replaces the raw module-docstring fallback for every file it cites.
+    if blueprint_path and blueprint_path.is_file():
+        try:
+            blueprint = json.loads(blueprint_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blueprint = {}
+        if (blueprint.get("_meta") or {}).get("status") == "grounded":
+            module_by_path = {parsed.path: parsed.module for parsed in graph.files}
+            for feature in blueprint.get("features") or []:
+                if not isinstance(feature, dict):
+                    continue
+                definition = str(feature.get("definition") or "").strip()
+                if not definition:
+                    continue
+                for path in feature.get("files") or []:
+                    module = module_by_path.get(str(path))
+                    if module:
+                        purposes[module] = definition
     return purposes
 
 
@@ -249,19 +271,54 @@ def run_selection(
 ) -> dict[str, Any]:
     """Select the ten and score their difficulty, together."""
     symbol_ids = [symbol.id for parsed in graph.files for symbol in parsed.symbols]
-    ledger, report = select(eligible, quota=quota)
+    coherent, rejected = _coherent_pool(eligible)
+    ledger, report = select(coherent, quota=quota)
     chosen_ids = {entry["task_id"] for entry in ledger.entries}
-    chosen = [task for task in eligible if task["task_id"] in chosen_ids]
+    chosen = [task for task in coherent if task["task_id"] in chosen_ids]
     difficulty = score_difficulty(chosen, lookalike_counts(symbol_ids, chosen))
 
     return {
         "schema_version": SCHEMA_VERSION,
         "pool_size": len(eligible),
+        "coherent_pool_size": len(coherent),
+        "quality_rejected": rejected,
         "ledger": ledger.to_dict(),
         "selection": report,
         "difficulty": difficulty,
         "task_ids": [entry["task_id"] for entry in ledger.entries],
     }
+
+
+def _coherent_pool(tasks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Remove history snapshots that are repository maintenance, not one task."""
+    history = [task for task in tasks if task.get("source") == "history"]
+    file_counts = [int((task.get("signals") or {}).get("files_changed") or 0) for task in history]
+    churns = [int((task.get("signals") or {}).get("churn") or 0) for task in history]
+    median_files = statistics.median(file_counts) if file_counts else 0
+    median_churn = statistics.median(churns) if churns else 0
+    file_ceiling = max(25, int(median_files * 4))
+    churn_ceiling = max(2_000, int(median_churn * 6))
+    generic = re.compile(r"^(?:stable|main|master|merge\b|sync\b|release\b)", re.I)
+
+    kept: list[dict[str, Any]] = []
+    rejected: dict[str, str] = {}
+    for task in tasks:
+        if task.get("source") != "history":
+            kept.append(task)
+            continue
+        title = str(task.get("title") or "").strip()
+        signals = task.get("signals") or {}
+        files = int(signals.get("files_changed") or 0)
+        churn = int(signals.get("churn") or 0)
+        if generic.search(title):
+            rejected[str(task["task_id"])] = "generic_or_merge_title"
+        elif files > file_ceiling and churn > churn_ceiling:
+            rejected[str(task["task_id"])] = (
+                f"change_too_broad:{files}_files:{churn}_lines"
+            )
+        else:
+            kept.append(task)
+    return kept, dict(sorted(rejected.items()))
 
 
 def emit_bundle(
@@ -271,15 +328,19 @@ def emit_bundle(
     tasks_root: Path,
     manifest_path: Path,
     history_root: Path | None = None,
+    knowledge_root: Path | None = None,
     client: Any | None = None,
 ) -> dict[str, Any]:
     """Write each task's statement and manifest, then the top-level manifest."""
     by_id = {task["task_id"]: task for task in eligible}
-    purposes = module_purposes(graph)
+    purposes = module_purposes(
+        graph, knowledge_root / "blueprint.json" if knowledge_root else None
+    )
     bodies = pull_request_bodies(history_root) if history_root else {}
     difficulty = selection["difficulty"]
     entries: list[dict[str, Any]] = []
     leaks: list[str] = []
+    invalid_instructions: list[str] = []
 
     for task_id in selection["task_ids"]:
         task = by_id[task_id]
@@ -313,7 +374,7 @@ def emit_bundle(
         # way meant three click tasks shipped a leaking mechanical instruction
         # while the model that could have replaced it was never asked.
         if client is not None:
-            produced = generated_instruction(
+            produced, generated_meta = generated_instruction(
                 client,
                 task,
                 evidence,
@@ -323,9 +384,27 @@ def emit_bundle(
                 written_so_far="\n".join(f"- {entry['title']}" for entry in entries[-4:]),
             )
             if produced is not None:
-                written, generated_meta = produced
+                written = produced
                 origin = "generated"
                 report = leak_check(written["instruction"], diff, names, text)
+            else:
+                origin = "mechanical_model_fallback"
+
+        quality_ok, quality_problems = instruction_quality(
+            written["title"], written["instruction"]
+        )
+        if not quality_ok:
+            written = mechanical_instruction(task, dict(evidence, change_summary=""))
+            origin = "mechanical_quality_fallback"
+            generated_meta = {
+                **generated_meta,
+                "quality_fallback": quality_problems,
+            }
+            quality_ok, quality_problems = instruction_quality(
+                written["title"], written["instruction"]
+            )
+        if not quality_ok:
+            invalid_instructions.append(task_id)
 
         if not report.clean:
             # Last resort: the change summary is the only part of the template
@@ -413,6 +492,7 @@ def emit_bundle(
         "shortfalls": ledger["shortfalls"],
         "difficulty_spread": _spread(difficulty),
         "instructions_leaking": leaks,
+        "instructions_invalid": invalid_instructions,
         "pool_size": selection["pool_size"],
         "validated_not_shipped": sorted(
             task["task_id"] for task in eligible if task["task_id"] not in shipped

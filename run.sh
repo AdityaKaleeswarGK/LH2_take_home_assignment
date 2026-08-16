@@ -5,9 +5,9 @@
 #   ./run.sh /path/to/local/repo
 #
 # Requires Docker running (every verifier runs in a container, with no host
-# fallback) and Python 3.12+. An OpenRouter key is optional: without one the
-# enrichment stage degrades and instructions are written mechanically, and the
-# deliverable is still complete.
+# fallback) and Python 3.12+. OpenRouter is required only when uncovered public
+# callables need generated tests; semantic enrichment and instruction prose
+# otherwise degrade to deterministic source-derived artifacts.
 set -euo pipefail
 
 SOURCE="${1:-}"
@@ -37,6 +37,10 @@ fi
 
 cd "$WORKDIR"
 if [ -n "$PYTHON" ]; then
+    # A clean checkout is a src-layout project and has no committed .venv.
+    # Make that source tree importable instead of requiring a prior editable
+    # install merely to reach the documented entry point.
+    export PYTHONPATH="$HERE/src${PYTHONPATH:+:$PYTHONPATH}"
     exec "$PYTHON" -m stress_stack run "$SOURCE" "$@"
 fi
 exec stress-stack run "$SOURCE" "$@"

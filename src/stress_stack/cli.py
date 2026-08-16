@@ -20,6 +20,7 @@ from stress_stack.graph import (
     build_index_artifacts,
     build_mining_artifacts,
     build_selection_artifacts,
+    build_test_generation_artifacts,
     build_validation_artifacts,
 )
 from stress_stack.hygiene import HygieneResult, run_hygiene
@@ -70,6 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Measure per-test coverage and attribute covered lines to symbols",
     )
     coverage_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
+    testgen_parser = subparsers.add_parser(
+        "testgen", help="Generate and mutation-check tests for uncovered public behavior"
+    )
+    testgen_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
+    testgen_parser.add_argument("--limit", type=int, default=3)
     index_parser = subparsers.add_parser(
         "index",
         help="Project the knowledge artifacts into a queryable SQLite index",
@@ -104,6 +110,9 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--history-limit", type=int, default=30)
     run_parser.add_argument("--excision-limit", type=int, default=12)
     run_parser.add_argument("--repeats", type=int, default=2)
+    run_parser.add_argument(
+        "--output", default="output", help="Destination directory for the final bundle"
+    )
     run_parser.add_argument(
         "--skip", action="append", default=[], metavar="STAGE",
         help="Skip a stage by name; repeatable (e.g. --skip enrich)",
@@ -162,6 +171,12 @@ def main(arguments: list[str] | None = None) -> int:
             return _print_coverage_result(
                 build_coverage_artifacts(namespace.source, cwd=Path.cwd())
             )
+        elif namespace.command == "testgen":
+            return _print_testgen_result(
+                build_test_generation_artifacts(
+                    namespace.source, cwd=Path.cwd(), limit=namespace.limit
+                )
+            )
         elif namespace.command == "index":
             return _print_index_result(build_index_artifacts(namespace.source, cwd=Path.cwd()))
         elif namespace.command == "mine":
@@ -187,6 +202,7 @@ def main(arguments: list[str] | None = None) -> int:
                     excision_limit=namespace.excision_limit,
                     repeats=namespace.repeats,
                     skip=tuple(namespace.skip),
+                    output=namespace.output,
                 )
             )
         elif namespace.command == "bundle":
@@ -332,6 +348,22 @@ def _print_coverage_result(report: dict) -> int:
     return 0 if report["coverage"] == "available" else 1
 
 
+def _print_testgen_result(report: dict) -> int:
+    print(f"Repository: {report['repository_root']}")
+    print(f"Test generation: {report['status']}")
+    if report.get("reason"):
+        print(f"  reason: {report['reason']}")
+    for path in report.get("files") or []:
+        print(f"  + {path}")
+    mutation = report.get("mutation") or {}
+    if mutation:
+        print(
+            f"Mutation caught: {mutation.get('caught')} "
+            f"({mutation.get('failed', 0)} failing tests)"
+        )
+    return 0 if report["status"] in {"generated", "not_needed"} else 1
+
+
 def _print_index_result(report: dict) -> int:
     print(f"Repository: {report['repository_root']}")
     print(
@@ -444,8 +476,13 @@ def _print_emission(report: dict) -> int:
     for problem in report["shortfalls"]:
         print(f"  shortfall: {problem}")
     print(f"Instructions failing the leak check: {report['instructions_leaking'] or 'none'}")
+    print(f"Instructions failing quality checks: {report.get('instructions_invalid') or 'none'}")
     print(f"Manifest: {report['manifest']}")
-    return 0 if report["quota_satisfied"] and not report["instructions_leaking"] else 1
+    return 0 if (
+        report["quota_satisfied"]
+        and not report["instructions_leaking"]
+        and not report.get("instructions_invalid")
+    ) else 1
 
 
 def _print_enrichment(report: dict) -> int:

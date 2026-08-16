@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from stress_stack.graph import blast_radius, build_graph, validate_graph
+from stress_stack.graph import GraphEdge, blast_radius, build_graph, validate_graph
 
 
 def write(root: Path, relative: str, content: str) -> None:
@@ -87,6 +87,24 @@ def test_validation_detects_a_graph_that_no_longer_matches_source(tmp_path: Path
     sample_repository(tmp_path)
     graph = build_graph(tmp_path)
     write(tmp_path, "pkg/api.py", "def entry():\n    return None\n")
+
+    report = validate_graph(graph, tmp_path)
+
+    assert report["status"] == "mismatched"
+    assert report["edge_match_rate"] < 1.0
+
+
+def test_validation_checks_the_edge_expression_not_only_its_endpoints(tmp_path: Path) -> None:
+    sample_repository(tmp_path)
+    graph = build_graph(tmp_path)
+    original = graph.edges[0]
+    graph.edges[0] = GraphEdge(
+        original.kind,
+        original.source,
+        original.target,
+        original.anchor,
+        "THIS EXPRESSION IS FALSE",
+    )
 
     report = validate_graph(graph, tmp_path)
 

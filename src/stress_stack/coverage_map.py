@@ -252,6 +252,14 @@ class CoverageMap:
                 for key, value in sorted(self.symbols.items())
                 if value.covering_tests
             },
+            # Pipeline 1 needs to know what lacks coverage in order to generate
+            # tests. Omitting these records made that mandatory stage
+            # impossible to implement from the persisted knowledge layer.
+            "uncovered_symbols": {
+                key: value.to_dict()
+                for key, value in sorted(self.symbols.items())
+                if not value.covering_tests
+            },
         }
 
 
@@ -296,17 +304,25 @@ def collect(
         "-q",
         "--cov-context=test",
         "--cov-report=",
+        # With no explicit source pytest-cov honours the repository's own
+        # coverage configuration. Supplying --cov=package alongside a project
+        # that sets [run] source/include creates warnings which some suites
+        # promote to errors (pluggy does), preventing coverage.data entirely.
+        "--cov",
     ]
-    arguments += [f"--cov={name}" for name in packages] or ["--cov=."]
+    del packages  # source files are filtered against the graph after collection
+    from stress_stack.pytest_runner import environment_for
+
+    environment = environment_for(repository_root, python)
+    environment["COVERAGE_FILE"] = str(datafile)
     result = run(
         arguments,
         cwd=repository_root,
-        env={
-            "PYTHONPATH": str(repository_root),
-            "COVERAGE_FILE": str(datafile),
-        },
+        env=environment,
         timeout=timeout,
     )
+    if not result.ok:
+        return {}, "unavailable", f"coverage_suite_failed: {result.failure_detail()}"
     if not datafile.exists():
         return {}, "unavailable", f"no_coverage_data: {result.failure_detail()}"
 
@@ -382,7 +398,11 @@ def load(path: Path) -> CoverageMap:
         return CoverageMap(status="unavailable", reason=f"unreadable_coverage_map: {exc}")
 
     coverage_map = CoverageMap(status=str(payload.get("status") or "available"))
-    for symbol_id, record in (payload.get("symbols") or {}).items():
+    records = {
+        **(payload.get("uncovered_symbols") or {}),
+        **(payload.get("symbols") or {}),
+    }
+    for symbol_id, record in records.items():
         coverage_map.symbols[symbol_id] = CoveredSymbol(
             symbol_id=symbol_id,
             path=str(record.get("path") or ""),

@@ -53,7 +53,7 @@ class PipelineResult:
 
     @property
     def ok(self) -> bool:
-        return all(stage.status in {"ok", "skipped"} for stage in self.stages)
+        return all(stage.status in {"ok", "skipped", "degraded"} for stage in self.stages)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -73,6 +73,7 @@ def run_pipeline(
     excision_limit: int = 12,
     repeats: int = 2,
     skip: tuple[str, ...] = (),
+    output: str = "output",
 ) -> PipelineResult:
     """Run the whole thing, from a URL or a path, and return what each stage did."""
     from stress_stack.graph import (
@@ -86,6 +87,7 @@ def run_pipeline(
         build_index_artifacts,
         build_mining_artifacts,
         build_selection_artifacts,
+        build_test_generation_artifacts,
         build_validation_artifacts,
     )
     from stress_stack.hygiene import run_hygiene
@@ -95,16 +97,14 @@ def run_pipeline(
     result = PipelineResult()
     here = {"source": source_value}
 
-    def at(source: str) -> Callable[[], Any]:
-        return lambda: source
-
     stages: list[tuple[str, Callable[[], Any]]] = [
         ("ingest", lambda: ingest(here["source"], cwd=working)),
         ("hygiene", lambda: run_hygiene(here["source"], cwd=working)),
         ("deps", lambda: build_dependency_artifacts(here["source"], cwd=working)),
-        ("container", lambda: build_container_artifacts(here["source"], cwd=working)),
         ("graph", lambda: build_graph_artifacts(here["source"], cwd=working)),
         ("coverage", lambda: build_coverage_artifacts(here["source"], cwd=working)),
+        ("testgen", lambda: build_test_generation_artifacts(here["source"], cwd=working)),
+        ("container", lambda: build_container_artifacts(here["source"], cwd=working)),
         ("enrich", lambda: build_enrichment_artifacts(here["source"], cwd=working)),
         ("index", lambda: build_index_artifacts(here["source"], cwd=working)),
         ("mine", lambda: build_mining_artifacts(here["source"], cwd=working)),
@@ -120,10 +120,11 @@ def run_pipeline(
         ),
         ("select", lambda: build_selection_artifacts(here["source"], cwd=working)),
         ("emit", lambda: build_emission_artifacts(here["source"], cwd=working)),
-        ("bundle", lambda: build_bundle_artifacts(here["source"], cwd=working)),
+        (
+            "bundle",
+            lambda: build_bundle_artifacts(here["source"], cwd=working, output=output),
+        ),
     ]
-    del at
-
     for name, action in stages:
         if name in skip:
             result.stages.append(StageResult(name, "skipped", 0.0, "skipped by request"))
@@ -150,7 +151,18 @@ def run_pipeline(
                 continue
             break
 
-        result.stages.append(StageResult(name, "ok", time.monotonic() - started))
+        semantic_error = _semantic_failure(name, produced)
+        stage_status = "degraded" if semantic_error and name in _OPTIONAL else (
+            "failed" if semantic_error else "ok"
+        )
+        result.stages.append(
+            StageResult(
+                name,
+                stage_status,
+                time.monotonic() - started,
+                semantic_error or "",
+            )
+        )
         # Ingest may have cloned; every later stage must address the clone, not
         # the URL, or each one would try to clone again.
         if name == "ingest":
@@ -160,6 +172,8 @@ def run_pipeline(
                 result.repository_root = root
         if name == "emit" and isinstance(produced, dict):
             result.manifest = produced
+        if semantic_error and name not in _OPTIONAL:
+            break
 
     if result.repository_root:
         atomic_write_json(
@@ -167,3 +181,45 @@ def run_pipeline(
             result.to_dict(),
         )
     return result
+
+
+def _semantic_failure(stage: str, produced: Any) -> str | None:
+    """Turn a returned-but-unsuccessful stage result into a pipeline failure."""
+    if stage == "hygiene" and getattr(produced, "status", None) != "complete":
+        return f"hygiene status is {getattr(produced, 'status', 'unknown')}"
+    if stage == "deps":
+        lock = getattr(produced, "lock", {}) or {}
+        if not getattr(produced, "environment_available", False):
+            return "test environment is unavailable"
+        if not str(lock.get("status") or "").startswith("locked"):
+            return f"dependency lock status is {lock.get('status') or 'unknown'}"
+    if stage == "container" and getattr(produced, "status", None) != "verified":
+        return f"container status is {getattr(produced, 'status', 'unknown')}"
+    if stage == "graph":
+        validation = getattr(produced, "validation", {}) or {}
+        if validation.get("status") != "verified":
+            return f"graph validation status is {validation.get('status') or 'unknown'}"
+    if stage == "coverage" and isinstance(produced, dict):
+        if produced.get("coverage") != "available":
+            return f"coverage is {produced.get('coverage') or 'unavailable'}"
+    if stage == "testgen" and isinstance(produced, dict):
+        if produced.get("status") not in {"generated", "not_needed"}:
+            return f"test generation status is {produced.get('status') or 'unknown'}"
+    if stage == "validate" and isinstance(produced, dict):
+        if int((produced.get("summary") or {}).get("eligible") or 0) < 10:
+            return "fewer than 10 tasks passed validation"
+    if stage == "select" and isinstance(produced, dict):
+        if not (produced.get("ledger") or {}).get("satisfied"):
+            return "task selection did not satisfy the quota"
+    if stage == "emit" and isinstance(produced, dict):
+        if (
+            produced.get("task_count") != 10
+            or not produced.get("quota_satisfied")
+            or produced.get("instructions_leaking")
+            or produced.get("instructions_invalid")
+        ):
+            return "emitted task manifest is incomplete or unsafe"
+    if stage == "bundle" and isinstance(produced, dict):
+        if produced.get("missing") or produced.get("task_count") != 10:
+            return "bundle is missing required artifacts or does not contain 10 tasks"
+    return None

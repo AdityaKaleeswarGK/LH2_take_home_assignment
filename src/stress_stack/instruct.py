@@ -31,6 +31,9 @@ _INDENTED_BLOCK = re.compile(r"(?m)^(?: {4}|\t).*$")
 _DIFF_LINE = re.compile(r"(?m)^[+-][^+-].*$")
 _IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _TOKEN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|[^\sA-Za-z0-9_]")
+_GENERIC_TITLE = re.compile(
+    r"^(?:stable|main|master|merge\b|sync\b|release\b|move to src\b)", re.I
+)
 
 
 @dataclass
@@ -203,6 +206,50 @@ def behaviour_summary(test_ids: list[str], *, limit: int = 8) -> str:
     return "; ".join(phrases[:-1]) + "; and " + phrases[-1]
 
 
+def instruction_quality(title: str, instruction: str) -> tuple[bool, list[str]]:
+    """Cheap structural checks for prose that is safe to ship without a model."""
+    problems: list[str] = []
+    if len(instruction.strip()) < 120:
+        problems.append("too_short")
+    if len(instruction) > 5_000:
+        problems.append("too_long")
+    if _GENERIC_TITLE.search(title.strip()):
+        problems.append("generic_title")
+    if "Implement the behaviour so that" in instruction and " hold." in instruction:
+        problems.append("placeholder_grammar")
+    if instruction.count("[") != instruction.count("]"):
+        problems.append("broken_markdown")
+    if re.search(r"\b(?:TODO|TBD|describe-only constraint)\b", instruction, re.I):
+        problems.append("template_placeholder")
+    return not problems, problems
+
+
+def _scenario_lines(test_ids: list[str], *, limit: int = 10) -> list[str]:
+    return [f"- {humanise(test_id)}" for test_id in test_ids[:limit] if humanise(test_id)]
+
+
+def _history_title(task: dict[str, Any]) -> str:
+    original = str(task.get("title") or "").strip()
+    if original and not _GENERIC_TITLE.search(original):
+        return original
+    scenario = humanise((task.get("targets") or [""])[0]).strip()
+    if scenario:
+        return f"{str(task.get('primary_module') or 'Repository')}: {scenario}"
+    return f"Update {task.get('primary_module') or 'repository behavior'}"
+
+
+def _usable_summary(value: str) -> str:
+    text = str(value or "").strip()
+    if (
+        len(text) < 12
+        or "#" in text
+        or _GENERIC_TITLE.search(text)
+        or text.count("[") != text.count("]")
+    ):
+        return ""
+    return text
+
+
 def mechanical_instruction(task: dict[str, Any], evidence: dict[str, Any]) -> dict[str, str]:
     """Assemble an instruction from measured fields alone.
 
@@ -240,16 +287,18 @@ def mechanical_instruction(task: dict[str, Any], evidence: dict[str, Any]) -> di
             f"Relevant files: {scope}."
         )
     else:
-        summary = evidence.get("change_summary") or ""
-        title = task.get("title") or task["task_id"]
+        summary = _usable_summary(evidence.get("change_summary") or "")
+        title = _history_title(task)
+        scenarios = _scenario_lines(task.get("targets") or [])
+        scenario_block = "\n".join(scenarios) or "- the designated verifier behavior"
         body = (
             f"{context}.\n\n"
-            + (f"Required change: {summary}\n\n" if summary else "")
-            + f"Implement the behaviour so that {behaviour} hold.\n\n"
-            f"Describe-only constraint: a different but correct implementation must "
-            f"pass, so the verifier checks observable behaviour rather than a "
-            f"particular approach. Success is measured by the repository's test "
-            f"suite, including tests for this behaviour, passing.\n\n"
+            + (f"Required behavior: {summary}\n\n" if summary else "")
+            + "Implement the behavior exercised by these repository scenarios:\n\n"
+            f"{scenario_block}\n\n"
+            "Preserve existing behavior outside these scenarios. A different "
+            "implementation is acceptable when it produces the same observable "
+            "results and the designated tests plus the broader suite pass.\n\n"
             f"Relevant files: {scope}."
         )
     return {"title": title, "instruction": body}
@@ -286,7 +335,7 @@ def generated_instruction(
     base_text: str,
     written_so_far: str = "",
     role: str = "worker",
-) -> tuple[dict[str, str], dict[str, Any]] | None:
+) -> tuple[dict[str, str] | None, dict[str, Any]]:
     """Ask a model to phrase the instruction, and keep it only if it is clean.
 
     The model sees the same evidence the mechanical writer does and nothing
@@ -331,19 +380,25 @@ def generated_instruction(
         payload, completion = client.complete_json(
             messages, schema=INSTRUCTION_SCHEMA, role=role, max_tokens=8000
         )
-    except (ModelError, Exception) as exc:  # noqa: BLE001 - any failure keeps the template
-        return None if isinstance(exc, ModelError) else None
+    except ModelError as exc:
+        # Recorded rather than swallowed: a model failure and a model that
+        # returned unusable prose both fall back to the template, and without
+        # the reason the artifact cannot tell you which happened.
+        return None, {"fell_back": "model_error", "detail": str(exc)[:200]}
+    except Exception as exc:  # noqa: BLE001 — never let the deliverable depend on this
+        return None, {"fell_back": type(exc).__name__, "detail": str(exc)[:200]}
 
     text = str(payload.get("instruction") or "").strip()
     title = str(payload.get("title") or "").strip()
     if len(text) < 80:
-        return None
+        return None, {"fell_back": "too_short", "detail": f"{len(text)} characters"}
     report = leak_check(text, diff, base_names, base_text)
     if not report.clean:
-        return None
+        return None, {"fell_back": "leaked", "detail": report.to_dict()}
     return (
         {"title": title or task.get("title") or task["task_id"], "instruction": text},
         {
+            "fell_back": None,
             "leak_check": report.to_dict(),
             "model": completion.model,
             "cached": completion.cached,

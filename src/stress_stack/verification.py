@@ -287,7 +287,31 @@ def gate_collateral(
     which would reject every pull request that retired an obsolete assertion.
     Callers must supply only ids they can show the change removed on purpose.
     """
+    if not baseline.collected or not after.collected:
+        return GateVerdict("collateral", False, "collection_failed", {})
     excluded = ignore or set()
+    disappeared = sorted(set(baseline.results) - set(after.results) - excluded)
+    if disappeared:
+        return GateVerdict(
+            "collateral",
+            False,
+            "tests_disappeared",
+            {"tests": disappeared[:25]},
+        )
+    new_infrastructure = sorted(
+        test_id
+        for test_id, result in after.results.items()
+        if result.failure_class == INFRASTRUCTURE
+        and baseline.results.get(test_id, CaseResult(test_id, PASSED, PASSED, "")).failure_class
+        != INFRASTRUCTURE
+    )
+    if new_infrastructure:
+        return GateVerdict(
+            "collateral",
+            False,
+            "new_infrastructure_failures",
+            {"tests": new_infrastructure[:25]},
+        )
     regressions = sorted(baseline.passing() - after.passing() - excluded)
     if regressions:
         return GateVerdict(
@@ -342,6 +366,10 @@ def gate_determinism(reports: list[RunReport], targets: set[str]) -> GateVerdict
 
 def gate_verifier_integrity(verifier_files: dict[str, str]) -> GateVerdict:
     """A verifier must not be able to read the answer instead of testing for it."""
+    if not verifier_files:
+        return GateVerdict(
+            "verifier_integrity", False, "no_verifier_files", {"files_checked": 0}
+        )
     patterns = {
         # Matches both `git show HEAD` and the list form `["git", "show", ...]`.
         "reads_git_history": re.compile(

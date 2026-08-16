@@ -60,13 +60,13 @@ def test_lines_attribute_to_the_innermost_symbol(tmp_path: Path) -> None:
     assert run.covering_tests == ["t.test_a::test_run"]
 
 
-def test_uncovered_symbols_are_recorded_but_excluded_from_output(tmp_path: Path) -> None:
+def test_uncovered_symbols_are_persisted_for_test_generation(tmp_path: Path) -> None:
     repository(tmp_path)
     graph = build_graph(tmp_path)
     result = cm.build(graph, {"pkg/mod.py": {8: ["t.test_a.test_run"]}})
 
     assert "pkg/mod.py::pkg.mod.helper" in result.symbols
-    assert "pkg/mod.py::pkg.mod.helper" not in result.to_dict()["symbols"]
+    assert "pkg/mod.py::pkg.mod.helper" in result.to_dict()["uncovered_symbols"]
 
 
 def covered(

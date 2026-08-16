@@ -174,6 +174,9 @@ class DockerRunner:
         self, tree: Path, evidence: Path, name: str, targets: list[str] | None = None
     ) -> RunOutcome:
         evidence.mkdir(parents=True, exist_ok=True)
+        # A failed container launch must not inherit a successful report from a
+        # previous run with the same name.
+        (evidence / f"{name}.xml").unlink(missing_ok=True)
         started = time.monotonic()
         result = run_sandboxed(
             self.image,

@@ -25,6 +25,7 @@ stage stays written once.
 from __future__ import annotations
 
 import ast
+import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -99,17 +100,15 @@ class BuiltTask:
             # rather than re-joining validation back onto candidates.
             "score": round(self.candidate.score, 4),
             "signals": self.candidate.signals,
-            "eligible": self.eligible,
             "rejected": self.rejected,
             "targets": self.targets,
             "verifier_files": self.verifier_files,
             "files_in_scope": self.files_in_scope,
             "detail": self.detail,
             "runs": [outcome.to_dict() for outcome in self.outcomes],
-            **summarize(self.gates),
-            # Last, and deliberately: this is the authoritative answer, and it
-            # must not be overwritten by the gate roll-up above.
-            "eligible": self.eligible,
+            # Stated structurally rather than by later-wins ordering: the gate
+            # roll-up must not be able to overwrite the authoritative answer.
+            **{**summarize(self.gates), "eligible": self.eligible},
         }
 
 
@@ -220,10 +219,38 @@ def stage_history_task(
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
 
+    # A test is rarely self-contained in one .py file. Copy every changed file
+    # under the test roots (fixtures, conftest modules, data files, snapshots)
+    # so fail-before cannot be manufactured by a missing asset such as Glom's
+    # test_valid.toml.
+    for path in _verifier_assets(candidate):
+        source = solution_dir / path
+        if not source.is_file():
+            continue
+        target = verifier_root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
     (task_root / "goldenSolution.diff").write_text(
         golden_diff(repository, transition), encoding="utf-8"
     )
     return transition, designated
+
+
+def _verifier_assets(candidate: Candidate) -> list[str]:
+    test_paths = [str(path) for path in candidate.signals.get("test_paths") or []]
+    changed_paths = [str(path) for path in candidate.signals.get("changed_paths") or []]
+    if not test_paths:
+        return []
+    common = Path(os.path.commonpath(test_paths)).as_posix()
+    if common.endswith(".py"):
+        common = Path(common).parent.as_posix()
+    prefix = common.rstrip("/") + "/"
+    return sorted(
+        path
+        for path in changed_paths
+        if path.startswith(prefix) or Path(path).name == "conftest.py"
+    )
 
 
 def stage_excision_task(
@@ -440,6 +467,13 @@ def validate_task(
         built.rejected = screen.rejection(policy)
         return built
 
+
+    # Candidates whose proving test pre-dates the fix still need a non-empty,
+    # explicit verifier folder in the deliverable. Materialise those target
+    # files now, then rebuild the evaluation tree before the repeated runs.
+    _ensure_target_verifier_files(built, resolved)
+    build_evaluation_tree(built.task_root, evaluation_tree)
+
     # Collateral is a question about the *unmodified* pre-change tree: did the
     # reference solution break something that was passing before? Measuring it
     # on the evaluation tree was wrong — that tree carries the post-change test
@@ -469,6 +503,12 @@ def validate_task(
 
     targets = set(resolved)
     built.gates = [
+        # Not require_assertion: classify() already documents that an absent
+        # feature usually fails by raising from inside the library rather than
+        # by tripping an assert, and that such a failure must qualify. The
+        # brief disqualifies a failure to *load* the code, not an exception
+        # raised by it. Demanding an assertion here rejected twenty otherwise
+        # valid tasks on glom.
         gate_fail_before(before_targets[0].report, targets),
         gate_pass_after(after_targets[0].report, targets),
         gate_collateral(
@@ -486,6 +526,7 @@ def validate_task(
         ),
         gate_verifier_integrity(_verifier_sources(built.task_root)),
         _gate_bundle_clean(built.task_root / "input"),
+        _gate_alternative(built, runner, evidence),
     ]
     built.detail["repeats"] = len(before_targets)
     built.detail["failure_classes"] = {
@@ -494,6 +535,85 @@ def validate_task(
         if target in before_targets[0].report.results
     }
     return built
+
+
+def _gate_alternative(built: BuiltTask, runner: Runner, evidence: Path) -> GateVerdict:
+    """Would a *different* correct implementation also pass this verifier?
+
+    Every other gate proves the reference satisfies the verifier, which the
+    brief says is not enough: "a different but correct implementation must pass
+    your verifier." Renaming the private symbols the change introduced cannot
+    alter observable behaviour, so a verifier that then fails was pinned to
+    structure rather than to behaviour.
+
+    The static coupling scan is reported rather than gated on — it flags how
+    portable a verifier looks, while the mutation measures whether it actually
+    is.
+    """
+    from stress_stack.alternatives import rename_private, scan_coupling, verdict
+
+    solution = built.task_root / "solution"
+    changed = _changed_sources(built)
+    private = set()
+    for relative in changed:
+        after_path = solution / relative
+        before_path = built.task_root / "input" / relative
+        if after_path.is_file():
+            from stress_stack.alternatives import private_symbols
+
+            after = private_symbols(
+                after_path.read_text(encoding="utf-8", errors="replace")
+            )
+            before = (
+                private_symbols(before_path.read_text(encoding="utf-8", errors="replace"))
+                if before_path.is_file()
+                else set()
+            )
+            private |= after - before
+    coupling = scan_coupling(_verifier_sources(built.task_root), private)
+
+    mutant = built.task_root / "alternative"
+    if mutant.exists():
+        shutil.rmtree(mutant)
+    shutil.copytree(solution, mutant)
+    mutation = rename_private(mutant, changed, names=private)
+
+    ran, still_passing = False, False
+    if mutation.renames:
+        outcome = runner.execute(mutant, evidence, "alternative", built.targets)
+        built.outcomes.append(outcome)
+        ran = outcome.usable
+        still_passing = ran and set(built.targets) <= outcome.report.passing()
+    shutil.rmtree(mutant, ignore_errors=True)
+
+    detail = verdict(mutation, still_passing, coupling, ran=ran or not mutation.renames)
+    return GateVerdict(
+        "alternative_implementation", bool(detail["portable"]),
+        None if detail["portable"] else detail["status"], detail,
+    )
+
+
+def _changed_sources(built: BuiltTask) -> list[str]:
+    signals = built.candidate.signals
+    if built.source == EXCISION:
+        return [str(signals.get("path") or "")]
+    return [str(path) for path in (signals.get("source_paths") or [])]
+
+
+def _ensure_target_verifier_files(built: BuiltTask, targets: list[str]) -> None:
+    solution = built.task_root / "solution"
+    verifier = built.task_root / "verifier"
+    verifier.mkdir(parents=True, exist_ok=True)
+    for test_id in targets:
+        relative = pytest_argument(solution, test_id).split("::", 1)[0]
+        source = solution / relative
+        destination = verifier / relative
+        if source.is_file() and not destination.is_file():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+    built.verifier_files = sorted(
+        str(path.relative_to(verifier)) for path in verifier.rglob("*") if path.is_file()
+    )
 
 
 def _deliberately_removed(
@@ -508,15 +628,20 @@ def _deliberately_removed(
     vanished = set(baseline.report.results) - set(after.report.results)
     if not vanished:
         return set()
-    rewritten = {
-        pytest_argument(built.task_root / "input", test_id).split("::", 1)[0]
-        for test_id in vanished
-    } & set(built.verifier_files)
-    return {
-        test_id
-        for test_id in vanished
-        if pytest_argument(built.task_root / "input", test_id).split("::", 1)[0] in rewritten
-    }
+    solution = built.task_root / "solution"
+    removed: set[str] = set()
+    for test_id in vanished:
+        argument = pytest_argument(built.task_root / "input", test_id)
+        path, _, remainder = argument.partition("::")
+        if path not in set(built.verifier_files) or not remainder:
+            continue
+        existing = collected_tests(
+            (solution / path).read_text(encoding="utf-8", errors="replace")
+        ) if (solution / path).is_file() else {}
+        local = remainder.split("[", 1)[0].replace("::", ".")
+        if local not in existing:
+            removed.add(test_id)
+    return removed
 
 
 
@@ -550,8 +675,8 @@ def _verifier_sources(task_root: Path) -> dict[str, str]:
         return {}
     return {
         str(path.relative_to(verifier_root)): path.read_text(encoding="utf-8", errors="replace")
-        for path in sorted(verifier_root.rglob("*.py"))
-        if path.is_file()
+        for path in sorted(verifier_root.rglob("*"))
+        if path.is_file() and path.stat().st_size <= 1_000_000
     }
 
 

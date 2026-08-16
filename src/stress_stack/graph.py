@@ -41,8 +41,15 @@ class GraphEdge:
     anchor: Anchor
     expression: str
 
-    def key(self) -> tuple[str, str, str, str, int]:
-        return (self.kind, self.source, self.target, self.anchor.path, self.anchor.line)
+    def key(self) -> tuple[str, str, str, str, int, str]:
+        return (
+            self.kind,
+            self.source,
+            self.target,
+            self.anchor.path,
+            self.anchor.line,
+            self.expression,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
@@ -467,6 +474,9 @@ def validate_graph(graph: RepositoryGraph, root: Path) -> dict[str, Any]:
     matched = original_keys & rebuilt_keys
     total = len(original_keys)
     anchored, misanchored = _verify_anchors(graph, root)
+    original_symbols = _symbol_keys(graph)
+    rebuilt_symbols = _symbol_keys(rebuilt)
+    symbol_matches = original_symbols & rebuilt_symbols
     return {
         "schema_version": "0.1.0",
         "edges_total": total,
@@ -482,9 +492,40 @@ def validate_graph(graph: RepositoryGraph, root: Path) -> dict[str, Any]:
             if (anchored + len(misanchored))
             else 1.0
         ),
+        "symbols_total": len(original_symbols),
+        "symbols_matched": len(symbol_matches),
+        "symbol_match_rate": (
+            round(len(symbol_matches) / len(original_symbols), 6)
+            if original_symbols
+            else 1.0
+        ),
+        "symbols_only_in_graph": sorted(
+            str(key) for key in original_symbols - rebuilt_symbols
+        )[:20],
         "status": "verified"
-        if total == len(matched) and not misanchored
+        if (
+            total == len(matched)
+            and len(original_symbols) == len(symbol_matches)
+            and not misanchored
+        )
         else "mismatched",
+    }
+
+
+def _symbol_keys(graph: RepositoryGraph) -> set[tuple[Any, ...]]:
+    return {
+        (
+            symbol.id,
+            symbol.kind,
+            symbol.anchor.path,
+            symbol.anchor.line,
+            symbol.anchor.end_line,
+            symbol.anchor.column,
+            symbol.anchor.end_column,
+            symbol.signature,
+        )
+        for parsed in graph.files
+        for symbol in parsed.symbols
     }
 
 
@@ -646,6 +687,58 @@ def build_coverage_artifacts(source_value: str, *, cwd: Path | None = None) -> d
     }
 
 
+def build_test_generation_artifacts(
+    source_value: str, *, cwd: Path | None = None, limit: int = 3
+) -> dict[str, Any]:
+    """Generate behavior tests for uncovered public callables and mutation-check them."""
+    from stress_stack import coverage_map as cm
+    from stress_stack.hygiene import provision_test_environment
+    from stress_stack.openrouter import OpenRouterClient
+    from stress_stack.testgen import generate_tests
+
+    working_directory = (cwd or Path.cwd()).resolve()
+    source = resolve_source(source_value, working_directory)
+    repository, _ = prepare_repository(source, working_directory)
+    repository.add_metadata_exclude()
+    metadata_root = repository.root / ".stress_stack"
+    knowledge_root = metadata_root / "knowledge"
+    evidence_root = metadata_root / "test_generation"
+    evidence_root.mkdir(parents=True, exist_ok=True)
+
+    coverage = cm.load(knowledge_root / "coverage_map.json")
+    if coverage.status != "available":
+        return {
+            "repository_root": str(repository.root),
+            "status": "unavailable",
+            "reason": coverage.reason or "coverage_unavailable",
+        }
+    environment = provision_test_environment(repository.root, metadata_root / "tools" / "test")
+    if not environment.get("installed"):
+        return {
+            "repository_root": str(repository.root),
+            "status": "unavailable",
+            "reason": environment.get("reason") or "test_environment_unavailable",
+        }
+    graph = build_graph(repository.root)
+    client = OpenRouterClient(cache_dir=metadata_root / "cache" / "llm")
+    result = generate_tests(
+        repository.root,
+        graph,
+        coverage,
+        Path(environment["python"]),
+        evidence_root,
+        client=client,
+        limit=limit,
+    )
+    if result.get("status") == "generated":
+        refreshed_graph = build_graph(repository.root)
+        refreshed, note = measure_coverage(repository.root, refreshed_graph, knowledge_root)
+        result["refreshed_coverage"] = note
+        result["coverage_statistics"] = refreshed.statistics() if refreshed else {}
+        update_stage(metadata_root, "repo_hygiene", "tests_generated")
+    return {"repository_root": str(repository.root), **result}
+
+
 def build_index_artifacts(source_value: str, *, cwd: Path | None = None) -> dict[str, Any]:
     """Project the JSON knowledge layer into the queryable tier."""
     from stress_stack import coverage_map as cm
@@ -739,6 +832,7 @@ def build_validation_artifacts(
     repeats: int = 2,
     only: str | None = None,
     policy: str = "strict",
+    surplus: int = 14,
 ) -> dict[str, Any]:
     """Stage the ranked candidates and put each through every gate."""
     from stress_stack.candidates import EXCISION, HISTORY, load_candidates
@@ -771,6 +865,12 @@ def build_validation_artifacts(
     graph = build_graph(repository.root)
     built: list[Any] = []
     summaries: dict[str, Any] = {}
+    eligible_modules: set[str] = set()
+    # Ten history plus four excision survivors is a useful reserve without
+    # validating fourteen from *each* source. The module condition prevents an
+    # early run of same-module candidates from making the later selection
+    # diversity floor impossible.
+    source_targets = {HISTORY: max(6, surplus - 4), EXCISION: min(4, surplus)}
     for name, limit in ((HISTORY, history_limit), (EXCISION, excision_limit)):
         if only and only != name:
             continue
@@ -784,9 +884,21 @@ def build_validation_artifacts(
             limit=limit,
             repeats=repeats,
             policy=policy,
+            # A surplus, not exactly ten: the diversity repair in selection
+            # trades candidates against each other and needs spares. Validating
+            # the whole ranked pool after the surplus exists is the single
+            # largest avoidable cost in a run.
+            stop_after=source_targets[name],
+            minimum_modules=4,
+            existing_modules=eligible_modules,
         )
         built.extend(results)
         summaries[name] = summary.to_dict()
+        for task in results:
+            if task.eligible:
+                eligible_modules.update(task.candidate.modules)
+                if task.candidate.primary_module:
+                    eligible_modules.add(task.candidate.primary_module)
 
     from stress_stack.validate import ValidationSummary
 
@@ -872,6 +984,7 @@ def build_emission_artifacts(
         tasks_root,
         metadata_root / "tasks.json",
         history_root=metadata_root / "history",
+        knowledge_root=knowledge_root,
         client=client,
     )
     update_stage(metadata_root, "task_generation", "emitted")
@@ -955,6 +1068,7 @@ def build_container_artifacts(source_value: str, *, cwd: Path | None = None):
         render_dockerfile,
         resolve_base_image,
         run_suite_in_container,
+        interpreter_version,
         select_python_version,
     )
     from stress_stack.hygiene import provision_test_environment
@@ -970,7 +1084,17 @@ def build_container_artifacts(source_value: str, *, cwd: Path | None = None):
     evidence.mkdir(parents=True, exist_ok=True)
 
     environment = provision_test_environment(repository.root, metadata_root / "tools" / "test")
-    python_version = select_python_version(environment.get("requires_python"))
+    selected_version = select_python_version(environment.get("requires_python"))
+    observed_version = (
+        interpreter_version(Path(environment["python"]))
+        if environment.get("installed")
+        else None
+    )
+    python_version = (
+        observed_version
+        if observed_version and observed_version.startswith(selected_version + ".")
+        else selected_version
+    )
 
     lockfile = repository.root / "requirements.lock"
     lock = compile_lock(
@@ -991,6 +1115,8 @@ def build_container_artifacts(source_value: str, *, cwd: Path | None = None):
             or (repository.root / "setup.py").exists(),
             test_command='["python", "-m", "pytest", "-q"]',
             has_runner=_lock_provides_runner(lockfile),
+            project_name=environment.get("project_name"),
+            project_version=environment.get("project_version"),
         ),
     )
     from stress_stack.container import _DOCKERIGNORE
@@ -1003,12 +1129,26 @@ def build_container_artifacts(source_value: str, *, cwd: Path | None = None):
     runs: list[dict[str, Any]] = []
     identical = False
     baseline_match = "not_run"
+    baseline = _host_baseline(metadata_root)
+    if baseline is None and environment.get("installed"):
+        from stress_stack.pytest_runner import run_pytest
+
+        host_run = run_pytest(
+            repository.root,
+            Path(environment["python"]),
+            evidence / "host_baseline.xml",
+        )
+        baseline = host_run.outcomes if host_run.exit_code == 0 else None
+        atomic_write_json(evidence / "host_baseline.json", host_run.to_dict())
     if build_status == "built":
         runs = [run_suite_in_container(image, evidence, name) for name in ("run1", "run2")]
         identical = runs[0]["outcomes"] == runs[1]["outcomes"] and bool(runs[0]["outcomes"])
-        baseline_match = compare_to_baseline(runs[0]["outcomes"], _host_baseline(metadata_root))
+        baseline_match = compare_to_baseline(runs[0]["outcomes"], baseline)
 
-    status = _container_status(build_status, identical, baseline_match)
+    all_passed = bool(runs) and all(
+        run["exit_code"] == 0 and run["failed"] == 0 for run in runs
+    )
+    status = _container_status(build_status, identical, baseline_match, all_passed)
     missing = detect_missing_system_library(build_log) if build_status == "failed" else None
     result = ContainerResult(
         dockerfile=dockerfile,
@@ -1046,12 +1186,20 @@ def _lock_provides_runner(lockfile: Path) -> bool:
     return False
 
 
-def _container_status(build_status: str, identical: bool, baseline_match: str) -> str:
+def _container_status(
+    build_status: str, identical: bool, baseline_match: str, all_passed: bool
+) -> str:
     if build_status != "built":
         return "build_failed"
     if not identical:
         return "nondeterministic"
-    if baseline_match == "matches":
+    if not all_passed:
+        return "tests_failed"
+    if baseline_match in {"matches", "matches_with_additions"}:
+        # Additions are the generated tests, which are themselves mutation-gated
+        # before they are allowed near the suite. Every test the host baseline
+        # recorded as passing still passes in the container, which is the claim
+        # the baseline exists to make.
         return "verified"
     if baseline_match == "no_baseline":
         return "deterministic_unverified"
@@ -1083,6 +1231,12 @@ def _partition_declarations(environment: dict[str, Any]) -> tuple[list[str], lis
     unverifiable: set[str] = set()
     for extra, names in grouped.items():
         target = checkable if (not extra or extra.lower() in installed) else unverifiable
+        target.update(str(name) for name in names)
+    installed_groups = {
+        str(item).lower() for item in environment.get("installed_groups") or []
+    }
+    for group, names in (environment.get("requirements_by_group") or {}).items():
+        target = checkable if str(group).lower() in installed_groups else unverifiable
         target.update(str(name) for name in names)
     return sorted(checkable), sorted(unverifiable - checkable)
 

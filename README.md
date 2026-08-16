@@ -5,21 +5,23 @@ repository and writes machine-readable history — commits, diffs, branches, tag
 public pull requests, and commit↔PR links — into the repository's own
 `.stress_stack/` directory.
 
-It then applies **repo hygiene**: ruff lint and format, verified by a test run
-before and after so any regression the fixes introduce is caught and reported.
-Nothing is inferred, and no LLM is involved at any point.
+It then builds a hash-pinned test environment and container, a source-verified
+repository graph and measured coverage map, mutation-checked generated tests,
+and ten independently validated benchmark tasks. Model output is bounded,
+cached, leak-checked, and never used as acceptance evidence.
 
 ## Scope
 
 | In scope | Not yet |
 | --- | --- |
-| Clone a GitHub URL (full history) or analyze a local repo | Dependency pinning |
-| Commit records with per-file change statistics | Containerization |
-| Branches, tags, merges, contributors | Test generation |
-| Public pull-request metadata | Knowledge layer / repository graph |
-| Commit↔PR links by merge SHA and merge/squash messages | Task generation |
-| Ruff lint + format with a documented baseline | PR reviews, comments, issues, releases, CI runs |
-| Before/after pass-to-pass test verification | |
+| Clone a GitHub URL (full history) or analyze a local repo | PR reviews and comments |
+| Ruff hygiene with before/after verification | Issues, releases, and CI runs |
+| Hash-pinned extras, PEP 735 groups, and build backends | Repository-specific hand-authored fixes |
+| Digest-pinned container with two deterministic passing runs | Silent host fallback for verifier runs |
+| Verified graph, coverage, and queryable knowledge index | Unverified model prose as a gate |
+| Mutation-checked generated tests | Guaranteed net-new task candidates when no evidence supports them |
+| History and excision tasks with fail-before/pass-after gates | |
+| Ten-task quota selection, transcripts, bundle, and `REPORT.md` | |
 
 `manifest.json` tracks all four pipeline stages, so later stages can mark
 themselves complete without rewriting what earlier ones produced.
@@ -32,7 +34,7 @@ the package is pure standard library.
 ## Installation
 
 ```bash
-uv tool install --editable /Users/adityagk/Desktop/projects/stress_stack
+uv tool install --editable .
 ```
 
 ```bash
@@ -49,6 +51,17 @@ uv venv --python 3.12 && uv pip install -e ".[dev]"
 ```
 
 ## Usage
+
+Run the complete pipeline and assemble the final bundle:
+
+```bash
+./run.sh /path/to/repository --output /path/to/output
+```
+
+For repositories with uncovered public callables, configure an OpenRouter key
+before the full run so `testgen` can propose tests. Every proposed test must pass
+against the repository, preserve the full suite, and fail against a mutation of
+its exact target; rejected proposals are not shipped.
 
 Clone and ingest a public GitHub repository into the current directory:
 

@@ -28,6 +28,7 @@ _TEST_EXTRA_ORDER = ("test", "tests", "testing", "dev")
 class LockResult:
     manifest: str | None
     extras: list[str]
+    groups: list[str]
     lockfile: Path | None
     package_count: int
     hashed: bool
@@ -43,6 +44,7 @@ class LockResult:
             "reason": self.reason,
             "manifest": self.manifest,
             "extras": self.extras,
+            "groups": self.groups,
             "lockfile": str(self.lockfile) if self.lockfile else None,
             "package_count": self.package_count,
             "hashed": self.hashed,
@@ -84,6 +86,7 @@ def compile_lock(
         return LockResult(
             manifest=None,
             extras=[],
+            groups=[],
             lockfile=None,
             package_count=0,
             hashed=False,
@@ -94,9 +97,17 @@ def compile_lock(
         )
 
     selected = list(extras or [])
-    arguments = [uv, "pip", "compile", manifest, "--python-version", python_version]
+    group_name, _ = test_dependency_group(root)
+    groups = [group_name] if group_name else []
+    sources = [manifest]
+    build_input = _build_requirements_input(root)
+    if build_input is not None:
+        sources.append(str(build_input))
+    arguments = [uv, "pip", "compile", *sources, "--python-version", python_version]
     for extra in selected:
         arguments += ["--extra", extra]
+    for group in groups:
+        arguments += ["--group", group]
     if generate_hashes:
         arguments.append("--generate-hashes")
     arguments += ["-o", str(destination), "--quiet"]
@@ -104,13 +115,23 @@ def compile_lock(
     result = run(arguments, cwd=root, timeout=900.0)
     if not result.ok:
         retried = _retry_without_extras(
-            root, destination, manifest, python_version, generate_hashes, uv, selected, result
+            root,
+            destination,
+            manifest,
+            python_version,
+            generate_hashes,
+            uv,
+            selected,
+            groups,
+            sources,
+            result,
         )
         if retried is not None:
             return retried
         return LockResult(
             manifest=manifest,
             extras=selected,
+            groups=groups,
             lockfile=None,
             package_count=0,
             hashed=generate_hashes,
@@ -123,6 +144,7 @@ def compile_lock(
     return LockResult(
         manifest=manifest,
         extras=selected,
+        groups=groups,
         lockfile=destination,
         package_count=count_packages(destination),
         hashed=generate_hashes,
@@ -141,12 +163,16 @@ def _retry_without_extras(
     generate_hashes: bool,
     uv: str,
     selected: list[str],
+    groups: list[str],
+    sources: list[str],
     failure: CommandResult,
 ) -> LockResult | None:
     """A declared extra that does not exist should not cost us the whole lock."""
     if not selected:
         return None
-    arguments = [uv, "pip", "compile", manifest, "--python-version", python_version]
+    arguments = [uv, "pip", "compile", *sources, "--python-version", python_version]
+    for group in groups:
+        arguments += ["--group", group]
     if generate_hashes:
         arguments.append("--generate-hashes")
     arguments += ["-o", str(destination), "--quiet"]
@@ -156,6 +182,7 @@ def _retry_without_extras(
     return LockResult(
         manifest=manifest,
         extras=[],
+        groups=groups,
         lockfile=destination,
         package_count=count_packages(destination),
         hashed=generate_hashes,
@@ -234,6 +261,36 @@ def test_dependency_group(root: Path) -> tuple[str, list[str]]:
             entries = [item for item in groups[name] if isinstance(item, str)]
             return name, entries
     return "", []
+
+
+def _build_requirements_input(root: Path) -> Path | None:
+    """Materialize harness and build requirements into the reproducible lock.
+
+    ``pip install --no-deps .`` still invokes a PEP 517 backend. Installing the
+    backend from a hash-pinned lock and disabling build isolation prevents that
+    final build step from resolving setuptools/flit/hatchling from the network.
+    """
+    # The runner is part of the execution environment even when a repository
+    # forgot to declare it. Pinning it here avoids a network-resolved range in
+    # the generated Dockerfile.
+    requirements: list[str] = ["pytest>=8,<10"]
+    manifest = root / "pyproject.toml"
+    if manifest.is_file():
+        try:
+            import tomllib
+
+            parsed = tomllib.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            parsed = {}
+        declared = (parsed.get("build-system") or {}).get("requires") or []
+        requirements += [str(item) for item in declared if isinstance(item, str)]
+    elif (root / "setup.py").is_file() or (root / "setup.cfg").is_file():
+        # PEP 517's specified legacy default when no [build-system] exists.
+        requirements.append("setuptools>=40.8.0")
+    destination = root / ".stress_stack" / "locking" / "build-requirements.in"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text("\n".join(requirements) + "\n", encoding="utf-8")
+    return destination
 
 
 def ensure_uv() -> str:

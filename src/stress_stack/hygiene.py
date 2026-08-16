@@ -204,7 +204,11 @@ def provision_test_environment(root: Path, environment_root: Path) -> dict[str, 
         "declared_extras": [],
         "declared_requirements": [],
         "requires_python": None,
+        "project_name": None,
+        "project_version": None,
         "installed_extras": [],
+        "declared_groups": [],
+        "installed_groups": [],
         "reason": None,
     }
     pytest_installation = install(python, ["pytest"])
@@ -224,13 +228,43 @@ def provision_test_environment(root: Path, environment_root: Path) -> dict[str, 
     record["declared_requirements"] = _declared_requirements(report, root)
     record["requirements_by_extra"] = _requirements_by_extra(report, root)
     entry = _local_install_entry(report, root)
-    record["requires_python"] = (entry or {}).get("metadata", {}).get("requires_python")
+    project_metadata = (entry or {}).get("metadata", {})
+    record["requires_python"] = project_metadata.get("requires_python")
+    record["project_name"] = project_metadata.get("name")
+    record["project_version"] = project_metadata.get("version")
     wanted = [extra for extra in declared if extra.lower() in _TEST_EXTRA_NAMES]
     for extra in wanted:
         result = install(python, [f"{root}[{extra}]"])
         if result.ok:
             record["installed_extras"].append(extra)
+        else:
+            record["installed"] = False
+            record["reason"] = f"test_extra_install_failed: {result.failure_detail()}"
+            return record
+
+    # PEP 735 dependency groups are intentionally not exposed as package
+    # extras. Install the selected test group explicitly so the environment,
+    # lockfile and container all describe the same suite dependencies.
+    from stress_stack.locking import test_dependency_group
+
+    group, requirements = test_dependency_group(root)
+    if group:
+        record["declared_groups"].append(group)
+        record["requirements_by_group"] = {group: list(requirements)}
+        record["declared_requirements"] = sorted(
+            set(record["declared_requirements"]) | {_requirement_name(item) for item in requirements}
+        )
+        group_install = install(python, requirements)
+        if not group_install.ok:
+            record["installed"] = False
+            record["reason"] = f"test_group_install_failed: {group_install.failure_detail()}"
+            return record
+        record["installed_groups"].append(group)
     return record
+
+
+def _requirement_name(requirement: str) -> str:
+    return re.split(r"[\s<>=!~;\[(]", requirement.strip(), maxsplit=1)[0]
 
 
 def _declared_requirements(report: Path, root: Path) -> list[str]:

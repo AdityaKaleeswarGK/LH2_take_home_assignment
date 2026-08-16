@@ -61,7 +61,11 @@ class CardResult:
             "cost": round(self.cost, 6),
             "reason": self.reason,
             "grounding": self.grounding,
-            "verification_state": "unverified",
+            "verification_state": (
+                "entity_citations_verified_semantics_unverified"
+                if self.grounding.get("grounded")
+                else "unverified"
+            ),
             **self.payload,
         }
 
@@ -304,7 +308,7 @@ def synthesize_blueprint(
         "cost": round(completion.cost, 6),
         "files_cited": len(set(cited)),
         "unknown_files": unknown,
-        "verification_state": "unverified",
+        "verification_state": "file_citations_verified_semantics_unverified",
     }
 
 

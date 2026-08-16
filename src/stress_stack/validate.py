@@ -103,7 +103,7 @@ def build_and_validate(
         built.rejected = f"staging_failed: {exc}"
         return built
 
-    built.verifier_files = sorted(designated)
+    built.verifier_files = _files_in(task_root / "verifier")
     built.files_in_scope = scope_files(graph, changed)
 
     evaluation_tree = work_root / task_id
@@ -138,6 +138,8 @@ def validate_pool(
     repeats: int,
     policy: str = STRICT,
     stop_after: int | None = None,
+    minimum_modules: int = 0,
+    existing_modules: set[str] | None = None,
 ) -> tuple[list[BuiltTask], ValidationSummary]:
     """Validate down the ranked pool until enough survive, or the budget runs out."""
     summary = ValidationSummary()
@@ -155,7 +157,18 @@ def validate_pool(
             summary.eligible += 1
         else:
             summary.reject(result.rejected or _first_failed_gate(result), result.task_id)
-        if stop_after is not None and summary.eligible >= stop_after:
+        modules = set(existing_modules or ())
+        for task in built:
+            if not task.eligible:
+                continue
+            modules.update(task.candidate.modules)
+            if task.candidate.primary_module:
+                modules.add(task.candidate.primary_module)
+        if (
+            stop_after is not None
+            and summary.eligible >= stop_after
+            and len(modules) >= minimum_modules
+        ):
             break
 
     summary.seconds = time.monotonic() - started
@@ -215,7 +228,7 @@ def _retry_with_explicit_stub(
     built.detail["designated"] = designated
     built.detail["excision"] = plan
     built.detail["stub_retry"] = "neutral_stub_failed_for_wrong_reason"
-    built.verifier_files = sorted(designated)
+    built.verifier_files = _files_in(task_root / "verifier")
     built.files_in_scope = scope_files(graph, [str(candidate.signals["path"])])
 
     evaluation_tree = work_root / task_id
@@ -234,3 +247,9 @@ def _first_failed_gate(built: BuiltTask) -> str:
         if not verdict.passed:
             return f"{verdict.gate}:{verdict.reason_code}"
     return "unknown"
+
+
+def _files_in(root: Path) -> list[str]:
+    if not root.is_dir():
+        return []
+    return sorted(str(path.relative_to(root)) for path in root.rglob("*") if path.is_file())

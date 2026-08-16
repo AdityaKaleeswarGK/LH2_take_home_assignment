@@ -114,7 +114,13 @@ class Mutation:
         return {"renames": self.renames, "files_changed": self.files_changed}
 
 
-def rename_private(root: Path, targets: list[str], *, suffix: str = "_alt") -> Mutation:
+def rename_private(
+    root: Path,
+    targets: list[str],
+    *,
+    names: set[str] | None = None,
+    suffix: str = "_alt",
+) -> Mutation:
     """Rename private module-level symbols throughout a materialised tree.
 
     A whole-word textual substitution rather than an AST rewrite, deliberately:
@@ -125,17 +131,28 @@ def rename_private(root: Path, targets: list[str], *, suffix: str = "_alt") -> M
     rename consistently surfaces immediately as an import error rather than
     silently passing.
     """
-    renames: dict[str, str] = {}
-    for relative in targets:
-        path = root / relative
-        if path.is_file():
-            for name in private_symbols(path.read_text(encoding="utf-8", errors="replace")):
-                renames[name] = f"{name}{suffix}"
+    selected = set(names or ())
+    if names is None:
+        for relative in targets:
+            path = root / relative
+            if path.is_file():
+                selected |= private_symbols(
+                    path.read_text(encoding="utf-8", errors="replace")
+                )
+    renames = {name: f"{name}{suffix}" for name in sorted(selected)}
     if not renames:
         return Mutation(renames={}, files_changed=[])
 
     changed: list[str] = []
+    from stress_stack.symbols import is_test_path
+
     for path in sorted(root.rglob("*.py")):
+        relative = str(path.relative_to(root))
+        # Tests are the observer. Rewriting their imports/assertions together
+        # with production code makes an implementation-coupled verifier appear
+        # portable by moving both sides of the assertion in lockstep.
+        if is_test_path(relative):
+            continue
         try:
             original = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
@@ -145,7 +162,7 @@ def rename_private(root: Path, targets: list[str], *, suffix: str = "_alt") -> M
             updated = re.sub(rf"\b{re.escape(old)}\b", new, updated)
         if updated != original:
             path.write_text(updated, encoding="utf-8")
-            changed.append(str(path.relative_to(root)))
+            changed.append(relative)
     return Mutation(renames=renames, files_changed=changed)
 
 
@@ -165,7 +182,14 @@ def verdict(
         status = "verifier_depends_on_internals"
     return {
         "status": status,
+        # The coupling scan is evidence, not a verdict. Gating on it rejected
+        # every glom task: the library's whole subject is spec display, so its
+        # tests assert on repr() constantly and one candidate scored 62
+        # findings while its mutation survived cleanly. What a verifier looks
+        # like is a warning; what it does under a semantics-preserving rename
+        # is the measurement.
         "portable": status in {"survived", "no_internals_to_rename"},
+        "coupling_findings": coupling.findings,
         "mutation": mutation.to_dict(),
         "coupling": coupling.to_dict(),
     }

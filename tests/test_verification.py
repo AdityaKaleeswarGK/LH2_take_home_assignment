@@ -6,6 +6,7 @@ from stress_stack.verification import (
     ASSERTION,
     BEHAVIORAL_EXCEPTION,
     INFRASTRUCTURE,
+    PASSED,
     RunReport,
     CaseResult,
     classify,
@@ -184,6 +185,20 @@ def test_collateral_compares_against_the_snapshot_baseline() -> None:
     assert verdict.detail["regressions"] == ["b"]
 
 
+def test_collateral_rejects_collection_loss_and_new_infrastructure() -> None:
+    baseline = report_from({"a": ("passed", PASSED, ""), "b": ("failed", ASSERTION, "old")})
+    disappeared = report_from({"a": ("passed", PASSED, "")})
+    assert gate_collateral(baseline, disappeared).reason_code == "tests_disappeared"
+
+    broken = report_from(
+        {
+            "a": ("passed", PASSED, ""),
+            "b": ("failed", INFRASTRUCTURE, "ImportError"),
+        }
+    )
+    assert gate_collateral(baseline, broken).reason_code == "new_infrastructure_failures"
+
+
 def test_determinism_catches_unstable_collection_status_and_signature() -> None:
     stable = report_from({"t::x": ("failed", ASSERTION, "AssertionError: a")})
     assert gate_determinism([stable, stable, stable], {"t::x"}).passed is True
@@ -217,6 +232,12 @@ def test_verifier_integrity_rejects_tests_that_read_the_answer() -> None:
     verdict = gate_verifier_integrity(cheating)
     assert verdict.passed is False
     assert "reads_git_history" in verdict.detail
+
+
+def test_an_empty_verifier_is_not_valid() -> None:
+    verdict = gate_verifier_integrity({})
+    assert verdict.passed is False
+    assert verdict.reason_code == "no_verifier_files"
 
 
 def test_summary_lists_every_failed_gate() -> None:

@@ -70,6 +70,33 @@ def test_a_module_with_no_private_symbols_yields_no_rename(tmp_path: Path) -> No
     assert mutation.files_changed == []
 
 
+def test_renaming_can_be_limited_to_newly_introduced_private_symbols(tmp_path: Path) -> None:
+    (tmp_path / "m.py").write_text(
+        "def _old():\n    return 1\n\ndef _new():\n    return _old()\n",
+        encoding="utf-8",
+    )
+
+    mutation = rename_private(tmp_path, ["m.py"], names={"_new"})
+
+    rewritten = (tmp_path / "m.py").read_text(encoding="utf-8")
+    assert mutation.renames == {"_new": "_new_alt"}
+    assert "def _old()" in rewritten
+    assert "def _new_alt()" in rewritten
+
+
+def test_renaming_never_rewrites_the_verifier(tmp_path: Path) -> None:
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "pkg" / "mod.py").write_text("def _secret():\n    return 1\n")
+    verifier = tmp_path / "tests" / "test_mod.py"
+    verifier.write_text("from pkg.mod import _secret\n\ndef test_x():\n    assert _secret() == 1\n")
+
+    rename_private(tmp_path, ["pkg/mod.py"])
+
+    assert "_secret_alt" in (tmp_path / "pkg" / "mod.py").read_text()
+    assert "_secret_alt" not in verifier.read_text()
+
+
 def test_a_test_patching_an_internal_is_flagged() -> None:
     report = scan_coupling(
         {"tests/test_render.py": "from unittest import mock\n\nwith mock.patch('pkg.render._wrap'):\n    pass\n"},
@@ -109,6 +136,29 @@ def test_the_verdict_distinguishes_survival_from_having_nothing_to_test() -> Non
     assert survived["status"] == "survived" and survived["portable"] is True
     assert coupled["status"] == "verifier_depends_on_internals"
     assert coupled["portable"] is False
+
+    # A static finding is recorded, never decisive. glom asserts on repr()
+    # throughout — spec display is the library's subject — so one candidate
+    # scored 62 findings while its mutation survived cleanly. Gating on the
+    # scan rejected every task in the repository.
+    statically_coupled = verdict(
+        Mutation({"_a": "_a_alt"}, ["m.py"]),
+        True,
+        CouplingReport(exact_representation=["t.py:1"]),
+        ran=True,
+    )
+    assert statically_coupled["status"] == "survived"
+    assert statically_coupled["portable"] is True
+    assert statically_coupled["coupling_findings"] == 1
+
+    # The mutation still decides against it when the rename actually breaks it.
+    really_coupled = verdict(
+        Mutation({"_a": "_a_alt"}, ["m.py"]),
+        False,
+        CouplingReport(exact_representation=["t.py:1"]),
+        ran=True,
+    )
+    assert really_coupled["portable"] is False
 
 
 def test_a_check_that_did_not_run_is_not_reported_as_a_pass() -> None:
