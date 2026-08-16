@@ -997,7 +997,11 @@ def build_emission_artifacts(
 
 
 def build_bundle_artifacts(
-    source_value: str, *, cwd: Path | None = None, output: str = "output"
+    source_value: str,
+    *,
+    cwd: Path | None = None,
+    output: str = "output",
+    use_model: bool = True,
 ) -> dict[str, Any]:
     """Project the pipeline's artifacts into the deliverable layout."""
     from stress_stack.bundle import assemble
@@ -1008,7 +1012,15 @@ def build_bundle_artifacts(
     destination = Path(output)
     if not destination.is_absolute():
         destination = working_directory / destination
-    return assemble(repository.root, destination).to_dict()
+    client = None
+    if use_model:
+        from stress_stack.openrouter import OpenRouterClient
+
+        candidate = OpenRouterClient(
+            cache_dir=repository.root / ".stress_stack" / "cache" / "llm"
+        )
+        client = candidate if candidate.configured else None
+    return assemble(repository.root, destination, client).to_dict()
 
 
 def build_enrichment_artifacts(source_value: str, *, cwd: Path | None = None, workers: int = 20):
