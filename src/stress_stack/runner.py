@@ -47,10 +47,27 @@ class RunOutcome:
     backend: str
     infrastructure_failure: str | None
     detail: str = ""
+    expect_empty: bool = False
+    """Set when collecting nothing is a legitimate outcome, never for a suite."""
 
     @property
     def usable(self) -> bool:
-        return self.infrastructure_failure is None
+        """A run is evidence only if it actually ran something.
+
+        Exit code alone cannot tell "tests failed" from "the interpreter could
+        not start pytest" — both are 1. click's image was built without a test
+        runner, every run exited 1 having collected nothing, and because that
+        looked like a result the screen concluded that none of forty-two
+        candidates had a behavioural test change. A misleading verdict is worse
+        than a crash, so an empty full-suite run is infrastructure.
+        """
+        if self.infrastructure_failure is not None:
+            return False
+        return bool(self.report.results) or self.expect_empty
+
+    @property
+    def empty(self) -> bool:
+        return not self.report.results
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -58,7 +75,8 @@ class RunOutcome:
             "backend": self.backend,
             "exit_code": self.exit_code,
             "seconds": round(self.seconds, 2),
-            "infrastructure_failure": self.infrastructure_failure,
+            "infrastructure_failure": self.infrastructure_failure
+            or (None if self.usable else "collected_no_tests"),
             "detail": self.detail[:400],
             "total": len(self.report.results),
             "passing": len(self.report.passing()),

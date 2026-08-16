@@ -975,6 +975,7 @@ def build_container_artifacts(source_value: str, *, cwd: Path | None = None):
             installable=(repository.root / "pyproject.toml").exists()
             or (repository.root / "setup.py").exists(),
             test_command='["python", "-m", "pytest", "-q"]',
+            has_runner=_lock_provides_runner(lockfile),
         ),
     )
     from stress_stack.container import _DOCKERIGNORE
@@ -1013,6 +1014,21 @@ def build_container_artifacts(source_value: str, *, cwd: Path | None = None):
     atomic_write_json(evidence / "container.json", payload)
     update_stage(metadata_root, "repo_hygiene", f"container_{status}")
     return result
+
+
+def _lock_provides_runner(lockfile: Path) -> bool:
+    """Whether the compiled lock already installs a test runner.
+
+    Read from the lock rather than predicted from the manifest, because the
+    manifest can declare tests in an extra, in a PEP 735 group, or in a
+    requirements file none of which the compile necessarily resolved.
+    """
+    if not lockfile.is_file():
+        return False
+    for line in lockfile.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.strip().lower().startswith("pytest=="):
+            return True
+    return False
 
 
 def _container_status(build_status: str, identical: bool, baseline_match: str) -> str:

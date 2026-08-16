@@ -58,6 +58,18 @@ def find_manifest(root: Path) -> str | None:
     return None
 
 
+def group_requirements(root: Path, destination: Path) -> Path | None:
+    """Write a PEP 735 test group out as a requirements file uv can compile."""
+    name, entries = test_dependency_group(root)
+    if not entries:
+        return None
+    destination.write_text(
+        f"# Compiled from [dependency-groups] {name}\n" + "\n".join(entries) + "\n",
+        encoding="utf-8",
+    )
+    return destination
+
+
 def compile_lock(
     root: Path,
     destination: Path,
@@ -190,6 +202,38 @@ def select_extras(declared: list[str]) -> list[str]:
         if candidate in available:
             return [available[candidate]]
     return []
+
+
+def test_dependency_group(root: Path) -> tuple[str, list[str]]:
+    """The PEP 735 group holding test dependencies, if the project uses one.
+
+    Extras are not the only way a project states what its tests need, and
+    reading only extras made a whole convention invisible: click declares
+    ``tests = ["pytest"]`` under ``[dependency-groups]`` and nothing under
+    ``[project.optional-dependencies]``, so the compiled lock was empty and the
+    image was built without a test runner. Group names are matched by the same
+    convention already used for extras rather than by a per-project list.
+    """
+    manifest = root / "pyproject.toml"
+    if not manifest.is_file():
+        return "", []
+    try:
+        import tomllib
+
+        parsed = tomllib.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "", []
+
+    groups = parsed.get("dependency-groups")
+    if not isinstance(groups, dict):
+        return "", []
+    available = {str(name).lower(): str(name) for name in groups}
+    for candidate in _TEST_EXTRA_ORDER:
+        if candidate in available:
+            name = available[candidate]
+            entries = [item for item in groups[name] if isinstance(item, str)]
+            return name, entries
+    return "", []
 
 
 def ensure_uv() -> str:
