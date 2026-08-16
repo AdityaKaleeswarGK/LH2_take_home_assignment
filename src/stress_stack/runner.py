@@ -122,6 +122,46 @@ def pytest_arguments(tree: Path, targets: list[str] | None) -> list[str]:
     return [pytest_argument(tree, target) for target in targets or []]
 
 
+def source_roots(tree: Path, *, mount: str = "/work") -> str:
+    """The PYTHONPATH under which the mounted tree's own packages win.
+
+    ``PYTHONPATH=/work`` assumes the packages sit directly under the repository
+    root. Under a ``src/`` layout they do not, so ``/work`` contains no
+    importable package, ``import click`` falls through to the copy the image
+    baked in at build time, and every run measures frozen code instead of the
+    task — silently, and with entirely plausible-looking results. click's
+    excision tasks all reported that removing a function body changed no test
+    verdict, which was true of the installed copy and irrelevant to the task.
+
+    The roots are derived with the same ``package_root`` the graph uses to name
+    modules, so a layout this tool can parse is a layout it can also run.
+    """
+    from stress_stack.symbols import discover_python_files, package_root
+
+    directories: set[Path] = set()
+    for path in discover_python_files(tree):
+        directories.add(package_root(tree, path))
+
+    # A directory earns a place on the path only if a package actually lives
+    # directly under it. Without that test every example script's own folder
+    # qualifies — click contributes eleven — which is noise at best and a
+    # shadowing hazard at worst.
+    roots: set[str] = set()
+    for directory in directories:
+        if directory == tree:
+            continue
+        if not any(child.is_dir() and (child / "__init__.py").is_file()
+                   for child in directory.iterdir()):
+            continue
+        try:
+            roots.add(f"{mount}/{directory.relative_to(tree).as_posix()}")
+        except ValueError:
+            continue
+    # The mount stays last so a src-layout package outranks anything sitting at
+    # the repository root, while a flat layout still resolves.
+    return ":".join([*sorted(roots), mount])
+
+
 @dataclass
 class DockerRunner:
     """Run the suite in a throwaway container with no network and a read-only tree."""
@@ -141,6 +181,7 @@ class DockerRunner:
             code_dir=tree,
             evidence_dir=evidence,
             policy=self.policy,
+            environment={"PYTHONPATH": source_roots(tree)},
         )
         seconds = time.monotonic() - started
         return RunOutcome(
