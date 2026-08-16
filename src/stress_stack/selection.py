@@ -88,10 +88,37 @@ class Ledger:
     def accepts(self, source: str) -> bool:
         return not self.full and self.by_source[source] < self.quota.cap(source)
 
-    def record(self, task_id: str, source: str, module: str, title: str) -> None:
+    def record(
+        self,
+        task_id: str,
+        source: str,
+        module: str,
+        title: str,
+        modules: list[str] | None = None,
+    ) -> None:
         self.entries.append(
-            {"task_id": task_id, "source": source, "module": module, "title": title}
+            {
+                "task_id": task_id,
+                "source": source,
+                "module": module,
+                "modules": sorted(set(modules or [module])),
+                "title": title,
+            }
         )
+
+    @property
+    def modules_covered(self) -> set[str]:
+        """Every module any selected task touches — what the floor is counted on.
+
+        A cross-module change genuinely exercises both modules, so both count.
+        The penalty below deliberately uses the *primary* module instead, which
+        is what stops one sprawling pull request satisfying the four-module
+        requirement single-handedly.
+        """
+        covered: set[str] = set()
+        for entry in self.entries:
+            covered.update(entry.get("modules") or [entry["module"]])
+        return covered
 
     def shortfalls(self) -> list[str]:
         """Every quota this ledger does not yet satisfy, stated plainly."""
@@ -104,7 +131,7 @@ class Ledger:
         for source, cap in sorted(self.quota.maximum.items()):
             if self.by_source[source] > cap:
                 problems.append(f"{source}: {self.by_source[source]} exceeds {cap}")
-        modules = len(self.by_module)
+        modules = len(self.modules_covered)
         if modules < self.quota.minimum_modules:
             problems.append(f"modules: {modules} of at least {self.quota.minimum_modules}")
         return problems
@@ -123,8 +150,9 @@ class Ledger:
             "quota": self.quota.to_dict(),
             "selected": len(self.entries),
             "by_source": dict(sorted(self.by_source.items())),
-            "by_module": dict(sorted(self.by_module.items())),
-            "distinct_modules": len(self.by_module),
+            "by_primary_module": dict(sorted(self.by_module.items())),
+            "modules_covered": sorted(self.modules_covered),
+            "distinct_modules": len(self.modules_covered),
             "shortfalls": self.shortfalls(),
             "satisfied": not self.shortfalls(),
             "entries": self.entries,
@@ -243,13 +271,25 @@ def justify(task: dict[str, Any], factors: dict[str, float], ranked: Sequence[st
         "churn": int(signals.get("churn") or signals.get("body_lines") or 0),
         "verifiers": len(task.get("targets") or []),
     }
+    # A factor only earns a sentence if its raw value says something. Ranking by
+    # *normalised* value alone produced "requires coordinated edits across 1
+    # source files" on a task graded hard — top of a normalised column can still
+    # be a raw value of one, which is not a reason.
+    notable = {
+        "coordinated_change": context["source_files"] >= 2,
+        "cross_module": context["modules"] >= 2,
+        "misleading_similarity": context["lookalikes"] >= 1,
+        "business_logic": factors.get("business_logic", 0.0) >= 200,
+        "scale": context["churn"] >= 40 or context["verifiers"] >= 3,
+    }
     clauses = [
-        _FACTOR_SENTENCE[name].format(**context)
-        for name in ranked[:2]
-        if factors.get(name, 0.0) > 0
-    ]
+        _FACTOR_SENTENCE[name].format(**context) for name in ranked if notable.get(name)
+    ][:2]
     if not clauses:
-        clauses = ["is a self-contained change with a small verified surface"]
+        clauses = [
+            f"is a contained change verified by {context['verifiers']} "
+            f"test{'' if context['verifiers'] == 1 else 's'}"
+        ]
     return "This task " + "; and it ".join(clauses) + "."
 
 
@@ -326,6 +366,7 @@ def select(
             source=task["source"],
             module=task.get("primary_module") or "(unknown)",
             title=task.get("title") or task["task_id"],
+            modules=task.get("modules") or None,
         )
         trace.append(
             {
@@ -393,10 +434,14 @@ def _repair_modules(
     nine core tasks is not.
     """
     repairs: list[dict[str, Any]] = []
-    while len(ledger.by_module) < quota.minimum_modules:
-        covered = set(ledger.by_module)
+    while len(ledger.modules_covered) < quota.minimum_modules:
+        covered = ledger.modules_covered
         incoming = max(
-            (task for task in remaining.values() if task.get("primary_module") not in covered),
+            (
+                task
+                for task in remaining.values()
+                if not set(task.get("modules") or [task.get("primary_module")]) <= covered
+            ),
             key=lambda task: float(task.get("score") or 0.0),
             default=None,
         )
@@ -416,6 +461,7 @@ def _repair_modules(
             source=incoming["source"],
             module=incoming.get("primary_module") or "(unknown)",
             title=incoming.get("title") or incoming["task_id"],
+            modules=incoming.get("modules") or None,
         )
         remaining.pop(incoming["task_id"], None)
         repairs.append(

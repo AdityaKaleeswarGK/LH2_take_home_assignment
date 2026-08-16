@@ -60,7 +60,7 @@ def test_selection_meets_the_module_floor_on_that_same_pool() -> None:
     ledger, _ = select(core_heavy_pool(), quota=Quota(total=10, minimum={}, maximum={}))
 
     assert len(ledger.entries) == 10
-    assert len(ledger.by_module) >= 4 or ledger.shortfalls()
+    assert len(ledger.modules_covered) >= 4 or ledger.shortfalls()
 
 
 def test_the_penalty_spreads_across_modules_when_the_pool_allows() -> None:
@@ -71,7 +71,7 @@ def test_the_penalty_spreads_across_modules_when_the_pool_allows() -> None:
     ]
     ledger, _ = select(pool, quota=Quota(total=8, minimum={}, maximum={}))
 
-    assert len(ledger.by_module) == 4
+    assert len(ledger.modules_covered) == 4
     assert ledger.shortfalls() == []
 
 

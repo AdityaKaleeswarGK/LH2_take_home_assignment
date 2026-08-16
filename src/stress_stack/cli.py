@@ -14,9 +14,11 @@ from stress_stack.graph import (
     build_coverage_artifacts,
     build_enrichment_artifacts,
     build_dependency_artifacts,
+    build_emission_artifacts,
     build_graph_artifacts,
     build_index_artifacts,
     build_mining_artifacts,
+    build_selection_artifacts,
     build_validation_artifacts,
 )
 from stress_stack.hygiene import HygieneResult, run_hygiene
@@ -92,6 +94,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Whether a verifier that could not be collected before the change "
              "counts as failing (default: strict, it does not)",
     )
+    select_parser = subparsers.add_parser(
+        "select",
+        help="Choose the final ten under the brief's quotas and record compliance",
+    )
+    select_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
+    emit_parser = subparsers.add_parser(
+        "emit",
+        help="Write each task's instruction and manifest, then tasks.json",
+    )
+    emit_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
     enrich_parser = subparsers.add_parser(
         "enrich", help="Build coverage, per-file semantic cards, and the repository blueprint"
     )
@@ -146,6 +158,10 @@ def main(arguments: list[str] | None = None) -> int:
                     policy=namespace.import_policy,
                 )
             )
+        elif namespace.command == "select":
+            return _print_selection(build_selection_artifacts(namespace.source, cwd=Path.cwd()))
+        elif namespace.command == "emit":
+            return _print_emission(build_emission_artifacts(namespace.source, cwd=Path.cwd()))
         elif namespace.command == "enrich":
             return _print_enrichment(
                 build_enrichment_artifacts(
@@ -332,6 +348,38 @@ def _print_validation_result(report: dict) -> int:
     print(f"Tasks: {report['tasks_root']}")
     print(f"Evidence: {report['knowledge_root']}/validation.json")
     return 0 if summary["eligible"] else 1
+
+
+def _print_selection(report: dict) -> int:
+    ledger = report["ledger"]
+    print(f"Repository: {report['repository_root']}")
+    print(f"Pool: {report['pool_size']} eligible -> {ledger['selected']} selected")
+    print(f"By source: {ledger['by_source']}")
+    print(f"Modules covered: {ledger['distinct_modules']} {ledger['modules_covered']}")
+    tiers: dict[str, int] = {}
+    for entry in report["difficulty"].values():
+        tiers[entry["tier"]] = tiers.get(entry["tier"], 0) + 1
+    print(f"Difficulty: {dict(sorted(tiers.items()))}")
+    for entry in ledger["entries"]:
+        print(f"  {entry['source']:<9} {entry['module']:<24} {entry['task_id']}")
+    print(f"Quota satisfied: {ledger['satisfied']}")
+    for problem in ledger["shortfalls"]:
+        print(f"  shortfall: {problem}")
+    return 0 if ledger["satisfied"] else 1
+
+
+def _print_emission(report: dict) -> int:
+    print(f"Repository: {report['repository_root']}")
+    print(f"Tasks written: {report['task_count']}")
+    print(f"By source: {report['by_source']}")
+    print(f"Modules covered: {report['distinct_modules']} {report['modules_covered']}")
+    print(f"Difficulty: {report['difficulty_spread']}")
+    print(f"Quota satisfied: {report['quota_satisfied']}")
+    for problem in report["shortfalls"]:
+        print(f"  shortfall: {problem}")
+    print(f"Instructions failing the leak check: {report['instructions_leaking'] or 'none'}")
+    print(f"Manifest: {report['manifest']}")
+    return 0 if report["quota_satisfied"] and not report["instructions_leaking"] else 1
 
 
 def _print_enrichment(report: dict) -> int:

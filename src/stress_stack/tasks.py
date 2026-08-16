@@ -95,6 +95,10 @@ class BuiltTask:
             "title": self.candidate.title,
             "primary_module": self.candidate.primary_module,
             "modules": self.candidate.modules,
+            # Carried through so selection and difficulty read one artifact
+            # rather than re-joining validation back onto candidates.
+            "score": round(self.candidate.score, 4),
+            "signals": self.candidate.signals,
             "eligible": self.eligible,
             "rejected": self.rejected,
             "targets": self.targets,

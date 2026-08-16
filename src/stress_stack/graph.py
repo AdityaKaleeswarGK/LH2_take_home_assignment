@@ -815,6 +815,60 @@ def build_validation_artifacts(
     }
 
 
+def build_selection_artifacts(source_value: str, *, cwd: Path | None = None) -> dict[str, Any]:
+    """Choose the ten, score their difficulty, and record quota compliance."""
+    from stress_stack.emit import load_eligible, run_selection
+
+    working_directory = (cwd or Path.cwd()).resolve()
+    source = resolve_source(source_value, working_directory)
+    repository, _ = prepare_repository(source, working_directory)
+    knowledge_root = repository.root / ".stress_stack" / "knowledge"
+
+    eligible = load_eligible(knowledge_root / "validation.json")
+    if not eligible:
+        raise MetadataError(
+            "No validated tasks found. Run `stress-stack validate` before selecting."
+        )
+    selection = run_selection(eligible, build_graph(repository.root))
+    atomic_write_json(knowledge_root / "selection_report.json", selection)
+    return {"repository_root": str(repository.root), "knowledge_root": str(knowledge_root),
+            **selection}
+
+
+def build_emission_artifacts(source_value: str, *, cwd: Path | None = None) -> dict[str, Any]:
+    """Write each task's statement and manifest, then tasks.json."""
+    from stress_stack.emit import emit_bundle, load_eligible, run_selection
+
+    working_directory = (cwd or Path.cwd()).resolve()
+    source = resolve_source(source_value, working_directory)
+    repository, _ = prepare_repository(source, working_directory)
+    metadata_root = repository.root / ".stress_stack"
+    knowledge_root = metadata_root / "knowledge"
+    tasks_root = metadata_root / "tasks"
+
+    eligible = load_eligible(knowledge_root / "validation.json")
+    if not eligible:
+        raise MetadataError(
+            "No validated tasks found. Run `stress-stack validate` before emitting."
+        )
+    graph = build_graph(repository.root)
+    # Recomputed, never reused. Selection is deterministic and cheap, and
+    # reading a stale report silently emitted tasks whose difficulty
+    # justifications predated a fix to how they are written.
+    selection = run_selection(eligible, graph)
+    atomic_write_json(knowledge_root / "selection_report.json", selection)
+    manifest = emit_bundle(
+        selection, eligible, graph, tasks_root, metadata_root / "tasks.json"
+    )
+    update_stage(metadata_root, "task_generation", "emitted")
+    return {
+        "repository_root": str(repository.root),
+        "tasks_root": str(tasks_root),
+        "manifest": str(metadata_root / "tasks.json"),
+        **manifest,
+    }
+
+
 def build_enrichment_artifacts(source_value: str, *, cwd: Path | None = None, workers: int = 20):
     """graph + coverage -> file cards -> blueprint, all written under knowledge/."""
     from stress_stack.enrich import (
