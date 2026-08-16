@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from inverse_alpha.errors import InputError
-from inverse_alpha.source import (
+from stress_stack.errors import InputError
+from stress_stack.source import (
     normalize_git_url,
     parse_github_url,
     resolve_source,

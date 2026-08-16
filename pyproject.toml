@@ -3,18 +3,14 @@ requires = ["setuptools>=75", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "inverse-alpha"
-version = "0.2.0"
-description = "Repository-local history, verified Python knowledge, and semantic enrichment"
+name = "stress-stack"
+version = "0.1.0"
+description = "Repository-local Git history and public pull-request ingestion"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Aditya Kaleeswar" }]
-dependencies = [
-  "PyYAML>=6,<7",
-  "tree-sitter==0.26.0",
-  "tree-sitter-python==0.25.0",
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = [
@@ -22,7 +18,7 @@ dev = [
 ]
 
 [project.scripts]
-inverse-alpha = "inverse_alpha.cli:main"
+stress-stack = "stress_stack.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

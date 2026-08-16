@@ -4,7 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from inverse_alpha.ingest import ingest
+from stress_stack.ingest import ingest
 
 
 def read_jsonl(path: Path) -> list[dict[str, object]]:
@@ -13,7 +13,7 @@ def read_jsonl(path: Path) -> list[dict[str, object]]:
 
 def test_local_ingestion_creates_repository_metadata(history_repository: Path) -> None:
     result = ingest(str(history_repository), cwd=history_repository.parent)
-    metadata = history_repository / ".inverse_alpha"
+    metadata = history_repository / ".stress_stack"
 
     assert result.repository_root == history_repository
     assert result.commit_count == 4
@@ -62,7 +62,7 @@ def test_repeated_ingestion_replaces_history_without_duplicates(
     ingest(str(history_repository), cwd=history_repository.parent)
     ingest(str(history_repository), cwd=history_repository.parent)
 
-    metadata = history_repository / ".inverse_alpha"
+    metadata = history_repository / ".stress_stack"
     commits = read_jsonl(metadata / "history" / "commits.jsonl")
     logs = read_jsonl(metadata / "logs" / "ingestion.jsonl")
 
@@ -70,4 +70,3 @@ def test_repeated_ingestion_replaces_history_without_duplicates(
     assert len({commit["sha"] for commit in commits}) == 4
     assert len(logs) == 2
     assert all(log["status"] == "partial" for log in logs)
-

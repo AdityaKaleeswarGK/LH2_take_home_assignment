@@ -1,0 +1,3 @@
+"""Stress Stack repository history ingestion package."""
+
+__version__ = "0.1.0"

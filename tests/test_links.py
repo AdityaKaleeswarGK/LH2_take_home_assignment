@@ -1,5 +1,5 @@
-from inverse_alpha.ingest import link_pull_requests
-from inverse_alpha.models import CommitRecord, PullRequestRecord
+from stress_stack.ingest import link_pull_requests
+from stress_stack.models import CommitRecord, PullRequestRecord
 
 
 def commit(sha: str, subject: str) -> CommitRecord:
@@ -55,4 +55,3 @@ def test_links_exact_merge_sha_and_squash_message() -> None:
         (7, "a" * 40, "github_merge_sha"),
         (8, "b" * 40, "commit_message"),
     ]
-

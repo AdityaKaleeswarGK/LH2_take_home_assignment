@@ -7,26 +7,14 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture(autouse=True)
-def isolated_inverse_alpha_config(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv(
-        "INVERSE_ALPHA_CONFIG_DIR", str(tmp_path / "inverse-alpha-config")
-    )
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
-    monkeypatch.delenv("OPENROUTER_BASE_URL", raising=False)
-
-
 def run_git(repository: Path, *arguments: str) -> str:
     environment = os.environ.copy()
     environment.update(
         {
-            "GIT_AUTHOR_NAME": "Inverse Alpha Test",
-            "GIT_AUTHOR_EMAIL": "inverse-alpha@example.test",
-            "GIT_COMMITTER_NAME": "Inverse Alpha Test",
-            "GIT_COMMITTER_EMAIL": "inverse-alpha@example.test",
+            "GIT_AUTHOR_NAME": "Stress Stack Test",
+            "GIT_AUTHOR_EMAIL": "stress-stack@example.test",
+            "GIT_COMMITTER_NAME": "Stress Stack Test",
+            "GIT_COMMITTER_EMAIL": "stress-stack@example.test",
             "LC_ALL": "C",
         }
     )
@@ -47,8 +35,8 @@ def history_repository(tmp_path: Path) -> Path:
     repository = tmp_path / "history-repository"
     repository.mkdir()
     run_git(repository, "init", "-b", "main")
-    run_git(repository, "config", "user.name", "Inverse Alpha Test")
-    run_git(repository, "config", "user.email", "inverse-alpha@example.test")
+    run_git(repository, "config", "user.name", "Stress Stack Test")
+    run_git(repository, "config", "user.email", "stress-stack@example.test")
 
     (repository / "base.txt").write_text("base\n", encoding="utf-8")
     run_git(repository, "add", "base.txt")

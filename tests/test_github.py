@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from inverse_alpha.github import GitHubClient, RequestResult
+from stress_stack.github import GitHubClient, RequestResult
 
 
 def pull_request(number: int) -> dict[str, Any]:

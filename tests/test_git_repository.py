@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from inverse_alpha.errors import InputError
-from inverse_alpha.git_repository import GitRepository
+from stress_stack.errors import InputError
+from stress_stack.git_repository import GitRepository
 
 
 def test_extracts_commits_diffs_branches_tags_and_merge(history_repository: Path) -> None:
@@ -66,4 +66,3 @@ def test_refuses_conflicting_existing_destination(
 
     with pytest.raises(InputError):
         GitRepository.clone_or_update(str(remote), destination)
-
