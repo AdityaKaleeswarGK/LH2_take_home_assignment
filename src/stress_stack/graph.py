@@ -883,6 +883,21 @@ def build_emission_artifacts(
     }
 
 
+def build_bundle_artifacts(
+    source_value: str, *, cwd: Path | None = None, output: str = "output"
+) -> dict[str, Any]:
+    """Project the pipeline's artifacts into the deliverable layout."""
+    from stress_stack.bundle import assemble
+
+    working_directory = (cwd or Path.cwd()).resolve()
+    source = resolve_source(source_value, working_directory)
+    repository, _ = prepare_repository(source, working_directory)
+    destination = Path(output)
+    if not destination.is_absolute():
+        destination = working_directory / destination
+    return assemble(repository.root, destination).to_dict()
+
+
 def build_enrichment_artifacts(source_value: str, *, cwd: Path | None = None, workers: int = 20):
     """graph + coverage -> file cards -> blueprint, all written under knowledge/."""
     from stress_stack.enrich import (

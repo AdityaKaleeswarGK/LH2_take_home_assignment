@@ -82,6 +82,7 @@ def run_pipeline(
         build_emission_artifacts,
         build_enrichment_artifacts,
         build_graph_artifacts,
+        build_bundle_artifacts,
         build_index_artifacts,
         build_mining_artifacts,
         build_selection_artifacts,
@@ -119,6 +120,7 @@ def run_pipeline(
         ),
         ("select", lambda: build_selection_artifacts(here["source"], cwd=working)),
         ("emit", lambda: build_emission_artifacts(here["source"], cwd=working)),
+        ("bundle", lambda: build_bundle_artifacts(here["source"], cwd=working)),
     ]
     del at
 

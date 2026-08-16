@@ -10,6 +10,7 @@ from stress_stack.errors import StressStackError
 from stress_stack.graph import (
     DependencyArtifacts,
     GraphArtifacts,
+    build_bundle_artifacts,
     build_container_artifacts,
     build_coverage_artifacts,
     build_enrichment_artifacts,
@@ -107,6 +108,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip", action="append", default=[], metavar="STAGE",
         help="Skip a stage by name; repeatable (e.g. --skip enrich)",
     )
+    bundle_parser = subparsers.add_parser(
+        "bundle",
+        help="Assemble output/ in the deliverable layout: repo, .okf, tasks, transcripts",
+    )
+    bundle_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
+    bundle_parser.add_argument("--output", default="output", help="Destination directory")
     select_parser = subparsers.add_parser(
         "select",
         help="Choose the final ten under the brief's quotas and record compliance",
@@ -180,6 +187,12 @@ def main(arguments: list[str] | None = None) -> int:
                     excision_limit=namespace.excision_limit,
                     repeats=namespace.repeats,
                     skip=tuple(namespace.skip),
+                )
+            )
+        elif namespace.command == "bundle":
+            return _print_bundle(
+                build_bundle_artifacts(
+                    namespace.source, cwd=Path.cwd(), output=namespace.output
                 )
             )
         elif namespace.command == "select":
@@ -390,6 +403,17 @@ def _print_pipeline(result: PipelineResult) -> int:
         print(f"Leaking instructions: {manifest.get('instructions_leaking') or 'none'}")
     print(f"Pipeline: {'ok' if result.ok else 'failed'}")
     return 0 if result.ok and manifest.get("quota_satisfied") else 1
+
+
+def _print_bundle(report: dict) -> int:
+    print(f"Repository: {report['repository_root']}")
+    print(f"Output: {report['output_root']}")
+    for item in report["copied"]:
+        print(f"  + {item}")
+    for item in report["missing"]:
+        print(f"  ! missing {item}")
+    print(f"Tasks: {report['task_count']} | transcripts: {report['transcripts']}")
+    return 0 if not report["missing"] else 1
 
 
 def _print_selection(report: dict) -> int:

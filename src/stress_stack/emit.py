@@ -145,6 +145,105 @@ def contract_of(graph: Any, symbol_id: str) -> dict[str, str]:
     return {"signature": "", "docstring": "", "qualified_name": ""}
 
 
+def provenance_of(task: dict[str, Any]) -> dict[str, Any]:
+    """Where this task came from, in the terms the brief asks for.
+
+    A history task is provenanced by the commit pair it was materialised
+    between; an excision task by the symbol whose body was removed. Both carry
+    enough to re-derive the task from the repository without this tool.
+    """
+    signals = task.get("signals") or {}
+    transition = (task.get("detail") or {}).get("transition") or {}
+    if task.get("source") == "excision":
+        return {
+            "kind": "excision_target",
+            "symbol_id": signals.get("symbol_id"),
+            "qualified_name": signals.get("qualified_name"),
+            "path": signals.get("path"),
+            "commit_sha": transition.get("head_sha"),
+            "stub_strategy": ((task.get("detail") or {}).get("excision") or {}).get("strategy"),
+        }
+    return {
+        "kind": "commit",
+        "commit_sha": transition.get("head_sha"),
+        "base_sha": transition.get("base_sha"),
+        "pull_request": signals.get("pr_number"),
+        "url": signals.get("html_url"),
+        "merged_at": signals.get("merged_at"),
+    }
+
+
+def verifier_command(task: dict[str, Any], tasks_root: Path) -> list[str]:
+    """The exact command that decides pass or fail, as an argument vector."""
+    from stress_stack.runner import pytest_arguments
+
+    tree = tasks_root / task["task_id"] / "input"
+    return [
+        "python", "-m", "pytest", "-p", "no:cacheprovider",
+        "--continue-on-collection-errors", "-q",
+        *pytest_arguments(tree, task.get("targets") or []),
+    ]
+
+
+def validation_status(task: dict[str, Any]) -> dict[str, Any]:
+    """What was proved about this task, gate by gate."""
+    gates = task.get("gates") or []
+    return {
+        "status": "validated" if task.get("eligible") else "rejected",
+        "gates_passed": [g["gate"] for g in gates if g.get("passed")],
+        "gates_failed": [g["gate"] for g in gates if not g.get("passed")],
+        "repeats": (task.get("detail") or {}).get("repeats"),
+        "fail_before_classes": (task.get("detail") or {}).get("failure_classes", {}),
+        "runs": [r["name"] for r in task.get("runs") or []],
+    }
+
+
+def golden_solution_markdown(
+    task: dict[str, Any], diff: str, provenance: dict[str, Any]
+) -> str:
+    """The diff, plus why this is the correct fix.
+
+    The rationale is assembled from measured evidence rather than asserted: the
+    change is correct because these named tests do not pass before it and do
+    pass after, nothing else regressed, and the verdict repeated.
+    """
+    detail = task.get("detail") or {}
+    targets = task.get("targets") or []
+    screen = detail.get("screen") or {}
+    lines = [
+        f"# Golden solution — {task['task_id']}",
+        "",
+        "## Provenance",
+        "",
+    ]
+    lines += [f"- **{key}**: `{value}`" for key, value in provenance.items() if value]
+    lines += [
+        "",
+        "## Why this is the correct fix",
+        "",
+        "This is the change the repository itself made, taken from git rather than "
+        "written by hand. It is *verified* correct rather than assumed, by four "
+        "measurements recorded in `evidence/`:",
+        "",
+        f"1. **Fail-before.** {len(targets)} designated test(s) do not pass against "
+        f"`input/`. {len(screen.get('ran_and_failed', []))} of them ran and failed "
+        "for a behavioural reason — an assertion, or an exception raised from inside "
+        "the repository — rather than an import or collection error.",
+        f"2. **Pass-after.** The same tests pass against `solution/`.",
+        f"3. **No collateral breakage.** Every test passing before the change still "
+        "passes after it.",
+        f"4. **Determinism.** The verdict was reproduced across "
+        f"{detail.get('repeats', 'N')} fresh container runs with identical statuses "
+        "and identical failure signatures.",
+        "",
+        "### Designated tests",
+        "",
+    ]
+    lines += [f"- `{target}`" for target in targets] or ["- (none recorded)"]
+    lines += ["", "## Diff", "", "```diff", diff.rstrip(), "```", ""]
+    return "\n".join(lines)
+
+
 def run_selection(
     eligible: list[dict[str, Any]], graph: Any, *, quota: Quota | None = None
 ) -> dict[str, Any]:
@@ -243,9 +342,17 @@ def emit_bundle(
         if not report.clean:
             leaks.append(task_id)
 
+        provenance = provenance_of(task)
+        command = verifier_command(task, tasks_root)
+        (task_root / "goldenSolution.md").write_text(
+            golden_solution_markdown(task, diff, provenance), encoding="utf-8"
+        )
+
         record = {
             "id": task_id,
             "source": task["source"],
+            "provenance": provenance,
+            "validation": validation_status(task),
             "title": written["title"],
             "instruction": written["instruction"],
             "instruction_origin": origin,
@@ -258,9 +365,12 @@ def emit_bundle(
             "verifier": {
                 "files": task.get("verifier_files") or [],
                 "node_ids": task.get("targets") or [],
+                "command": command,
+                "command_line": " ".join(command),
                 "procedure": (
-                    "Copy input/, overlay verifier/ onto it, then run the listed "
-                    "node ids. They must fail before the change and pass after."
+                    "Copy input/, overlay verifier/ onto it, then run the command "
+                    "below from the tree root. It must fail before the change and "
+                    "pass after."
                 ),
             },
             "paths": {
@@ -268,6 +378,7 @@ def emit_bundle(
                 "solution": f"{task_id}/solution",
                 "verifier": f"{task_id}/verifier",
                 "golden_diff": f"{task_id}/goldenSolution.diff",
+                "golden_solution": f"{task_id}/goldenSolution.md",
                 "evidence": f"{task_id}/evidence",
             },
             "gates": task.get("gates") or [],
