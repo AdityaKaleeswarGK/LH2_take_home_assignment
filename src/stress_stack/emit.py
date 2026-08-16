@@ -209,10 +209,11 @@ def emit_bundle(
         text = base_source_text(input_dir)
         report = leak_check(written["instruction"], diff, names, text)
 
-        # The template is the floor. Generated prose has to clear the same leak
-        # check to replace it, and anything else — a model error, a short or
-        # unusable answer, a leak — leaves the template standing.
-        if client is not None and report.clean:
+        # A leaking template is the case that most needs a second attempt, so
+        # generation is never gated on the template being clean. Gating it that
+        # way meant three click tasks shipped a leaking mechanical instruction
+        # while the model that could have replaced it was never asked.
+        if client is not None:
             produced = generated_instruction(
                 client,
                 task,
@@ -226,6 +227,18 @@ def emit_bundle(
                 written, generated_meta = produced
                 origin = "generated"
                 report = leak_check(written["instruction"], diff, names, text)
+
+        if not report.clean:
+            # Last resort: the change summary is the only part of the template
+            # carrying prose the author wrote, and therefore the only part that
+            # can echo the patch. Dropping it costs context and guarantees a
+            # clean statement, which is the right trade when the alternative is
+            # shipping the answer.
+            stripped = dict(evidence, change_summary="")
+            written = mechanical_instruction(task, stripped)
+            origin = "mechanical_minimal"
+            generated_meta = {}
+            report = leak_check(written["instruction"], diff, names, text)
 
         if not report.clean:
             leaks.append(task_id)
