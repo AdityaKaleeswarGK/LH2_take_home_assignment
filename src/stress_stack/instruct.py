@@ -325,6 +325,36 @@ def build_evidence(
     }
 
 
+def _behaviour_brief(task: dict[str, Any], evidence: dict[str, Any]) -> str:
+    """What must exist when the work is done — and, for an excision, how much.
+
+    Covering tests exercise a symbol without being about it. `Path.from_t` is
+    covered by a deletion test and an assignment test, so an instruction written
+    from those names described deletion and assignment as work to do, when the
+    solver needs only `from_t` and the other two pass because it does. The scope
+    is therefore stated separately from the checks: one names the single
+    function to implement, the other names what will be run against it.
+    """
+    module = evidence.get("module_purpose", "")
+    checks = behaviour_summary(task.get("targets") or [])
+    if task.get("source") != "excision":
+        return f"{module}\n{evidence.get('change_summary', '')}\nThe verifier checks: {checks}.".strip()
+
+    qualified = evidence.get("qualified_name") or task.get("subject", "")
+    return (
+        f"{module}\n"
+        f"SCOPE: exactly one function is missing its body — {qualified}. Its "
+        "signature and documentation remain in place. Implement that function "
+        "and nothing else; the rest of the repository is already complete and "
+        "correct.\n"
+        f"CHECKS: the verifier runs these existing tests, which exercise the "
+        f"function directly or indirectly — {checks}. They describe what is "
+        "checked, not additional work: a test named for deletion or assignment "
+        "passes once the missing function behaves correctly. Do not describe "
+        "those neighbouring features as things the solver must build."
+    ).strip()
+
+
 def generated_instruction(
     client: Any,
     task: dict[str, Any],
@@ -350,11 +380,7 @@ def generated_instruction(
 
     contract = [line for line in [evidence.get("signature"), evidence.get("docstring")] if line]
     messages = instruction_messages(
-        behaviour=(
-            f"{evidence.get('module_purpose', '')}\n"
-            f"{evidence.get('change_summary', '')}\n"
-            f"The verifier checks: {behaviour_summary(task.get('targets') or [])}."
-        ).strip(),
+        behaviour=_behaviour_brief(task, evidence),
         feature=task.get("primary_module") or "",
         contract_lines=contract,
         verifier_tests=[humanise(test_id) for test_id in (task.get("targets") or [])],
