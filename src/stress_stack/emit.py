@@ -384,7 +384,11 @@ def emit_bundle(
     leaks: list[str] = []
     invalid_instructions: list[str] = []
 
-    for task_id in selection["task_ids"]:
+    from stress_stack.progress import reporter
+
+    live = reporter()
+    for position, task_id in enumerate(selection["task_ids"], start=1):
+        live.step(f"writing {task_id}", position, len(selection["task_ids"]))
         task = by_id[task_id]
         task_root = tasks_root / task_id
         contract = (

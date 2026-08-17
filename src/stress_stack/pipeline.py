@@ -137,11 +137,16 @@ def run_pipeline(
             lambda: build_bundle_artifacts(here["source"], cwd=working, output=output),
         ),
     ]
-    for name, action in stages:
+    from stress_stack.progress import reporter
+
+    live = reporter()
+    for position, (name, action) in enumerate(stages, start=1):
         if name in skip:
             result.stages.append(StageResult(name, "skipped", 0.0, "skipped by request"))
+            live.stage_end(name, "skipped", 0.0, "skipped by request")
             continue
         started = time.monotonic()
+        live.stage_start(name, position, len(stages))
         try:
             produced = action()
         except StressStackError as exc:
@@ -150,8 +155,10 @@ def run_pipeline(
             )
             if name in _OPTIONAL:
                 result.stages[-1].status = "degraded"
+                _announce(live, result.stages[-1])
                 _record(result)
                 continue
+            _announce(live, result.stages[-1])
             _record(result)
             break
         except Exception as exc:  # noqa: BLE001 — a stage crash is a stage result
@@ -162,8 +169,10 @@ def run_pipeline(
             )
             if name in _OPTIONAL:
                 result.stages[-1].status = "degraded"
+                _announce(live, result.stages[-1])
                 _record(result)
                 continue
+            _announce(live, result.stages[-1])
             _record(result)
             break
 
@@ -179,6 +188,7 @@ def run_pipeline(
                 semantic_error or "",
             )
         )
+        _announce(live, result.stages[-1])
         # Ingest may have cloned; every later stage must address the clone, not
         # the URL, or each one would try to clone again.
         if name == "ingest":
@@ -204,6 +214,10 @@ def run_pipeline(
             result.to_dict(),
         )
     return result
+
+
+def _announce(live: Any, stage: StageResult) -> None:
+    live.stage_end(stage.name, stage.status, stage.seconds, stage.detail[:80])
 
 
 def _semantic_failure(stage: str, produced: Any) -> str | None:

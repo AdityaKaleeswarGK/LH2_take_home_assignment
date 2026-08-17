@@ -119,8 +119,13 @@ def adjudicate(
             list(fallback.values()), calibrated=False, note="no_model_configured"
         )
 
+    from stress_stack.progress import reporter
+
+    live = reporter()
+    done = [0]
+
     def judge(task: dict[str, Any]) -> Verdict:
-        return _judge_one(
+        verdict = _judge_one(
             task,
             difficulty.get(task["task_id"]) or {},
             tasks_root=tasks_root,
@@ -130,12 +135,21 @@ def adjudicate(
             max_turns=max_turns,
             fallback=fallback[task["task_id"]],
         )
+        done[0] += 1
+        looked = (verdict.exploration or {}).get("tool_calls", 0)
+        live.step(
+            f"{verdict.task_id} → {verdict.tier} after {looked} tool call(s)",
+            done[0],
+            len(tasks),
+        )
+        return verdict
 
     # Each task is judged independently and each opens its own index handle, so
     # the pool is safe and the wall clock is one task rather than ten.
     with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(tasks)))) as pool:
         verdicts = list(pool.map(judge, tasks))
 
+    live.step(f"calibrating {len(verdicts)} verdicts across the set")
     calibrated, note = _calibrate(verdicts, tasks, client)
     return _result(calibrated, calibrated=not note, note=note)
 

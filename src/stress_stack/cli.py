@@ -161,12 +161,69 @@ def build_parser() -> argparse.ArgumentParser:
         "--set", dest="assignments", action="append", metavar="ROLE=MODEL",
         help="Assign a model to a role, e.g. --set worker=openai/gpt-5.6-luna",
     )
+    commands_parser = subparsers.add_parser(
+        "commands",
+        help="Print the command to run everything, and each stage on its own",
+    )
+    commands_parser.add_argument("source", nargs="?", default="<repo-url-or-path>")
     return parser
+
+
+# Stage order is a dependency order, not a preference: hygiene reformats the
+# tree graph parses, deps compiles the lockfile container builds from, and
+# validate runs inside the image container verified.
+STAGES: tuple[tuple[str, str], ...] = (
+    ("ingest", "Clone the repository and extract its history"),
+    ("hygiene", "Apply ruff lint and format, verified by a before/after test run"),
+    ("deps", "Pin every dependency to an exact, hashed version"),
+    ("graph", "Build the verified symbol graph"),
+    ("coverage", "Measure which tests execute which symbols"),
+    ("testgen", "Generate tests for uncovered behaviour, gated on mutation"),
+    ("container", "Build the image and prove it runs the suite twice identically"),
+    ("enrich", "Describe each file and synthesise the repository blueprint"),
+    ("index", "Load the graph, coverage and history into a queryable index"),
+    ("mine", "Rank every history and excision candidate"),
+    ("validate", "Put candidates through the screen and the eight gates"),
+    ("select", "Choose the ten under the brief's quotas"),
+    ("adjudicate", "Let an agent read the code and judge each task's difficulty"),
+    ("emit", "Write each task's instruction, manifest and golden solution"),
+    ("bundle", "Assemble output/ with the repo, knowledge layer and tasks"),
+)
+
+
+def _print_commands(source: str) -> int:
+    print("Set up once:\n")
+    print("  pip install -e .")
+    print("  stress-stack model --set-key          # prompts, never echoes\n")
+    print("Run everything:\n")
+    print(f"  stress-stack run {source} --output output\n")
+    print("Or one stage at a time, in this order:\n")
+    for position, (name, description) in enumerate(STAGES, start=1):
+        print(f"  {position:>2}. stress-stack {name:<11} {source:<24} # {description}")
+    print("\nEvery stage is re-runnable and reads what the previous one wrote.")
+    return 0
+
+
+# Commands that take long enough that silence reads as a hang.
+_LIVE = frozenset(
+    {"run", "validate", "adjudicate", "emit", "enrich", "testgen", "container", "mine"}
+)
 
 
 def main(arguments: list[str] | None = None) -> int:
     parser = build_parser()
     namespace = parser.parse_args(arguments)
+    if namespace.command in _LIVE and not getattr(namespace, "quiet", False):
+        from stress_stack.progress import Console, reporting
+
+        # `run` renames the stage as it goes; a single stage names itself.
+        console = Console(stage="" if namespace.command == "run" else namespace.command)
+        with reporting(console):
+            return _dispatch(parser, namespace)
+    return _dispatch(parser, namespace)
+
+
+def _dispatch(parser: argparse.ArgumentParser, namespace: argparse.Namespace) -> int:
     try:
         if namespace.command == "ingest":
             result = ingest(namespace.source, cwd=Path.cwd())
@@ -238,6 +295,8 @@ def main(arguments: list[str] | None = None) -> int:
                     namespace.source, cwd=Path.cwd(), workers=namespace.workers
                 )
             )
+        elif namespace.command == "commands":
+            return _print_commands(namespace.source)
         elif namespace.command == "model":
             return _configure_model(namespace)
         elif namespace.command == "deps":

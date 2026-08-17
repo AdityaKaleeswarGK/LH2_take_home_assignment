@@ -142,12 +142,21 @@ def validate_pool(
     existing_modules: set[str] | None = None,
 ) -> tuple[list[BuiltTask], ValidationSummary]:
     """Validate down the ranked pool until enough survive, or the budget runs out."""
+    from stress_stack.progress import reporter
+
+    live = reporter()
     summary = ValidationSummary()
     built: list[BuiltTask] = []
     started = time.monotonic()
+    planned = candidates[:limit]
 
-    for candidate in candidates[:limit]:
+    for candidate in planned:
         summary.attempted += 1
+        live.step(
+            f"{candidate.candidate_id}  ({summary.eligible} eligible so far)",
+            summary.attempted,
+            len(planned),
+        )
         result = build_and_validate(
             repository, graph, candidate, tasks_root, work_root, runner,
             repeats=repeats, policy=policy,
