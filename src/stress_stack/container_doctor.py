@@ -121,9 +121,9 @@ def run_container_verification(
 
     # For Python repos, delegate to verified container pipeline if available
     if prof.primary_language == "python":
-        from stress_stack.container import verify_container
+        from stress_stack.graph import build_container_artifacts
 
-        legacy = verify_container(str(root))
+        legacy = build_container_artifacts(str(root))
         return ContainerDoctorResult(
             dockerfile_path=legacy.dockerfile,
             image_tag=legacy.image,
