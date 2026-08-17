@@ -947,6 +947,59 @@ def build_selection_artifacts(source_value: str, *, cwd: Path | None = None) -> 
             **selection}
 
 
+def build_adjudication_artifacts(
+    source_value: str, *, cwd: Path | None = None, use_model: bool = True
+) -> dict[str, Any]:
+    """Let an agent read the code and decide how hard each selected task is."""
+    from stress_stack.adjudicate import adjudicate
+    from stress_stack.emit import load_eligible, run_selection
+
+    working_directory = (cwd or Path.cwd()).resolve()
+    source = resolve_source(source_value, working_directory)
+    repository, _ = prepare_repository(source, working_directory)
+    metadata_root = repository.root / ".stress_stack"
+    knowledge_root = metadata_root / "knowledge"
+
+    eligible = load_eligible(knowledge_root / "validation.json")
+    if not eligible:
+        raise MetadataError(
+            "No validated tasks found. Run `stress-stack validate` before adjudicating."
+        )
+    # Recomputed rather than read, for the same reason `emit` recomputes it:
+    # selection is deterministic and cheap, and judging a stale set of ten would
+    # attach reasoning to tasks that are not the ones being shipped.
+    selection = run_selection(eligible, build_graph(repository.root))
+    chosen = {entry["task_id"] for entry in (selection.get("ledger") or {}).get("entries", [])}
+    tasks = [task for task in eligible if task["task_id"] in chosen]
+
+    client = None
+    if use_model:
+        from stress_stack.openrouter import OpenRouterClient
+
+        candidate = OpenRouterClient(cache_dir=metadata_root / "cache" / "llm")
+        client = candidate if candidate.configured else None
+
+    blueprint = {}
+    blueprint_path = knowledge_root / "blueprint.json"
+    if blueprint_path.is_file():
+        try:
+            blueprint = json.loads(blueprint_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blueprint = {}
+
+    result = adjudicate(
+        tasks,
+        selection.get("difficulty") or {},
+        tasks_root=metadata_root / "tasks",
+        client=client,
+        index_path=knowledge_root / "index.sqlite",
+        blueprint=blueprint,
+    )
+    atomic_write_json(knowledge_root / "adjudication.json", result)
+    update_stage(metadata_root, "task_generation", "adjudicated")
+    return {"repository_root": str(repository.root), **result}
+
+
 def build_emission_artifacts(
     source_value: str, *, cwd: Path | None = None, use_model: bool = True
 ) -> dict[str, Any]:

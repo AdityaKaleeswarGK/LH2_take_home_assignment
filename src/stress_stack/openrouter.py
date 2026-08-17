@@ -24,6 +24,7 @@ import json
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -52,6 +53,8 @@ class Completion:
     attempts: int = 1
     cost: float = 0.0
     reasoning_tokens: int = 0
+    tool_calls: tuple[dict[str, Any], ...] = ()
+    """Tools the model asked to run, in the order it asked for them."""
 
     @property
     def truncated(self) -> bool:
@@ -81,6 +84,7 @@ class Completion:
             "cost": self.cost,
             "reasoning_tokens": self.reasoning_tokens,
             "truncated": self.truncated,
+            "tool_calls": [call.get("name") for call in self.tool_calls],
         }
 
 
@@ -155,6 +159,7 @@ class OpenRouterClient:
         temperature: float = 0.0,
         max_tokens: int | None = None,
         json_schema: dict[str, Any] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         use_cache: bool = True,
     ) -> Completion:
         resolved_model = model or self.settings.model_for(role)
@@ -165,6 +170,8 @@ class OpenRouterClient:
         }
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
+        if tools:
+            payload["tools"] = tools
         if json_schema is not None:
             payload["response_format"] = {
                 "type": "json_schema",
@@ -206,6 +213,60 @@ class OpenRouterClient:
         """Return parsed JSON, tolerating models that wrap it in a fence."""
         completion = self.complete(messages, json_schema=schema, **kwargs)
         return parse_json(completion.content), completion
+
+    def converse(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        tools: list[dict[str, Any]],
+        run_tool: Callable[[str, dict[str, Any]], str],
+        max_turns: int = 12,
+        **kwargs: Any,
+    ) -> tuple[list[dict[str, Any]], list[Completion]]:
+        """Let the model explore with tools, and return the whole exchange.
+
+        Determinism survives this. Each turn is cached on the hash of the
+        payload, and the payload contains every message accumulated so far, so a
+        replay walks the identical sequence of keys and never reaches the
+        network. That only holds while the tools are pure reads of a fixed tree —
+        a tool that observed changing state would make the second turn's input
+        differ from the first run's and the chain would diverge.
+
+        The loop is bounded. A model that keeps asking for tools is stopped and
+        the transcript says so, rather than spending until a budget runs out.
+        """
+        conversation = list(messages)
+        completions: list[Completion] = []
+        for _ in range(max_turns):
+            completion = self.complete(conversation, tools=tools, **kwargs)
+            completions.append(completion)
+            if not completion.tool_calls:
+                return conversation, completions
+            conversation.append(
+                {
+                    "role": "assistant",
+                    "content": completion.content or None,
+                    "tool_calls": [_wire_tool_call(call) for call in completion.tool_calls],
+                }
+            )
+            for call in completion.tool_calls:
+                conversation.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call["id"],
+                        "content": _bounded(run_tool(call["name"], call["arguments"])),
+                    }
+                )
+        conversation.append(
+            {
+                "role": "user",
+                "content": (
+                    f"You have used the {max_turns}-turn exploration budget. "
+                    "Answer now from what you already know."
+                ),
+            }
+        )
+        return conversation, completions
 
     def _request_with_retry(self, payload: dict[str, Any], key: str) -> Completion:
         delay = 1.0
@@ -264,9 +325,12 @@ class OpenRouterClient:
         message = choices[0].get("message") or {}
         usage = body.get("usage") or {}
         details = usage.get("completion_tokens_details") or {}
-        # Some providers surface the answer only on `reasoning` when content is empty.
+        tool_calls = _tool_calls_from(message)
+        # Some providers surface the answer only on `reasoning` when content is
+        # empty. A turn that asked for tools is legitimately contentless, so the
+        # fallback must not fire there or the reasoning trace becomes the answer.
         content = message.get("content") or ""
-        if not str(content).strip() and message.get("reasoning"):
+        if not tool_calls and not str(content).strip() and message.get("reasoning"):
             content = message["reasoning"]
         return Completion(
             content=str(content),
@@ -280,6 +344,7 @@ class OpenRouterClient:
             attempts=attempts,
             cost=float(usage.get("cost") or 0.0),
             reasoning_tokens=int(details.get("reasoning_tokens") or 0),
+            tool_calls=tool_calls,
         )
 
     def _cache_key(self, payload: dict[str, Any]) -> str:
@@ -314,6 +379,7 @@ class OpenRouterClient:
             latency_seconds=0.0,
             finish_reason=response.get("finish_reason"),
             cache_key=key,
+            tool_calls=tuple(response.get("tool_calls") or ()),
         )
 
     def _write_cache(
@@ -331,6 +397,7 @@ class OpenRouterClient:
             "response": {
                 "content": completion.content,
                 "finish_reason": completion.finish_reason,
+                "tool_calls": [dict(call) for call in completion.tool_calls],
             },
             "usage": {
                 "prompt_tokens": completion.prompt_tokens,
@@ -342,6 +409,53 @@ class OpenRouterClient:
             redact(json.dumps(entry, indent=2, sort_keys=True, ensure_ascii=False)) + "\n",
             encoding="utf-8",
         )
+
+
+_TOOL_RESULT_BUDGET = 8000
+
+
+def _bounded(text: str) -> str:
+    """Cap one tool result so a large file cannot crowd out the conversation."""
+    if len(text) <= _TOOL_RESULT_BUDGET:
+        return text
+    return text[:_TOOL_RESULT_BUDGET] + f"\n... truncated at {_TOOL_RESULT_BUDGET} characters ..."
+
+
+def _tool_calls_from(message: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    """Normalise the wire format into name/arguments, arguments already parsed.
+
+    Providers send ``arguments`` as a JSON *string*. A model occasionally emits
+    something that is not valid JSON there; that is a malformed request rather
+    than a crash, so it becomes an empty argument set and the tool reports the
+    problem back to the model.
+    """
+    calls = []
+    for index, raw in enumerate(message.get("tool_calls") or []):
+        function = raw.get("function") or {}
+        try:
+            arguments = json.loads(function.get("arguments") or "{}")
+        except json.JSONDecodeError:
+            arguments = {}
+        calls.append(
+            {
+                "id": str(raw.get("id") or f"call_{index}"),
+                "name": str(function.get("name") or ""),
+                "arguments": arguments if isinstance(arguments, dict) else {},
+            }
+        )
+    return tuple(calls)
+
+
+def _wire_tool_call(call: dict[str, Any]) -> dict[str, Any]:
+    """The inverse of :func:`_tool_calls_from`, for echoing the turn back."""
+    return {
+        "id": call["id"],
+        "type": "function",
+        "function": {
+            "name": call["name"],
+            "arguments": json.dumps(call["arguments"], sort_keys=True),
+        },
+    }
 
 
 def parse_json(content: str) -> dict[str, Any]:

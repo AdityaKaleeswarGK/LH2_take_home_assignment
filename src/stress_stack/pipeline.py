@@ -25,8 +25,10 @@ from stress_stack.errors import StressStackError
 
 # Optional stages are those whose absence degrades the result without
 # invalidating it: enrichment needs a model, and the deliverable is defined to
-# stand without one.
-_OPTIONAL = frozenset({"enrich"})
+# stand without one. Adjudication is the same bargain — it replaces a measured
+# difficulty tier with a reasoned one, and the measured tier is still there when
+# no model answers.
+_OPTIONAL = frozenset({"enrich", "adjudicate"})
 
 
 @dataclass
@@ -77,6 +79,7 @@ def run_pipeline(
 ) -> PipelineResult:
     """Run the whole thing, from a URL or a path, and return what each stage did."""
     from stress_stack.graph import (
+        build_adjudication_artifacts,
         build_container_artifacts,
         build_coverage_artifacts,
         build_dependency_artifacts,
@@ -127,6 +130,7 @@ def run_pipeline(
             ),
         ),
         ("select", lambda: build_selection_artifacts(here["source"], cwd=working)),
+        ("adjudicate", lambda: build_adjudication_artifacts(here["source"], cwd=working)),
         ("emit", lambda: build_emission_artifacts(here["source"], cwd=working)),
         (
             "bundle",
@@ -227,6 +231,13 @@ def _semantic_failure(stage: str, produced: Any) -> str | None:
     if stage == "validate" and isinstance(produced, dict):
         if int((produced.get("summary") or {}).get("eligible") or 0) < 10:
             return "fewer than 10 tasks passed validation"
+    if stage == "adjudicate" and isinstance(produced, dict):
+        # Reported rather than fatal: `adjudicate` is optional, so this surfaces
+        # as `degraded` and the run continues on the measured tiers.
+        if produced.get("note"):
+            return str(produced["note"])
+        if int(produced.get("fell_back") or 0):
+            return f"{produced['fell_back']} task(s) kept the measured tier"
     if stage == "select" and isinstance(produced, dict):
         if not (produced.get("ledger") or {}).get("satisfied"):
             return "task selection did not satisfy the quota"

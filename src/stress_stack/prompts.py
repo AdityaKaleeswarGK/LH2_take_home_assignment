@@ -193,6 +193,178 @@ _INSTRUCTION_SYSTEM = (
 )
 
 
+RUBRIC = """\
+easy
+  One symbol in one module. The contract is visible where the agent is already
+  looking — a docstring, a type signature, or the failing test itself. No hidden
+  coupling: getting it right does not require knowing anything the local code
+  does not say.
+
+medium
+  Several symbols, or one whose correct behaviour is constrained by rules that
+  are not visible at the call site. The agent has to read callers, neighbouring
+  tests, or a sibling module to learn what "correct" means here. Edge cases and
+  error paths carry real weight.
+
+hard
+  At least one of:
+  - coordinated edits across modules, where a change in one place is wrong
+    unless a matching change is made elsewhere;
+  - business-logic or domain knowledge that cannot be derived from the code in
+    scope;
+  - misleading similar code nearby — a near-identical helper, an overload, or a
+    parallel code path that an agent will plausibly edit instead;
+  - a failing test that pins a symptom whose cause lives in a different module.
+"""
+
+_ADJUDICATION_SYSTEM = f"""\
+You are grading how hard a benchmark task is for an AI coding agent that will be
+given the repository in its pre-change state plus a written instruction, and
+must make the designated tests pass.
+
+You are not solving the task. You are deciding how hard it is, and saying why.
+
+Use the tools to look at the actual code before you judge. Read the module the
+task lives in. Look at what calls the symbols in scope. Check whether something
+nearby looks confusingly similar. A judgement formed without opening anything is
+worth less than one that names what it found.
+
+Judge the difficulty *of the work*, not of the description. A one-line fix in a
+module with three lookalike helpers is harder than a long mechanical edit.
+
+Tier definitions — apply these, not your own scale:
+
+{RUBRIC}
+
+Rules:
+1. Justify in one or two sentences, naming the specific thing that makes it
+   hard: the module, the neighbouring symbol, the rule that is not local. A
+   justification that would read the same for any task is useless.
+2. Never restate the fix or name the lines to change. You are describing
+   difficulty, not writing a hint.
+3. Cite only what you actually read. Do not guess at file contents.
+4. {_UNTRUSTED}
+5. Reply with JSON only.
+"""
+
+ADJUDICATION_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["explored", "criteria", "tier", "justification"],
+    "properties": {
+        "explored": {
+            "type": "string",
+            "description": "What you looked at and what you learned from it.",
+        },
+        "criteria": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "cross_module_reasoning",
+                    "business_logic_knowledge",
+                    "misleading_similar_code",
+                    "coordinated_multi_file_change",
+                    "non_local_cause",
+                    "local_and_self_describing",
+                ],
+            },
+            "description": "Which rubric criteria this task actually meets.",
+        },
+        "tier": {"type": "string", "enum": ["easy", "medium", "hard"]},
+        "justification": {
+            "type": "string",
+            "description": "One or two sentences naming the specific source of difficulty.",
+        },
+    },
+}
+
+
+def adjudication_messages(brief: str) -> list[dict[str, str]]:
+    """Open the exploration. The model replies with tool calls, not an answer."""
+    return [
+        {"role": "system", "content": _ADJUDICATION_SYSTEM},
+        {
+            "role": "user",
+            "content": (
+                f"{brief}\n\n"
+                "Explore with the tools until you can name what makes this task "
+                "hard or easy for an agent, then give your verdict."
+            ),
+        },
+    ]
+
+
+CALIBRATION_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["tiers"],
+    "properties": {
+        "tiers": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["task_id", "tier", "justification"],
+                "properties": {
+                    "task_id": {"type": "string"},
+                    "tier": {"type": "string", "enum": ["easy", "medium", "hard"]},
+                    "justification": {"type": "string"},
+                },
+            },
+        }
+    },
+}
+
+_CALIBRATION_SYSTEM = f"""\
+You are settling the difficulty labels for a set of benchmark tasks that were
+each judged on their own. Easy, medium and hard are only meaningful relative to
+this set, and a per-task pass cannot see that.
+
+Tier definitions:
+
+{RUBRIC}
+
+Rules:
+1. Keep a per-task verdict unless the set makes it wrong. Moving a label needs a
+   reason that only becomes visible in comparison — "this is the same shape as
+   two others already called medium, and strictly smaller".
+2. Do not force a distribution. If seven tasks are genuinely medium, say medium
+   seven times. Spread is not a goal.
+3. Return every task_id you were given, exactly once.
+4. Each justification names the specific source of difficulty. Never restate the
+   fix.
+5. Reply with JSON only.
+"""
+
+
+def calibration_messages(proposals: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """Show every per-task verdict at once and let the set correct the parts."""
+    blocks = []
+    for entry in proposals:
+        blocks.append(
+            f"## {entry['task_id']}\n"
+            f"- title: {entry.get('title', '')}\n"
+            f"- source: {entry.get('source', '')}\n"
+            f"- modules: {', '.join(entry.get('modules') or []) or '(none)'}\n"
+            f"- proposed tier: {entry.get('tier', 'unknown')}\n"
+            f"- criteria: {', '.join(entry.get('criteria') or []) or '(none)'}\n"
+            f"- measured tier: {entry.get('measured_tier', 'unknown')}\n"
+            f"- reasoning: {entry.get('justification', '')}"
+        )
+    return [
+        {"role": "system", "content": _CALIBRATION_SYSTEM},
+        {
+            "role": "user",
+            "content": (
+                "# Per-task verdicts\n\n"
+                + "\n\n".join(blocks)
+                + "\n\nReturn JSON with key: tiers."
+            ),
+        },
+    ]
+
+
 def instruction_messages(
     *,
     behaviour: str,

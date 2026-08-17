@@ -321,6 +321,45 @@ def _coherent_pool(tasks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], d
     return kept, dict(sorted(rejected.items()))
 
 
+def merge_adjudication(
+    measured: dict[str, dict[str, Any]], path: Path | None
+) -> dict[str, dict[str, Any]]:
+    """Let the agent's tier win, and keep the measurement beside it.
+
+    The two are recorded together on purpose. A judgement that replaced a
+    measurement should be auditable against the thing it replaced, and a reader
+    who distrusts the reasoning can still see what the factors said. Where no
+    adjudication exists — no model, a failed call — the measured tier stands
+    untouched and says so.
+    """
+    from stress_stack.adjudicate import load_adjudication
+
+    verdicts = load_adjudication(path) if path is not None else {}
+    merged: dict[str, dict[str, Any]] = {}
+    for task_id, entry in measured.items():
+        verdict = verdicts.get(task_id)
+        record = dict(entry)
+        record["measured_tier"] = entry.get("tier")
+        record["measured_justification"] = entry.get("justification")
+        if not verdict:
+            record["tier_origin"] = "measured_tercile"
+            merged[task_id] = record
+            continue
+        record["tier"] = verdict.get("tier") or entry.get("tier")
+        record["justification"] = verdict.get("justification") or entry.get("justification")
+        record["tier_origin"] = verdict.get("origin") or "measured_tercile"
+        record["criteria"] = verdict.get("criteria") or []
+        record["agrees_with_measurement"] = verdict.get("agrees_with_measurement")
+        record["verification_state"] = verdict.get("verification_state")
+        record["exploration"] = {
+            key: value
+            for key, value in (verdict.get("exploration") or {}).items()
+            if key != "calls"
+        }
+        merged[task_id] = record
+    return merged
+
+
 def emit_bundle(
     selection: dict[str, Any],
     eligible: list[dict[str, Any]],
@@ -337,7 +376,10 @@ def emit_bundle(
         graph, knowledge_root / "blueprint.json" if knowledge_root else None
     )
     bodies = pull_request_bodies(history_root) if history_root else {}
-    difficulty = selection["difficulty"]
+    difficulty = merge_adjudication(
+        selection["difficulty"],
+        knowledge_root / "adjudication.json" if knowledge_root else None,
+    )
     entries: list[dict[str, Any]] = []
     leaks: list[str] = []
     invalid_instructions: list[str] = []
@@ -420,6 +462,23 @@ def emit_bundle(
 
         if not report.clean:
             leaks.append(task_id)
+
+        # The difficulty justification is prose about the change, written by an
+        # agent that read the pre-change tree. It ships in task.json beside the
+        # instruction, so it is held to the same standard: if it echoes the
+        # patch, the measured sentence — which is assembled from factor names
+        # and cannot leak — takes its place.
+        entry = difficulty.get(task_id) or {}
+        if entry.get("tier_origin") == "agent":
+            justification_leak = leak_check(str(entry.get("justification") or ""), diff, names, text)
+            if not justification_leak.clean:
+                entry = dict(
+                    entry,
+                    justification=entry.get("measured_justification") or "",
+                    tier_origin="agent_tier_measured_justification",
+                    justification_leak=justification_leak.to_dict(),
+                )
+                difficulty[task_id] = entry
 
         provenance = provenance_of(task)
         command = verifier_command(task, tasks_root)

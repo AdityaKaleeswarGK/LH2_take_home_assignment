@@ -19,6 +19,7 @@ from stress_stack.graph import (
     build_graph_artifacts,
     build_index_artifacts,
     build_mining_artifacts,
+    build_adjudication_artifacts,
     build_selection_artifacts,
     build_test_generation_artifacts,
     build_validation_artifacts,
@@ -128,6 +129,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Choose the final ten under the brief's quotas and record compliance",
     )
     select_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
+    adjudicate_parser = subparsers.add_parser(
+        "adjudicate",
+        help="Let an agent read the code and decide each selected task's difficulty",
+    )
+    adjudicate_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
+    adjudicate_parser.add_argument(
+        "--no-model",
+        action="store_true",
+        help="Keep the measured tercile instead of asking a model",
+    )
     emit_parser = subparsers.add_parser(
         "emit",
         help="Write each task's instruction and manifest, then tasks.json",
@@ -213,6 +224,12 @@ def main(arguments: list[str] | None = None) -> int:
             )
         elif namespace.command == "select":
             return _print_selection(build_selection_artifacts(namespace.source, cwd=Path.cwd()))
+        elif namespace.command == "adjudicate":
+            return _print_adjudication(
+                build_adjudication_artifacts(
+                    namespace.source, cwd=Path.cwd(), use_model=not namespace.no_model
+                )
+            )
         elif namespace.command == "emit":
             return _print_emission(build_emission_artifacts(namespace.source, cwd=Path.cwd()))
         elif namespace.command == "enrich":
@@ -464,6 +481,27 @@ def _print_selection(report: dict) -> int:
     for problem in ledger["shortfalls"]:
         print(f"  shortfall: {problem}")
     return 0 if ledger["satisfied"] else 1
+
+
+def _print_adjudication(report: dict) -> int:
+    print(f"Repository: {report['repository_root']}")
+    print(
+        f"Adjudicated: {report['adjudicated']} | kept the measurement: {report['fell_back']}"
+    )
+    print(f"Distribution: {report['distribution']} | calibrated: {report['calibrated']}")
+    if report["adjudicated"]:
+        print(
+            f"Agreed with the measured tercile: "
+            f"{report['agreed_with_measurement']}/{report['adjudicated']}"
+        )
+    for verdict in report["verdicts"]:
+        moved = "" if verdict["agrees_with_measurement"] else f"  (was {verdict['measured_tier']})"
+        looked = (verdict.get("exploration") or {}).get("tool_calls", 0)
+        print(f"  {verdict['tier']:<7} {verdict['task_id']:<44} {looked} tool call(s){moved}")
+        print(f"          {verdict['justification'][:150]}")
+    if report["note"]:
+        print(f"Note: {report['note']}")
+    return 0
 
 
 def _print_emission(report: dict) -> int:
