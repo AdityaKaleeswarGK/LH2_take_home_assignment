@@ -51,18 +51,18 @@ def lock_dependencies(
         from stress_stack.graph import build_dependency_artifacts
 
         dep_art = build_dependency_artifacts(str(root))
-        report = dep_art.report
-        total_pinned = len(report.runtime) + len(report.test)
+        total_pinned = len(dep_art.runtime) + len(dep_art.test)
+        unresolved = (dep_art.audit or {}).get("unresolved_to_distribution", [])
         return LockResult(
             status="locked_hash_pinned",
             ecosystem="python",
-            lock_file=".stress_stack/lockfile.json",
+            lock_file=str(dep_art.lockfile),
             pinned_count=total_pinned,
-            unresolved=report.unpinned,
+            unresolved=unresolved,
             lock_data={
-                "runtime": report.runtime,
-                "test": report.test,
-                "optional": report.optional,
+                "runtime": dep_art.runtime,
+                "test": dep_art.test,
+                "optional": dep_art.optional,
             },
         )
 
