@@ -161,6 +161,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--set", dest="assignments", action="append", metavar="ROLE=MODEL",
         help="Assign a model to a role, e.g. --set worker=openai/gpt-5.6-luna",
     )
+    orchestrate_parser = subparsers.add_parser(
+        "orchestrate",
+        help="Run project-aware agentic orchestration end-to-end",
+    )
+    orchestrate_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
+    orchestrate_parser.add_argument("--workers", type=int, default=4)
+    orchestrate_parser.add_argument("--history-limit", type=int, default=30)
+    orchestrate_parser.add_argument("--excision-limit", type=int, default=12)
+    orchestrate_parser.add_argument("--output", default="output")
     commands_parser = subparsers.add_parser(
         "commands",
         help="Print the command to run everything, and each stage on its own",
@@ -303,6 +312,20 @@ def _dispatch(parser: argparse.ArgumentParser, namespace: argparse.Namespace) ->
             return _print_dependency_result(
                 build_dependency_artifacts(namespace.source, cwd=Path.cwd())
             )
+        elif namespace.command == "orchestrate":
+            from stress_stack.orchestrator import orchestrate_repository
+
+            orch_res = orchestrate_repository(
+                namespace.source,
+                max_workers=namespace.workers,
+                history_limit=namespace.history_limit,
+                excision_limit=namespace.excision_limit,
+                output_dir=namespace.output,
+            )
+            print(f"Orchestration complete: {orch_res.repository_root}")
+            print(f"Ecosystem: {orch_res.profile.ecosystem} | Toolchain: {orch_res.profile.toolchain}")
+            print(f"Tasks validated: {orch_res.tasks_validated} | Selected: {orch_res.tasks_selected}")
+            return 0 if orch_res.ok else 1
         else:
             parser.error(f"Unsupported command: {namespace.command}")
     except StressStackError as exc:
