@@ -298,39 +298,23 @@ needs a coverage tool that can attribute lines to individual tests.
 ### Net-new feature tasks were not built
 
 The assignment allows up to three of the ten tasks to be brand-new features defined
-entirely by tests I write myself. I did not build that category, and the ten tasks
-delivered come from the other two sources.
+entirely by tests I write. I did not build that category.
 
-Partly this was scope, but there is a real reason underneath it. Every other task
-type has an independent ground truth to check against — for a historical change, the
-project's own authors wrote the fix and the tests; for a removed function, the
-original implementation is the answer. A net-new feature has neither. I would be
-writing the tests *and* the reference solution, so proving that the solution passes
-the tests demonstrates only that I can satisfy my own expectations. That is a weaker
-guarantee than every other task in the set, and mixing it in without saying so would
-quietly lower the quality of the whole deliverable.
-
-The way to do it properly is to take the feature description from something outside
-my own head — the project's open issues, for instance — and to hold it to a higher
-bar on the check that asks whether a different but equally valid solution would also
-pass.
+The reason is not only scope. Every other task type has an independent ground truth:
+for a historical change the project's own authors wrote both fix and tests; for a
+removed function, the original implementation is the answer. A net-new feature has
+neither — I would write both the tests and the solution, so passing proves only that
+I can satisfy myself. Doing it properly means taking the feature from the project's
+open issues.
 
 ### Automated lint repair is deliberately shallow
 
-When a linter can identify a problem but not fix it automatically, the pipeline can
-ask a model to repair it, and it only keeps the result if the number of problems went
-down *and* the test suite behaves identically afterwards. Everything else is undone.
+When a linter finds a problem it cannot fix automatically, the pipeline can ask a
+model to repair it, keeping the result only if the problem count drops and the test
+suite behaves identically. Everything else is undone.
 
-That safety is not the limitation. The limitation is how much the model is allowed to
-see. Doing this properly means giving it the whole project plus the complete linter
-output for every file, and asking it to judge each problem individually — and the
-cost of that grows with the size of the repository rather than with the number of
-problems, so it becomes expensive on exactly the large codebases where it would be
-most useful. Under a fixed budget I chose to bound the input instead: the repair pass
-looks at a limited set of files at a time, which in practice means it fixes naming
-and simple structural issues and leaves anything requiring whole-project reasoning
-alone.
-
-The better approach is to group problems by rule and fix each rule with a small
-representative set of examples, rather than shipping whole files into the prompt. That
-keeps the cost tied to the variety of problems instead of the size of the repository.
+The safety is not the limitation; the input budget is. Judging each problem properly
+means showing the model the whole project and its complete linter output, and that
+cost grows with repository size rather than problem count — worst on the large
+codebases where it would help most. Bounded to a few files, it fixes naming and
+simple structure only.
