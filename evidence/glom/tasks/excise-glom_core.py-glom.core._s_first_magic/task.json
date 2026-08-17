@@ -1,0 +1,273 @@
+{
+  "difficulty": {
+    "agrees_with_measurement": false,
+    "criteria": [
+      "local_and_self_describing"
+    ],
+    "dominant_factors": [
+      "misleading_similarity",
+      "scale"
+    ],
+    "exploration": {
+      "refused": [],
+      "tool_calls": 14,
+      "tools_used": [
+        "grep",
+        "read_file"
+      ]
+    },
+    "factors": {
+      "business_logic": 0.0,
+      "coordinated_change": 1.0,
+      "cross_module": 1.0,
+      "misleading_similarity": 0.0,
+      "scale": 22.0
+    },
+    "justification": "The helper’s short local description does not establish its full contract. Its implementation must be inferred from _t_eval, scope initialization, ScopeVars/Vars, and neighboring S/A path behavior, including error and assignment cases.",
+    "measured_justification": "This task touches 13 lines with 9 tests that must end up passing.",
+    "measured_tier": "easy",
+    "score": 0.2155,
+    "tercile_cuts": [
+      0.2155,
+      0.3969
+    ],
+    "tier": "medium",
+    "tier_origin": "agent",
+    "verification_state": "reasoning_unverified_label_only"
+  },
+  "files_in_scope": [
+    "glom/core.py"
+  ],
+  "gates": [
+    {
+      "detail": {
+        "targets": {
+          "glom.test.test_match::test_nested_dict": "assert {1: None} == {1: 1}",
+          "glom.test.test_path_and_t::test_s_magic": "AssertionError: assert None == 'value'",
+          "glom.test.test_path_and_t::test_t_subspec": "glom.core.GlomError.wrap(TypeError): error raised while processing, details below.",
+          "glom.test.test_scope_vars::test_globals": "glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'a'",
+          "glom.test.test_scope_vars::test_let": "glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'a'",
+          "glom.test.test_scope_vars::test_max_skip": "AttributeError: 'NoneType' object has no attribute 'max'",
+          "glom.test.test_scope_vars::test_s_scope_assign": "glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'a'",
+          "glom.test.test_scope_vars::test_scoped_vars": "glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'last'",
+          "glom.test.test_scope_vars::test_vars": "assert None == 1"
+        }
+      },
+      "gate": "fail_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "targets": [
+          "glom.test.test_match::test_nested_dict",
+          "glom.test.test_path_and_t::test_s_magic",
+          "glom.test.test_path_and_t::test_t_subspec",
+          "glom.test.test_scope_vars::test_globals",
+          "glom.test.test_scope_vars::test_let",
+          "glom.test.test_scope_vars::test_max_skip",
+          "glom.test.test_scope_vars::test_s_scope_assign",
+          "glom.test.test_scope_vars::test_scoped_vars",
+          "glom.test.test_scope_vars::test_vars"
+        ]
+      },
+      "gate": "pass_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "after_passing": 202,
+        "baseline_passing": 193,
+        "deliberately_removed": []
+      },
+      "gate": "collateral",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "files_checked": 4
+      },
+      "gate": "verifier_integrity",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "clean": true,
+        "leaked_paths": [],
+        "stale_bytecode": [],
+        "stray_patches": []
+      },
+      "gate": "solver_bundle",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "coupling": {
+          "exact_representation": [
+            "glom/test/test_match.py:134",
+            "glom/test/test_match.py:160",
+            "glom/test/test_match.py:164",
+            "glom/test/test_match.py:236",
+            "glom/test/test_match.py:237",
+            "glom/test/test_match.py:239",
+            "glom/test/test_match.py:240",
+            "glom/test/test_match.py:242",
+            "glom/test/test_match.py:243",
+            "glom/test/test_match.py:244"
+          ],
+          "findings": 42,
+          "patched_internals": [],
+          "private_references": [],
+          "type_identity": []
+        },
+        "coupling_findings": 42,
+        "mutation": {
+          "files_changed": [],
+          "renames": {}
+        },
+        "portable": true,
+        "status": "no_internals_to_rename"
+      },
+      "gate": "alternative_implementation",
+      "passed": true,
+      "reason_code": null
+    }
+  ],
+  "generation": {
+    "cache_key": "a27632f8a048e1d835182240185e1470fbe81f726d426f77f17c0968eb67642d",
+    "cached": false,
+    "fell_back": null,
+    "leak_check": {
+      "clean": true,
+      "copied_spans": [],
+      "private_names_leaked": [],
+      "public_names_mentioned": []
+    },
+    "model": "openai/gpt-5.6-luna"
+  },
+  "id": "excise-glom_core.py-glom.core._s_first_magic",
+  "instruction": "Implement only the missing body of `glom.core._s_first_magic(scope, key, _t)`, preserving its existing signature and documentation. The completed behavior must make `S` expressions resolve user-defined scope variables correctly: dot access such as `S.name` must be equivalent to bracket access such as `S['name']`, and any remaining path such as `S.name.value` must navigate the resolved value using the repository's normal glom path semantics. It must interoperate with nested dictionaries and other nested data, `T` subspecifications, callable invocations, global and locally introduced scope values (including `let` and scope assignments), scoped variables, and fallback/max-skip behavior already supported elsewhere. Missing or invalid lookups must produce the repository's established formatted glom errors rather than leaking an unrelated exception or silently returning an incorrect value. Do not modify any other file, function, public API, or neighboring feature; success is determined by the existing tests covering nested dicts, S magic, T subspecs, globals, let, max skip, S scope assignment, scoped vars, and vars.",
+  "instruction_origin": "generated",
+  "leak_check": {
+    "clean": true,
+    "copied_spans": [],
+    "private_names_leaked": [],
+    "public_names_mentioned": []
+  },
+  "modules": [
+    "glom.core"
+  ],
+  "paths": {
+    "evidence": "excise-glom_core.py-glom.core._s_first_magic/evidence",
+    "golden_diff": "excise-glom_core.py-glom.core._s_first_magic/goldenSolution.diff",
+    "golden_solution": "excise-glom_core.py-glom.core._s_first_magic/goldenSolution.md",
+    "input": "excise-glom_core.py-glom.core._s_first_magic/input",
+    "solution": "excise-glom_core.py-glom.core._s_first_magic/solution",
+    "verifier": "excise-glom_core.py-glom.core._s_first_magic/verifier"
+  },
+  "primary_module": "glom.core",
+  "provenance": {
+    "commit_sha": "30b477ab65560914a38f331614947d0894701044",
+    "kind": "excision_target",
+    "path": "glom/core.py",
+    "qualified_name": "glom.core._s_first_magic",
+    "stub_strategy": "neutral",
+    "symbol_id": "glom/core.py::glom.core._s_first_magic"
+  },
+  "source": "excision",
+  "title": "Implement scope-path resolution for glom.core._s_first_magic",
+  "validation": {
+    "fail_before_classes": {
+      "glom.test.test_match::test_nested_dict": "assertion",
+      "glom.test.test_path_and_t::test_s_magic": "assertion",
+      "glom.test.test_path_and_t::test_t_subspec": "behavioral_exception",
+      "glom.test.test_scope_vars::test_globals": "behavioral_exception",
+      "glom.test.test_scope_vars::test_let": "behavioral_exception",
+      "glom.test.test_scope_vars::test_max_skip": "behavioral_exception",
+      "glom.test.test_scope_vars::test_s_scope_assign": "behavioral_exception",
+      "glom.test.test_scope_vars::test_scoped_vars": "behavioral_exception",
+      "glom.test.test_scope_vars::test_vars": "assertion"
+    },
+    "gates_failed": [],
+    "gates_passed": [
+      "fail_before",
+      "pass_after",
+      "collateral",
+      "determinism_before",
+      "determinism_after",
+      "verifier_integrity",
+      "solver_bundle",
+      "alternative_implementation"
+    ],
+    "repeats": 2,
+    "runs": [
+      "after_full",
+      "before_full",
+      "baseline_full",
+      "before_targets_1",
+      "before_targets_2",
+      "after_targets_1",
+      "after_targets_2"
+    ],
+    "status": "validated"
+  },
+  "verifier": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "--continue-on-collection-errors",
+      "-q",
+      "glom/test/test_match.py::test_nested_dict",
+      "glom/test/test_path_and_t.py::test_s_magic",
+      "glom/test/test_path_and_t.py::test_t_subspec",
+      "glom/test/test_scope_vars.py::test_globals",
+      "glom/test/test_scope_vars.py::test_let",
+      "glom/test/test_scope_vars.py::test_max_skip",
+      "glom/test/test_scope_vars.py::test_s_scope_assign",
+      "glom/test/test_scope_vars.py::test_scoped_vars",
+      "glom/test/test_scope_vars.py::test_vars"
+    ],
+    "command_line": "python -m pytest -p no:cacheprovider --continue-on-collection-errors -q glom/test/test_match.py::test_nested_dict glom/test/test_path_and_t.py::test_s_magic glom/test/test_path_and_t.py::test_t_subspec glom/test/test_scope_vars.py::test_globals glom/test/test_scope_vars.py::test_let glom/test/test_scope_vars.py::test_max_skip glom/test/test_scope_vars.py::test_s_scope_assign glom/test/test_scope_vars.py::test_scoped_vars glom/test/test_scope_vars.py::test_vars",
+    "files": [
+      "glom/test/test_match.py",
+      "glom/test/test_path_and_t.py",
+      "glom/test/test_scope_vars.py",
+      "glom/test/test_snippets.py"
+    ],
+    "node_ids": [
+      "glom.test.test_match::test_nested_dict",
+      "glom.test.test_path_and_t::test_s_magic",
+      "glom.test.test_path_and_t::test_t_subspec",
+      "glom.test.test_scope_vars::test_globals",
+      "glom.test.test_scope_vars::test_let",
+      "glom.test.test_scope_vars::test_max_skip",
+      "glom.test.test_scope_vars::test_s_scope_assign",
+      "glom.test.test_scope_vars::test_scoped_vars",
+      "glom.test.test_scope_vars::test_vars"
+    ],
+    "procedure": "Copy input/, overlay verifier/ onto it, then run the command below from the tree root. It must fail before the change and pass after."
+  }
+}

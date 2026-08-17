@@ -1,0 +1,155 @@
+# Golden solution — pr-277
+
+## Provenance
+
+- **kind**: `commit`
+- **commit_sha**: `9082ab6f98b018856fc9d37aec4077d27662f025`
+- **base_sha**: `573cb911aee0af7149ea8376a05f61b3435b23e7`
+- **pull_request**: `277`
+- **url**: `https://github.com/mahmoud/glom/pull/277`
+- **merged_at**: `2023-11-25T23:55:51Z`
+
+## Why this is the correct fix
+
+This is the change the repository itself made, taken from git rather than written by hand. It is *verified* correct rather than assumed, by four measurements recorded in `evidence/`:
+
+1. **Fail-before.** 2 designated test(s) do not pass against `input/`. 2 of them ran and failed for a behavioural reason — an assertion, or an exception raised from inside the repository — rather than an import or collection error.
+2. **Pass-after.** The same tests pass against `solution/`.
+3. **No collateral breakage.** Every test passing before the change still passes after it.
+4. **Determinism.** The verdict was reproduced across 2 fresh container runs with identical statuses and identical failure signatures.
+
+### Designated tests
+
+- `glom.test.test_cli::test_main_toml_target`
+- `glom.test.test_cli::test_usage_errors`
+
+## Diff
+
+```diff
+diff --git a/docs/cli.rst b/docs/cli.rst
+index cc69aed..9235d56 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -22,8 +22,9 @@ All the power of ``glom``, without even opening your text editor!
+ 
+    --help / -h                     show this help message and exit
+    --target-file TARGET_FILE       path to target data source (optional)
+-   --target-format TARGET_FORMAT   format of the source data (json or python)
+-                                     (defaults to 'json')
++   --target-format TARGET_FORMAT
++                                   format of the source data (json, python, toml,
++                                   or yaml) (defaults to 'json')
+    --spec-file SPEC_FILE           path to glom spec definition (optional)
+    --spec-format SPEC_FORMAT       format of the glom spec definition (json, python,
+                                      python-full) (defaults to 'python')
+diff --git a/glom/cli.py b/glom/cli.py
+index bd8752a..14b2b25 100644
+--- a/glom/cli.py
++++ b/glom/cli.py
+@@ -11,8 +11,8 @@ Flags:
+   --help / -h                 show this help message and exit
+   --target-file TARGET_FILE   path to target data source (optional)
+   --target-format TARGET_FORMAT
+-                              format of the source data (json or python)
+-                              (defaults to 'json')
++                              format of the source data (json, python, toml,
++                              or yaml) (defaults to 'json')
+   --spec-file SPEC_FILE       path to glom spec definition (optional)
+   --spec-format SPEC_FORMAT   format of the glom spec definition (json, python,
+                               python-full) (defaults to 'python')
+@@ -110,8 +110,8 @@ def mw_handle_target(target_text, target_format):
+     """ Handles reading in a file specified in cli command.
+ 
+     Args:
+-        target_text (str): String that specifies where 6
+-        target_format (str): Valid formats include `.json` and `.yml` or `.yaml`
++        target_text (str): The target data to load, as text
++        target_format (str): Valid formats include `.json`, `.toml`, and `.yml` or `.yaml`
+     Returns:
+         The content of the file that you specified
+     Raises:
+@@ -128,6 +128,17 @@ def mw_handle_target(target_text, target_format):
+             load_func = yaml.safe_load
+         except ImportError:
+             raise UsageError('No YAML package found. To process yaml files, run: pip install PyYAML')
++    elif target_format == 'toml':
++        missing =  UsageError('No TOML package found. To process toml files, upgrade to Python 3.11 or run: pip install tomli')
++        try:
++            import tomllib
++            load_func = tomllib.loads
++        except ImportError:
++            try:
++                import tomli
++                load_func = tomli.loads
++            except ImportError:
++                raise missing
+     elif target_format == 'python':
+         load_func = ast.literal_eval
+     else:
+diff --git a/glom/test/data/test_invalid.toml b/glom/test/data/test_invalid.toml
+new file mode 100644
+index 0000000..6c31b39
+--- /dev/null
++++ b/glom/test/data/test_invalid.toml
+@@ -0,0 +1,2 @@
++# invalid
++toml = {
+diff --git a/glom/test/data/test_valid.toml b/glom/test/data/test_valid.toml
+new file mode 100644
+index 0000000..6758470
+--- /dev/null
++++ b/glom/test/data/test_valid.toml
+@@ -0,0 +1 @@
++Hello = ["World"]
+diff --git a/glom/test/test_cli.py b/glom/test/test_cli.py
+index 93e6c1b..54607a3 100644
+--- a/glom/test/test_cli.py
++++ b/glom/test/test_cli.py
+@@ -78,6 +78,10 @@ def test_usage_errors(cc, basic_spec_path, basic_target_path):
+     res = cc.fail_1(['glom', '--target-format', 'yaml', BASIC_SPEC, '{' + BASIC_TARGET])
+     assert 'could not load target data' in res.stdout  # TODO: stderr
+ 
++    # bad target toml
++    res = cc.fail_1(['glom', '--target-format', 'toml', BASIC_SPEC, '{' + BASIC_TARGET])
++    assert 'could not load target data' in res.stdout  # TODO: stderr
++
+     # TODO: bad target python?
+ 
+     # bad target format  TODO: fail_2
+@@ -132,6 +136,23 @@ def test_main_yaml_target():
+     assert 'expected <block end>, but found' in str(excinfo.value)
+ 
+ 
++def test_main_toml_target():
++    cwd = os.path.dirname(os.path.abspath(__file__))
++    # Handles the filepath if running tox
++    if '.tox' in cwd:
++        cwd = os.path.join(cwd.split('.tox')[0] + '/glom/test/')
++    path = os.path.join(cwd, 'data/test_valid.toml')
++    argv = ['__', '--target-file', path, '--target-format', 'toml', 'Hello']
++    assert cli.main(argv) == 0
++
++    path = os.path.join(cwd, 'data/test_invalid.toml')
++    argv = ['__', '--target-file', path, '--target-format', 'toml', 'Hello']
++    # Makes sure correct improper toml exception is raised
++    with pytest.raises(CommandLineError) as excinfo:
++        cli.main(argv)
++    assert 'Invalid initial character for a key part' in str(excinfo.value)
++
++
+ def test_main_python_full_spec_python_target():
+     argv = ['__', '--target-format', 'python', '--spec-format', 'python-full', 'T[T[3].bit_length()]', '{1: 2, 2: 3, 3: 4}']
+     assert cli.main(argv) == 0
+diff --git a/setup.py b/setup.py
+index 438c443..e266626 100644
+--- a/setup.py
++++ b/setup.py
+@@ -40,6 +40,7 @@ setup(name='glom',
+       packages=['glom', 'glom.test'],
+       install_requires=['boltons>=19.3.0', 'attrs', 'face==20.1.1'],
+       extras_require={
++          'toml': ['tomli; python_version<"3.11"'],
+           'yaml': ['PyYAML'],
+       },
+       entry_points={'console_scripts': ['glom = glom.cli:console_main']},
+```

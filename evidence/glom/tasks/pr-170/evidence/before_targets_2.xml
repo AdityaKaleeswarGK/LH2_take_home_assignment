@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.131" timestamp="2026-08-17T15:08:40.595270+00:00" hostname="3ac8c5fa3406"><testcase classname="glom.test.test_error" name="test_line_trace" time="0.001"><failure message="AssertionError: assert '/tuple!list' == '/tuple!list/...0&gt;/dict!int/S'&#10;  &#10;  - /tuple!list/list&lt;0&gt;/dict!int/S&#10;  + /tuple!list">glom/test/test_error.py:48: in test_line_trace
+    assert fmtd_stack == '/tuple!list/list&lt;0&gt;/dict!int/S'
+E   AssertionError: assert '/tuple!list' == '/tuple!list/...0&gt;/dict!int/S'
+E     
+E     - /tuple!list/list&lt;0&gt;/dict!int/S
+E     + /tuple!list</failure></testcase><testcase classname="glom.test.test_match" name="test_nested_dict" time="0.001"><failure message="glom.core.PathAccessError: &lt;exception str() failed&gt;">glom/test/test_match.py:508: in test_nested_dict
+    assert glom({1: 2}, Match({A.t: S.t})) == {1: 1}
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:1974: in glom
+    raise err
+E   glom.core.PathAccessError: &lt;exception str() failed&gt;</failure></testcase></testsuite></testsuites>

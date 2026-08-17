@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import difflib
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from stress_stack.parsers.tree_sitter_core import (
@@ -55,6 +54,13 @@ class MultiLangExcision:
         }
 
 
+def _indent_of(code: str, byte_offset: int) -> str:
+    """Leading whitespace of the line the given byte offset falls on."""
+    prefix = code.encode("utf-8")[:byte_offset].decode("utf-8", errors="replace")
+    line = prefix.rsplit("\n", 1)[-1] if "\n" in prefix else prefix
+    return line[: len(line) - len(line.lstrip())]
+
+
 def excise_symbol(
     file_path: str, code: str, symbol_name: str
 ) -> MultiLangExcision | None:
@@ -90,33 +96,38 @@ def excise_symbol(
     if not target_sym:
         return None
 
-    lines = code.splitlines()
-    first_idx = target_sym.first_body_line - 1
-    last_idx = target_sym.last_body_line - 1
+    # The idiomatic "not implemented" marker for each ecosystem.
+    statement = {
+        "rust": "todo!()",
+        "typescript": 'throw new Error("Not implemented");',
+        "javascript": 'throw new Error("Not implemented");',
+        "tsx": 'throw new Error("Not implemented");',
+        "go": 'panic("not implemented")',
+        "c": 'throw std::runtime_error("Not implemented");',
+        "cpp": 'throw std::runtime_error("Not implemented");',
+    }.get(lang, 'raise NotImplementedError("Not implemented")')
 
-    if first_idx >= len(lines) or last_idx >= len(lines) or first_idx > last_idx:
+    start, end = target_sym.body_start_byte, target_sym.body_end_byte
+    if start is None or end is None or start >= end:
         return None
 
-    # Determine indentation of the body
-    body_line = lines[first_idx]
-    indent = " " * (len(body_line) - len(body_line.lstrip()))
-    if not indent:
-        indent = "    "
-
-    # Idiomatic stub per language
-    if lang == "rust":
-        stub_line = f"{indent}todo!()"
-    elif lang in {"typescript", "javascript"}:
-        stub_line = f'{indent}throw new Error("Not implemented");'
-    elif lang == "go":
-        stub_line = f'{indent}panic("not implemented")'
-    elif lang in {"c", "cpp"}:
-        stub_line = f'{indent}throw std::runtime_error("Not implemented");'
+    raw = code.encode("utf-8")
+    body = raw[start:end].decode("utf-8", errors="replace")
+    # Replace the body's interior and keep its delimiters, so a brace-delimited
+    # language keeps its block and the declaration stays syntactically whole.
+    # Line-range replacement could not do this: a single-line definition shares
+    # its line with the signature, and rewriting that line deleted the function.
+    if body.startswith("{") and body.endswith("}"):
+        indent = _indent_of(code, start)
+        replacement = "{\n" + indent + "    " + statement + "\n" + indent + "}"
     else:
-        stub_line = f'{indent}raise NotImplementedError("Not implemented")'
+        replacement = statement
 
-    stubbed_lines = lines[:first_idx] + [stub_line] + lines[last_idx + 1 :]
-    stubbed_code = "\n".join(stubbed_lines) + ("\n" if code.endswith("\n") else "")
+    stubbed_code = (
+        raw[:start].decode("utf-8", errors="replace")
+        + replacement
+        + raw[end:].decode("utf-8", errors="replace")
+    )
 
     return MultiLangExcision(
         path=file_path,

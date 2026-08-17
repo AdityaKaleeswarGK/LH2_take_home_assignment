@@ -1,0 +1,76 @@
+import imp
+import os
+
+from setuptools import setup
+
+__author__ = 'Mahmoud Hashemi and Kurt Rose'
+__contact__ = 'mahmoud@hatnote.com'
+__url__ = 'https://github.com/mahmoud/glom'
+
+CUR_PATH = os.path.abspath(os.path.dirname(__file__))
+_version_mod_path = os.path.join(CUR_PATH, 'glom', '_version.py')
+_version_mod = imp.load_source('_version', _version_mod_path)
+__version__ = _version_mod.__version__
+
+
+open_kwarg = {}
+
+with open('README.md', encoding='utf8') as read_me:
+    long_description = read_me.read()
+
+setup(name='glom',
+      version=__version__,
+      description="A declarative object transformer and formatter, for conglomerating nested data.",
+      long_description=long_description,
+      long_description_content_type='text/markdown',
+      author=__author__,
+      author_email=__contact__,
+      url=__url__,
+      project_urls={
+          'Documentation': 'https://glom.readthedocs.io/en/latest/',
+      },
+      packages=['glom', 'glom.test'],
+      install_requires=['boltons>=19.3.0', 'attrs', 'face==20.1.1'],
+      extras_require={
+          'yaml': ['PyYAML'],
+      },
+      entry_points={'console_scripts': ['glom = glom.cli:console_main']},
+      include_package_data=True,
+      zip_safe=False,
+      platforms='any',
+      license_files=['LICENSE'],
+      classifiers=[
+          'Topic :: Utilities',
+          'Intended Audience :: Developers',
+          'Topic :: Software Development :: Libraries',
+          'Development Status :: 5 - Production/Stable',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9',
+          'Programming Language :: Python :: 3.10',
+          'Programming Language :: Python :: Implementation :: CPython',
+          'Programming Language :: Python :: Implementation :: PyPy',
+          'License :: OSI Approved :: BSD License',
+      ]
+     )
+
+"""
+A brief checklist for release:
+
+* tox
+* git commit (if applicable)
+* Bump glom/_version.py off of -dev
+* git commit -a -m "bump version for vx.y.z release"
+* rm -rf dist/*
+* python setup.py sdist bdist_wheel
+* twine upload dist/*
+* bump docs/conf.py version
+* git commit
+* write CHANGELOG
+* git commit
+* git tag -a vx.y.z -m "brief summary"
+* bump glom/_version.py onto n+1 dev
+* git commit
+* git push
+
+"""

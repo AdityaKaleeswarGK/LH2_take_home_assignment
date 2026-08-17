@@ -19,17 +19,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-# Optional tree_sitter import with fallback
-try:
-    import tree_sitter
-    from tree_sitter_languages import get_language, get_parser
-    TREE_SITTER_AVAILABLE = True
-except ImportError:
-    try:
-        import tree_sitter
-        TREE_SITTER_AVAILABLE = hasattr(tree_sitter, "Language")
-    except ImportError:
-        TREE_SITTER_AVAILABLE = False
+
+def tree_sitter_available() -> bool:
+    """Whether real grammars are loadable, resolved through the backend.
+
+    Previously this module probed `tree_sitter_languages`, a package that was
+    neither installed nor declared, so the flag was always False and every
+    non-Python language was silently parsed by regex. Routing the question to
+    the backend keeps one answer instead of two that can disagree.
+    """
+    from stress_stack.parsers.tree_sitter_backend import TREE_SITTER_AVAILABLE
+
+    return TREE_SITTER_AVAILABLE
+
 
 LANGUAGE_EXTENSIONS: dict[str, str] = {
     ".py": "python",
@@ -39,11 +41,17 @@ LANGUAGE_EXTENSIONS: dict[str, str] = {
     ".mjs": "javascript",
     ".cjs": "javascript",
     ".ts": "typescript",
-    ".tsx": "typescript",
+    # Its own grammar — see the note beside SPECS["tsx"] in the backend.
+    ".tsx": "tsx",
     ".rs": "rust",
     ".go": "go",
     ".c": "c",
-    ".h": "c",
+    # `.h` is ambiguous — C and C++ share it, and the majority of real `.h`
+    # files in a mixed tree are C++ headers. The C++ grammar parses the C
+    # constructs this layer extracts, so choosing it fails on strictly fewer
+    # files than choosing C does; parsing json.hpp-style headers as C produced
+    # a syntax error on almost every one.
+    ".h": "cpp",
     ".cpp": "cpp",
     ".hpp": "cpp",
     ".cc": "cpp",
@@ -73,6 +81,12 @@ class ExtractedSymbol:
     is_async: bool = False
     is_generator: bool = False
     docstring: str = ""
+    # Exact byte span of the body, including its delimiters, when a grammar
+    # supplied one. Line numbers cannot express a single-line definition —
+    # `func Mul(a, b int) int { return a * b }` has its body on the signature's
+    # line, so replacing that line range deletes the declaration too.
+    body_start_byte: int | None = None
+    body_end_byte: int | None = None
 
 
 @dataclass
@@ -87,6 +101,34 @@ class ParsedSourceFile:
     @property
     def test_count(self) -> int:
         return len(self.tests)
+
+    # `module` and `is_test` exist so this file description satisfies the same
+    # readers as the Python graph's ParsedFile — `candidates.module_index` and
+    # `candidates.test_paths` need exactly these two attributes, and duplicating
+    # those functions for a second graph type would mean two rankers to keep in
+    # agreement.
+    @property
+    def module(self) -> str:
+        """Dotted module name derived from the path, without its extension."""
+        stem = self.path.rsplit(".", 1)[0] if "." in self.path.rsplit("/", 1)[-1] else self.path
+        return stem.replace("/", ".").strip(".")
+
+    @property
+    def is_test(self) -> bool:
+        if self.tests:
+            return True
+        name = self.path.rsplit("/", 1)[-1].lower()
+        return (
+            name.startswith("test")
+            or "_test." in name
+            or ".test." in name
+            or ".spec." in name
+        )
+
+    @property
+    def syntax_error(self) -> bool:
+        """Alias matching the Python graph's field name."""
+        return self.has_syntax_error
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -120,13 +162,25 @@ def detect_language(path: str | Path) -> str | None:
     return LANGUAGE_EXTENSIONS.get(suffix)
 
 
-def parse_source_code(path: str, code: str) -> ParsedSourceFile:
-    """Universal parser that dispatches to tree-sitter or language-specific parser."""
+def parse_source_code(path: str, code: str, *, prefer_tree_sitter: bool = True) -> ParsedSourceFile:
+    """Parse a source file, preferring a real grammar over the regex fallback.
+
+    Python keeps using `ast` even when tree-sitter is available: it is the same
+    parser CPython uses, it resolves dotted names and decorators without a
+    node-type table, and the rest of the pipeline is already built on its
+    output. Every other language goes through tree-sitter when the grammar
+    loads, and falls back to the regex extractors when it does not.
+    """
     lang = detect_language(path) or "unknown"
     result = ParsedSourceFile(path=path, language=lang)
 
     if not code.strip():
         return result
+
+    if prefer_tree_sitter and lang != "python":
+        parsed = _tree_sitter_parse(code, lang, result)
+        if parsed:
+            return result
 
     if lang == "python":
         _parse_python_source(code, result)
@@ -147,6 +201,58 @@ def parse_source_code(path: str, code: str) -> ParsedSourceFile:
 # ---------------------------------------------------------------------------
 # Python AST / Tree-sitter Parser
 # ---------------------------------------------------------------------------
+
+
+def _tree_sitter_parse(code: str, lang: str, result: ParsedSourceFile) -> bool:
+    """Fill `result` from a real grammar. Returns False if that was not possible."""
+    from stress_stack.parsers import tree_sitter_backend as backend
+
+    parsed = backend.parse(result.path, code, lang)
+    if parsed is None:
+        return False
+
+    for entry in parsed["symbols"]:
+        symbol = ExtractedSymbol(
+            name=entry["name"],
+            qualified_name=entry["name"],
+            kind=entry["kind"],
+            start_line=entry["start_line"],
+            end_line=entry["end_line"],
+            first_body_line=entry["first_body_line"],
+            last_body_line=entry["last_body_line"],
+            is_test=entry["is_test"],
+            body_start_byte=entry.get("body_start_byte"),
+            body_end_byte=entry.get("body_end_byte"),
+        )
+        result.symbols.append(symbol)
+        if symbol.is_test:
+            result.tests.append(symbol)
+
+    for entry in parsed["imports"]:
+        raw = entry["raw"]
+        result.imports.append(
+            ExtractedImport(raw=raw, module=_import_module(raw, lang), line=entry["line"])
+        )
+
+    result.has_syntax_error = parsed["has_syntax_error"]
+    return True
+
+
+def _import_module(raw: str, lang: str) -> str:
+    """Reduce an import statement to the module path it names."""
+    text = raw.strip().rstrip(";")
+    if lang == "rust":
+        return text.removeprefix("use ").strip()
+    if lang == "go":
+        return text.removeprefix("import ").strip().strip('"')
+    if lang in {"c", "cpp"}:
+        return text.removeprefix("#include").strip().strip('<>"')
+    if lang in {"javascript", "typescript"}:
+        # `import x from 'mod'` — the module is the quoted tail.
+        for quote in ("'", '"'):
+            if quote in text:
+                return text.rsplit(quote, 2)[-2] if text.count(quote) >= 2 else text
+    return text
 
 
 def _parse_python_source(code: str, result: ParsedSourceFile) -> None:

@@ -9,3 +9,9 @@ build/
 
 # Machine-local Claude Code permissions
 .claude/settings.local.json
+
+# Working clones of analysed repositories. The evidence that matters is copied
+# into evidence/ and the deliverable into output/; the clone itself carries its
+# own .git and 67MB of provisioned virtualenvs under .stress_stack/tools/.
+/glom/
+/pluggy/

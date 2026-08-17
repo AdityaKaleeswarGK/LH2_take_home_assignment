@@ -1,0 +1,18 @@
+--- a/glom/core.py
++++ b/glom/core.py
+@@ -1528,7 +1528,14 @@
+     enable S.a to do S['a'] or S['a'].val as a special
+     case for accessing user defined string variables
+     """
+-    return None
++    err = None
++    try:
++        cur = scope[key]
++    except KeyError as e:
++        err = PathAccessError(e, Path(_t), 0)  # always only one level depth, hence 0
++    if err:
++        raise err
++    return cur
+ 
+ 
+ def _t_eval(target, _t, scope):

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -292,21 +293,35 @@ def stage_excision_task(
     original = source_file.read_text(encoding="utf-8")
     dotted = qualified[len(module) + 1 :] if module else qualified
     name = qualified.rsplit(".", 1)[-1]
-    try:
-        # Ask the plan which stubs are meaningful before honouring a preference:
-        # a generator has no neutral body, and requesting one anyway would build
-        # a task whose failure says nothing about the contract.
-        plan = plan_excision(original, name, path=path, dotted=dotted)
-        chosen = strategy if strategy in plan.strategies() else plan.strategies()[0]
-        result = excise(original, name, strategy=chosen, path=path, dotted=dotted)
-    except ExcisionError as exc:
-        raise TaskBuildError(str(exc)) from exc
+    if path.endswith(".py"):
+        try:
+            # Ask the plan which stubs are meaningful before honouring a
+            # preference: a generator has no neutral body, and requesting one
+            # anyway would build a task whose failure says nothing about the
+            # contract.
+            plan = plan_excision(original, name, path=path, dotted=dotted)
+            chosen = strategy if strategy in plan.strategies() else plan.strategies()[0]
+            result = excise(original, name, strategy=chosen, path=path, dotted=dotted)
+        except ExcisionError as exc:
+            raise TaskBuildError(str(exc)) from exc
+    else:
+        # Other ecosystems excise through tree-sitter, which knows the body's
+        # exact extent. There is no strategy choice: each language has one
+        # idiomatic unimplemented marker (`todo!()`, `panic`, `throw`).
+        from stress_stack.excision_multilang import excise_symbol
+
+        result = excise_symbol(path, original, name)
+        if result is None:
+            raise TaskBuildError(f"could not excise {name} from {path}")
 
     source_file.write_text(result.stubbed, encoding="utf-8")
-    (task_root / "goldenSolution.diff").write_text(result.diff(label=path), encoding="utf-8")
+    # The Python excision labels its diff on demand; the multi-language one
+    # already carries the path in its headers.
+    golden = result.diff(label=path) if path.endswith(".py") else result.diff()
+    (task_root / "goldenSolution.diff").write_text(golden, encoding="utf-8")
 
     covering = [str(t) for t in candidate.signals["covering_tests"]]
-    designated = _group_by_file(covering, solution_dir)
+    designated = _designate_tests(covering, solution_dir, path)
     verifier_root = task_root / "verifier"
     _reset(verifier_root)
     for test_path in designated:
@@ -731,6 +746,39 @@ def _group_by_file(node_ids: list[str], tree: Path) -> dict[str, list[str]]:
         if not remainder or not (tree / path).is_file():
             continue
         grouped.setdefault(path, []).append(remainder.replace("::", "."))
+    return {path: sorted(set(names)) for path, names in sorted(grouped.items())}
+
+
+def _designate_tests(node_ids: list[str], tree: Path, subject_path: str) -> dict[str, list[str]]:
+    """Map covering test ids to the files that define them.
+
+    pytest's ids already carry the file (`glom/test/test_x.py::test_y`), so the
+    Python path just splits them. Go's carry the *package*
+    (`example.com/m::TestAdd`), which names a directory, not a file — so the
+    defining file is found by looking for the declaration. Without this the
+    verifier directory came out empty and every excision task failed staging.
+    """
+    if subject_path.endswith(".py"):
+        return _group_by_file(node_ids, tree)
+
+    grouped: dict[str, list[str]] = {}
+    for node_id in node_ids:
+        name = node_id.rsplit("::", 1)[-1]
+        for candidate in sorted(tree.rglob("*")):
+            if not candidate.is_file() or candidate.suffix != Path(subject_path).suffix:
+                continue
+            # Relative to the staged tree, never absolute: the tree itself lives
+            # under `.stress_stack/tasks/<id>/solution`, so testing the absolute
+            # parts excluded every file in it and designated nothing.
+            if ".stress_stack" in candidate.relative_to(tree).parts:
+                continue
+            try:
+                text = candidate.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if re.search(rf"\b(fn|func)\s+{re.escape(name)}\s*[(<]", text):
+                grouped.setdefault(candidate.relative_to(tree).as_posix(), []).append(name)
+                break
     return {path: sorted(set(names)) for path, names in sorted(grouped.items())}
 
 

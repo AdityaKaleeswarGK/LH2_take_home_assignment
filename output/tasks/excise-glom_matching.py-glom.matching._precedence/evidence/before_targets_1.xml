@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="0.093" timestamp="2026-08-17T15:09:32.417948+00:00" hostname="78be25ded166"><testcase classname="glom.test.test_match" name="test_double_wrapping" time="0.001"><failure message="ValueError: Optional() keys must be == match constants, not 'key'">glom/test/test_match.py:113: in test_double_wrapping
+    outer(Optional('key'))
+          ^^^^^^^^^^^^^^^
+glom/matching.py:596: in __init__
+    raise ValueError(f"Optional() keys must be == match constants, not {key!r}")
+E   ValueError: Optional() keys must be == match constants, not 'key'</failure></testcase><testcase classname="glom.test.test_match" name="test_nested_struct" time="0.000"><failure message="ValueError: Optional() keys must be == match constants, not 'value'">glom/test/test_match.py:408: in test_nested_struct
+    Optional('value', 'null'): _json(
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/matching.py:596: in __init__
+    raise ValueError(f"Optional() keys must be == match constants, not {key!r}")
+E   ValueError: Optional() keys must be == match constants, not 'value'</failure></testcase><testcase classname="glom.test.test_match" name="test_sample" time="0.000"><failure message="ValueError: Optional() keys must be == match constants, not 'date_added'">glom/test/test_match.py:276: in test_sample
+    Optional('date_added'): datetime.datetime,
+    ^^^^^^^^^^^^^^^^^^^^^^
+glom/matching.py:596: in __init__
+    raise ValueError(f"Optional() keys must be == match constants, not {key!r}")
+E   ValueError: Optional() keys must be == match constants, not 'date_added'</failure></testcase></testsuite></testsuites>

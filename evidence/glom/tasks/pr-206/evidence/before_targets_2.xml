@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="0.095" timestamp="2026-08-17T13:52:22.003771+00:00" hostname="f2e321846390"><testcase classname="glom.test.test_path_and_t" name="test_t_arithmetic" time="0.000"><failure message="TypeError: unsupported operand type(s) for +: 'TType' and 'TType'">glom/test/test_path_and_t.py:234: in test_t_arithmetic
+    assert glom(t, T + T) == 4
+                   ^^^^^
+E   TypeError: unsupported operand type(s) for +: 'TType' and 'TType'</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_t_arithmetic_errors" time="0.000"><failure message="TypeError: unsupported operand type(s) for /: 'TType' and 'int'">glom/test/test_path_and_t.py:256: in test_t_arithmetic_errors
+    glom(0, T / 0)
+            ^^^^^
+E   TypeError: unsupported operand type(s) for /: 'TType' and 'int'</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_t_arithmetic_reprs" time="0.000"><failure message="TypeError: unsupported operand type(s) for +: 'TType' and 'TType'">glom/test/test_path_and_t.py:248: in test_t_arithmetic_reprs
+    assert repr(T + T) == "T + T"
+                ^^^^^
+E   TypeError: unsupported operand type(s) for +: 'TType' and 'TType'</failure></testcase></testsuite></testsuites>

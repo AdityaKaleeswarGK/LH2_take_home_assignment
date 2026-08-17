@@ -51,6 +51,16 @@ class SandboxPolicy:
     read_only_root: bool = True
     drop_capabilities: bool = True
     run_as_host_user: bool = True
+    # Compiled ecosystems build a test binary into /tmp and then execute it, so
+    # a `noexec` tmpfs stops them before a single test runs — `go test` reports
+    # `fork/exec /tmp/go-build.../pkg.test: permission denied`. Interpreted
+    # ecosystems never need this, so it stays off unless a runner asks.
+    #
+    # The relaxation is narrow: the code mount is still read-only, the root
+    # filesystem is still read-only, the network is still off and every
+    # capability is still dropped. The only new power is executing a file the
+    # run itself just compiled inside its own throwaway tmpfs.
+    allow_tmp_exec: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -62,6 +72,7 @@ class SandboxPolicy:
             "timeout_seconds": self.timeout_seconds,
             "read_only_root": self.read_only_root,
             "drop_capabilities": self.drop_capabilities,
+            "allow_tmp_exec": self.allow_tmp_exec,
         }
 
 
@@ -120,7 +131,8 @@ def build_arguments(
         f"--memory={policy.memory}",
         f"--pids-limit={policy.pids}",
         "--security-opt=no-new-privileges",
-        f"--tmpfs=/tmp:rw,size={policy.tmpfs_size},mode=1777",
+        f"--tmpfs=/tmp:rw{',exec' if policy.allow_tmp_exec else ''}"
+        f",size={policy.tmpfs_size},mode=1777",
         f"--volume={_resolve(code_dir)}:/work:ro",
         f"--volume={_resolve(evidence_dir)}:/evidence:rw",
         "--workdir=/work",

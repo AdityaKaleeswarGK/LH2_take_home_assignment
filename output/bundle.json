@@ -1,0 +1,15 @@
+{
+  "copied": [
+    "repo/",
+    ".okf/",
+    "repo_graph.json",
+    "tasks/ (10)",
+    "tasks.json",
+    "transcripts/ (198)"
+  ],
+  "missing": [],
+  "output_root": "/private/tmp/glom_out",
+  "repository_root": "/Users/adityagk/Desktop/projects/stress_stack/glom",
+  "task_count": 10,
+  "transcripts": 198
+}

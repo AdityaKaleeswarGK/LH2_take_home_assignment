@@ -212,7 +212,88 @@ def image_available(image: str) -> bool:
     return run(["docker", "image", "inspect", image], timeout=30.0).ok
 
 
-def select_runner(*, image: str) -> DockerRunner:
+@dataclass
+class LanguageRunner:
+    """Run an ecosystem's own test command in the same sandbox pytest gets.
+
+    Structurally identical to ``DockerRunner`` — same image, same policy, same
+    isolation — and different in only two respects, both forced by the
+    ecosystem rather than chosen: the command comes from the language's test
+    plan, and results are read from the runner's stdout because `go test` and
+    `cargo test` have no JUnit file to write.
+
+    The raw output is still written to the evidence directory. A verdict whose
+    supporting output was thrown away is not reproducible, and every gate
+    verdict here has to be re-checkable from disk.
+    """
+
+    image: str
+    plan: Any
+    policy: SandboxPolicy = field(default_factory=SandboxPolicy)
+    backend: str = DOCKER
+
+    def execute(
+        self, tree: Path, evidence: Path, name: str, targets: list[str] | None = None
+    ) -> RunOutcome:
+        evidence.mkdir(parents=True, exist_ok=True)
+        log_path = evidence / f"{name}.log"
+        log_path.unlink(missing_ok=True)
+        started = time.monotonic()
+        result = run_sandboxed(
+            self.image,
+            self.plan.suite_command(targets),
+            code_dir=tree,
+            evidence_dir=evidence,
+            policy=self.policy,
+            # No PYTHONPATH: setting it for a Go or Rust image is meaningless,
+            # and it is the shadowing vector that broke pytest-dependency repos.
+            environment={},
+        )
+        seconds = time.monotonic() - started
+        log_path.write_text(
+            f"$ {' '.join(self.plan.suite_command(targets))}\n\n"
+            f"--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}\n",
+            encoding="utf-8",
+        )
+        report = self.plan.parse(result.stdout, result.stderr, result.exit_code)
+        return RunOutcome(
+            name=name,
+            report=report,
+            exit_code=result.exit_code,
+            seconds=seconds,
+            backend=self.backend,
+            infrastructure_failure=result.infrastructure_failure,
+            detail=(result.stderr.strip() or result.stdout.strip())[-400:]
+            if result.infrastructure_failure
+            else "",
+        )
+
+
+def select_runner(*, image: str, language: str = "python") -> Any:
+    """The runner for this ecosystem, or an error explaining why there is none."""
+    if language != "python":
+        from stress_stack.test_runners import plan_for, supported_languages
+
+        plan = plan_for(language)
+        if plan is None:
+            raise ToolingError(
+                f"Validation has no test plan for {language!r}. Supported: "
+                f"{', '.join(sorted(supported_languages())) or 'python only'}. "
+                "Gate verdicts are only produced from parsed per-test results, "
+                "never inferred from an exit code."
+            )
+        _require_container(image)
+        # Go, Rust and C++ compile a test binary and exec it; the default
+        # `noexec` tmpfs blocks that before any test runs.
+        compiled = language in {"go", "rust", "c", "cpp"}
+        return LanguageRunner(
+            image=image, plan=plan, policy=SandboxPolicy(allow_tmp_exec=compiled)
+        )
+    _require_container(image)
+    return DockerRunner(image=image)
+
+
+def _require_container(image: str) -> None:
     """The container is the only backend, and its absence is an error.
 
     There was a host-interpreter fallback here. It is gone deliberately: a
@@ -231,4 +312,3 @@ def select_runner(*, image: str) -> DockerRunner:
             f"Container image {image!r} does not exist. Run `stress-stack container` "
             "first — it builds the image validation runs in."
         )
-    return DockerRunner(image=image)

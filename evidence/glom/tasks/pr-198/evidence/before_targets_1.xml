@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.083" timestamp="2026-08-17T13:52:03.750984+00:00" hostname="e9bd58784588"><testcase classname="glom.test.test_path_and_t" name="test_path_cache" time="0.001"><failure message="AssertionError: assert Path('a', 'b', 'c') is Path('a', 'b', 'c')&#10; +  where Path('a', 'b', 'c') = from_text('a.b.c')&#10; +    where from_text = Path.from_text&#10; +  and   Path('a', 'b', 'c') = from_text('a.b.c')&#10; +    where from_text = Path.from_text">glom/test/test_path_and_t.py:242: in test_path_cache
+    assert Path.from_text('a.b.c') is Path.from_text('a.b.c')
+E   AssertionError: assert Path('a', 'b', 'c') is Path('a', 'b', 'c')
+E    +  where Path('a', 'b', 'c') = from_text('a.b.c')
+E    +    where from_text = Path.from_text
+E    +  and   Path('a', 'b', 'c') = from_text('a.b.c')
+E    +    where from_text = Path.from_text</failure></testcase></testsuite></testsuites>

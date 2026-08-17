@@ -1,0 +1,570 @@
+{
+  "count": 94,
+  "generated_at": "2026-08-17T14:50:56.980337+00:00",
+  "violations": [
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.glom` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 2
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Fill` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 3
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Auto` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 4
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.register` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 5
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.register_op` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 6
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Glommer` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 7
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Call` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 8
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Invoke` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 9
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Spec` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 10
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Ref` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 11
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.SKIP` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 12
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.STOP` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 13
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.UP` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 14
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.ROOT` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 15
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.MODE` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 16
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Path` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 17
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Vars` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 18
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Val` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 19
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Coalesce` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 20
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Inspect` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 21
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.Pipe` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 22
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.GlomError` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 23
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.BadSpec` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 24
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.PathAccessError` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 25
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.PathAssignError` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 26
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.CoalesceError` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 27
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.UnregisteredTarget` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 28
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.T` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 29
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.S` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 30
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.core.A` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 31
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.reduction.Sum` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 34
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.reduction.Fold` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 34
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.reduction.Flatten` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 34
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.reduction.flatten` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 34
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.reduction.FoldError` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 34
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.reduction.Merge` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 34
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.reduction.merge` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 34
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.M` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 36
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.Or` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 37
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.And` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 38
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.Not` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 39
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.Match` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 40
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.MatchError` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 41
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.TypeMatchError` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 42
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.Regex` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 43
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.Optional` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 44
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.Required` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 45
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.Switch` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 46
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.Check` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 47
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.matching.CheckError` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 48
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.mutation.Assign` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 50
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.mutation.Delete` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 50
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.mutation.assign` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 50
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.mutation.delete` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 50
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.mutation.PathDeleteError` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 50
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom.streaming.Iter` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 55
+    },
+    {
+      "code": "F401",
+      "filename": "glom/__init__.py",
+      "message": "`glom._version.__version__` imported but unused; consider removing, adding to `__all__`, or using a redundant alias",
+      "row": 57
+    },
+    {
+      "code": "E721",
+      "filename": "glom/cli.py",
+      "message": "Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks",
+      "row": 242
+    },
+    {
+      "code": "E402",
+      "filename": "glom/core.py",
+      "message": "Module level import not at top of file",
+      "row": 37
+    },
+    {
+      "code": "E402",
+      "filename": "glom/core.py",
+      "message": "Module level import not at top of file",
+      "row": 38
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 269
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 272
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 273
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 290
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 1157
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 1368
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 1794
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 2243
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 2660
+    },
+    {
+      "code": "E731",
+      "filename": "glom/core.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 2682
+    },
+    {
+      "code": "E731",
+      "filename": "glom/grouping.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 105
+    },
+    {
+      "code": "E731",
+      "filename": "glom/mutation.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 200
+    },
+    {
+      "code": "E731",
+      "filename": "glom/test/test_basic.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 90
+    },
+    {
+      "code": "F841",
+      "filename": "glom/test/test_basic.py",
+      "message": "Local variable `res` is assigned to but never used",
+      "row": 467
+    },
+    {
+      "code": "E722",
+      "filename": "glom/test/test_error.py",
+      "message": "Do not use bare `except`",
+      "row": 141
+    },
+    {
+      "code": "E402",
+      "filename": "glom/test/test_error.py",
+      "message": "Module level import not at top of file",
+      "row": 160
+    },
+    {
+      "code": "F841",
+      "filename": "glom/test/test_error.py",
+      "message": "Local variable `ret` is assigned to but never used",
+      "row": 231
+    },
+    {
+      "code": "F811",
+      "filename": "glom/test/test_match.py",
+      "message": "Redefinition of unused `Ref` from line 6: `Ref` redefined here",
+      "row": 19
+    },
+    {
+      "code": "E721",
+      "filename": "glom/test/test_match.py",
+      "message": "Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks",
+      "row": 47
+    },
+    {
+      "code": "E711",
+      "filename": "glom/test/test_match.py",
+      "message": "Comparison to `None` should be `cond is not None`",
+      "row": 52
+    },
+    {
+      "code": "E712",
+      "filename": "glom/test/test_match.py",
+      "message": "Avoid equality comparisons to `True`; use `glom(True, Fill(M | \"default\")):` for truth checks",
+      "row": 269
+    },
+    {
+      "code": "E712",
+      "filename": "glom/test/test_match.py",
+      "message": "Avoid equality comparisons to `False`; use `not glom(False, ~M):` for false checks",
+      "row": 273
+    },
+    {
+      "code": "E711",
+      "filename": "glom/test/test_match.py",
+      "message": "Comparison to `None` should be `cond is None`",
+      "row": 364
+    },
+    {
+      "code": "E711",
+      "filename": "glom/test/test_match.py",
+      "message": "Comparison to `None` should be `cond is None`",
+      "row": 379
+    },
+    {
+      "code": "E731",
+      "filename": "glom/test/test_match.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 419
+    },
+    {
+      "code": "E731",
+      "filename": "glom/test/test_mutation.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 73
+    },
+    {
+      "code": "F841",
+      "filename": "glom/test/test_mutation.py",
+      "message": "Local variable `counter` is assigned to but never used",
+      "row": 126
+    },
+    {
+      "code": "E731",
+      "filename": "glom/test/test_mutation.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 284
+    },
+    {
+      "code": "F841",
+      "filename": "glom/test/test_path_and_t.py",
+      "message": "Local variable `pre` is assigned to but never used",
+      "row": 378
+    },
+    {
+      "code": "E741",
+      "filename": "glom/test/test_reduction.py",
+      "message": "Ambiguous variable name: `l`",
+      "row": 62
+    },
+    {
+      "code": "E722",
+      "filename": "glom/test/test_snippets.py",
+      "message": "Do not use bare `except`",
+      "row": 38
+    },
+    {
+      "code": "E731",
+      "filename": "glom/test/test_streaming.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 33
+    },
+    {
+      "code": "E731",
+      "filename": "glom/tutorial.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 442
+    },
+    {
+      "code": "E731",
+      "filename": "glom/tutorial.py",
+      "message": "Do not assign a `lambda` expression, use a `def`",
+      "row": 443
+    }
+  ]
+}

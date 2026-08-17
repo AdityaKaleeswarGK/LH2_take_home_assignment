@@ -1,0 +1,23 @@
+diff --git a/glom/cli.py b/glom/cli.py
+index cd0609e..bd8752a 100644
+--- a/glom/cli.py
++++ b/glom/cli.py
+@@ -125,7 +125,7 @@ def mw_handle_target(target_text, target_format):
+     elif target_format in ('yaml', 'yml'):
+         try:
+             import yaml
+-            load_func = yaml.load
++            load_func = yaml.safe_load
+         except ImportError:
+             raise UsageError('No YAML package found. To process yaml files, run: pip install PyYAML')
+     elif target_format == 'python':
+diff --git a/requirements.txt b/requirements.txt
+index b3b7f51..f12f4f4 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -5,4 +5,4 @@ face<22.0.0
+ pytest==4.6.11;python_version<'3.6'
+ pytest>=6.2.5;python_version >= '3.6'
+ tox==3.7.0
+-PyYAML==5.4.1
++PyYAML==6.0.1

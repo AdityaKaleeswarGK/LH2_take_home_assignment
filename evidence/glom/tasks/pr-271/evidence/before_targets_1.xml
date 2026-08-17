@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="19" skipped="0" tests="19" time="0.435" timestamp="2026-08-17T15:08:46.802222+00:00" hostname="161f23464f30"><testcase classname="glom.test.test_basic" name="test_bbrepr" time="0.001"><failure message="AssertionError: assert '{\n         ...int: dict,\n}' == '{int: dict}'&#10;  &#10;  - {int: dict}&#10;  + {&#10;  +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ...&#10;  &#10;  ...Full output truncated (2 lines hidden), use '-vv' to show">glom/test/test_basic.py:455: in test_bbrepr
+    assert bbrepr({int: dict}) == "{int: dict}"
+E   AssertionError: assert '{\n         ...int: dict,\n}' == '{int: dict}'
+E     
+E     - {int: dict}
+E     + {
+E     +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ...
+E     
+E     ...Full output truncated (2 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_basic" name="test_pipe" time="0.000"><failure message="TypeError: can only concatenate str (not &quot;int&quot;) to str">glom/test/test_basic.py:432: in test_pipe
+    assert repr(Pipe(1, Pipe([2], dict))) == 'Pipe(1, Pipe([2], dict))'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:1981: in __repr__
+    return self.__class__.__name__ + bbrepr(self.steps)
+                                     ^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:21: in wrapper
+    result = user_function(self)
+             ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:70: in repr
+    return self.repr1(x, self.maxlevel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:517: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:88: in repr1
+    return method(x, level)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:128: in repr_tuple
+    return self._repr_iterable(x, level, '(', ')', self.maxtuple, ',')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:119: in _repr_iterable
+    pieces = [repr1(elem, newlevel) for elem in islice(x, maxiter)]
+              ^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:517: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:90: in repr1
+    return self.repr_instance(x, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:200: in repr_instance
+    s = s[:i] + self.fillvalue + s[len(s)-j:]
+        ^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: can only concatenate str (not "int") to str</failure></testcase><testcase classname="glom.test.test_basic" name="test_ref" time="0.002"><failure message="assert 'Ref(\n      ...        ),\n)' == &quot;Ref('item', ...Ref('item')))&quot;&#10;  &#10;  - Ref('item', (T[1], Ref('item')))&#10;  + Ref(&#10;  +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ...&#10;  &#10;  ...Full output truncated (6 lines hidden), use '-vv' to show">glom/test/test_basic.py:409: in test_ref
+    assert repr(Ref('item', (T[1], Ref('item')))) == "Ref('item', (T[1], Ref('item')))"
+E   assert 'Ref(\n      ...        ),\n)' == "Ref('item', ...Ref('item')))"
+E     
+E     - Ref('item', (T[1], Ref('item')))
+E     + Ref(
+E     +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ...
+E     
+E     ...Full output truncated (6 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_3_11_byte_code_caret" time="0.001"><failure message="AssertionError: assert 'Traceback (m...ut of range\n' == 'Traceback (m...ut of range\n'&#10;  &#10;  Skipping 295 identical leading characters in diff, use -v to show&#10;     Spec: []&#10;  +               ~~~~^^^&#10;    IndexError: list index out of range">glom/test/test_error.py:514: in test_3_11_byte_code_caret
+    assert _make_stack(target=1, spec=[]) == """\
+E   AssertionError: assert 'Traceback (m...ut of range\n' == 'Traceback (m...ut of range\n'
+E     
+E     Skipping 295 identical leading characters in diff, use -v to show
+E        Spec: []
+E     +               ~~~~^^^
+E       IndexError: list index out of range</failure></testcase><testcase classname="glom.test.test_error" name="test_all_public_errors" time="0.004"><failure message="assert '[\n                                                                              ' in &quot;error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: 'kurt'\n - Spec: [\...r' not registered for 'iterate', expected one of registered types: (OrderedDict, _AbstractIterable, dict, list, tuple)&quot;">glom/test/test_error.py:482: in test_all_public_errors
+    assert bbrepr(spec)[:80] in exc_str
+E   assert '[\n                                                                              ' in "error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: 'kurt'\n - Spec: [\...r' not registered for 'iterate', expected one of registered types: (OrderedDict, _AbstractIterable, dict, list, tuple)"</failure></testcase><testcase classname="glom.test.test_error" name="test_branching_stack" time="0.001"><failure message="AssertionError: assert 'Traceback (m...r() failed&gt;\n' == 'Traceback (m...t in Switch\n'&#10;  &#10;  Skipping 173 identical leading characters in diff, use -v to show&#10;  + tchError: &lt;exception str() failed&gt;&#10;  - tchError: error raised while processing, details below.&#10;  -  Target-spec trace (most recent last):&#10;  -  - Target: [None]&#10;  -  - Spec: Match(Switch([(1, 1), ('a', 'a'), (T.a, T.a)]))...&#10;  &#10;  ...Full output truncated (8 lines hidden), use '-vv' to show">glom/test/test_error.py:265: in test_branching_stack
+    assert actual == expected
+E   AssertionError: assert 'Traceback (m...r() failed&gt;\n' == 'Traceback (m...t in Switch\n'
+E     
+E     Skipping 173 identical leading characters in diff, use -v to show
+E     + tchError: &lt;exception str() failed&gt;
+E     - tchError: error raised while processing, details below.
+E     -  Target-spec trace (most recent last):
+E     -  - Target: [None]
+E     -  - Spec: Match(Switch([(1, 1), ('a', 'a'), (T.a, T.a)]))...
+E     
+E     ...Full output truncated (8 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_coalesce_stack" time="0.001"><failure message="AssertionError: assert 'Traceback (m...at path [])\n' == 'Traceback (m...at path [])\n'&#10;  &#10;  Skipping 269 identical leading characters in diff, use -v to show&#10;  Skipping 402 identical trailing characters in diff, use -v to show&#10;  -  Target: {'a': {'b': 'c'}, 'd': {'e': ['f'], 'g': 'h'}, 'i': [{'j... (len=&#10;  +  Target: {&#10;  +                                                       ... (len=">glom/test/test_error.py:367: in test_coalesce_stack
+    assert actual == expected
+E   AssertionError: assert 'Traceback (m...at path [])\n' == 'Traceback (m...at path [])\n'
+E     
+E     Skipping 269 identical leading characters in diff, use -v to show
+E     Skipping 402 identical trailing characters in diff, use -v to show
+E     -  Target: {'a': {'b': 'c'}, 'd': {'e': ['f'], 'g': 'h'}, 'i': [{'j... (len=
+E     +  Target: {
+E     +                                                       ... (len=</failure></testcase><testcase classname="glom.test.test_error" name="test_glom_dev_debug" time="0.001"><failure message="assert 'yesandno' in 'error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: {\n                ... access \'b\', part 1 of Path(\'a\', \'b\', \'c\'), got error: AttributeError(&quot;\'str\' object has no attribute \'b\'&quot;)'&#10; +  where 'error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: {\n                ... access \'b\', part 1 of Path(\'a\', \'b\', \'c\'), got error: AttributeError(&quot;\'str\' object has no attribute \'b\'&quot;)' = str(PathAccessError(AttributeError(&quot;'str' object has no attribute 'b'&quot;), Path('a', 'b', 'c'), 1))&#10; +    where PathAccessError(AttributeError(&quot;'str' object has no attribute 'b'&quot;), Path('a', 'b', 'c'), 1) = &lt;ExceptionInfo PathAccessError(AttributeError(&quot;'str' object has no attribute 'b'&quot;), Path('a', 'b', 'c'), 1) tblen=2&gt;.value">glom/test/test_error.py:495: in test_glom_dev_debug
+    assert 'yesandno' in str(exc_info.value)
+E   assert 'yesandno' in 'error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: {\n                ... access \'b\', part 1 of Path(\'a\', \'b\', \'c\'), got error: AttributeError("\'str\' object has no attribute \'b\'")'
+E    +  where 'error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: {\n                ... access \'b\', part 1 of Path(\'a\', \'b\', \'c\'), got error: AttributeError("\'str\' object has no attribute \'b\'")' = str(PathAccessError(AttributeError("'str' object has no attribute 'b'"), Path('a', 'b', 'c'), 1))
+E    +    where PathAccessError(AttributeError("'str' object has no attribute 'b'"), Path('a', 'b', 'c'), 1) = &lt;ExceptionInfo PathAccessError(AttributeError("'str' object has no attribute 'b'"), Path('a', 'b', 'c'), 1) tblen=2&gt;.value</failure></testcase><testcase classname="glom.test.test_error" name="test_glom_error_double_stack" time="0.002"><failure message="assert 'Traceback (m...e \'val\'&quot;)\n' == 'Traceback (m...e \'val\'&quot;)\n'&#10;  &#10;  Skipping 271 identical leading characters in diff, use -v to show&#10;  -  Target: [&#10;  +  Target: [None]&#10;  ?           +++++&#10;  +  - Spec: {'results': [{'value': &lt;function _subglom_wrap at&#10;  +  - Spec: [{'value': &lt;function _subglom_wrap at...&#10;  &#10;  ...Full output truncated (25 lines hidden), use '-vv' to show">glom/test/test_error.py:224: in test_glom_error_double_stack
+    assert expected == actual
+E   assert 'Traceback (m...e \'val\'")\n' == 'Traceback (m...e \'val\'")\n'
+E     
+E     Skipping 271 identical leading characters in diff, use -v to show
+E     -  Target: [
+E     +  Target: [None]
+E     ?           +++++
+E     +  - Spec: {'results': [{'value': &lt;function _subglom_wrap at
+E     +  - Spec: [{'value': &lt;function _subglom_wrap at...
+E     
+E     ...Full output truncated (25 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_glom_error_stack" time="0.001"><failure message="assert 'Traceback (m...\'value\'&quot;)\n' == 'Traceback (m...\'value\'&quot;)\n'&#10;  &#10;  Skipping 271 identical leading characters in diff, use -v to show&#10;  -  Target: [None]&#10;  ?           -----&#10;  +  Target: [&#10;  -  - Spec: {'results': [{'valué': 'value'}]}&#10;  -  - Spec: [{'valué': 'value'}]...&#10;  &#10;  ...Full output truncated (11 lines hidden), use '-vv' to show">glom/test/test_error.py:180: in test_glom_error_stack
+    assert actual == expected
+E   assert 'Traceback (m...\'value\'")\n' == 'Traceback (m...\'value\'")\n'
+E     
+E     Skipping 271 identical leading characters in diff, use -v to show
+E     -  Target: [None]
+E     ?           -----
+E     +  Target: [
+E     -  - Spec: {'results': [{'valué': 'value'}]}
+E     -  - Spec: [{'valué': 'value'}]...
+E     
+E     ...Full output truncated (11 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_long_target_repr" time="0.003"><failure message="assert '...' in 'Traceback (most recent call last):\n  File &quot;test_error.py&quot;, line ___, in _make_stack\n    glom(target, spec)\n  File &quot;core.py&quot;, line ___, in glom\n    raise err\nglom.core.PathAccessError: &lt;exception str() failed&gt;\n'">glom/test/test_error.py:238: in test_long_target_repr
+    assert '...' in actual
+E   assert '...' in 'Traceback (most recent call last):\n  File "test_error.py", line ___, in _make_stack\n    glom(target, spec)\n  File "core.py", line ___, in glom\n    raise err\nglom.core.PathAccessError: &lt;exception str() failed&gt;\n'</failure></testcase><testcase classname="glom.test.test_error" name="test_midway_branch" time="0.001"><failure message="assert 'Traceback (m...r() failed&gt;\n' == 'Traceback (m...ute \'a\'&quot;)\n'&#10;  &#10;  Skipping 174 identical leading characters in diff, use -v to show&#10;  + essError: &lt;exception str() failed&gt;&#10;  - essError: error raised while processing, details below.&#10;  -  Target-spec trace (most recent last):&#10;  -  - Target: [None]&#10;  -  - Spec: Match(Switch([(1, 1), ('a', 'a'), ([None], T.a)]))...&#10;  &#10;  ...Full output truncated (8 lines hidden), use '-vv' to show">glom/test/test_error.py:291: in test_midway_branch
+    assert actual == expected
+E   assert 'Traceback (m...r() failed&gt;\n' == 'Traceback (m...ute \'a\'")\n'
+E     
+E     Skipping 174 identical leading characters in diff, use -v to show
+E     + essError: &lt;exception str() failed&gt;
+E     - essError: error raised while processing, details below.
+E     -  Target-spec trace (most recent last):
+E     -  - Target: [None]
+E     -  - Spec: Match(Switch([(1, 1), ('a', 'a'), ([None], T.a)]))...
+E     
+E     ...Full output truncated (8 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_nesting_stack" time="0.001"><failure message="assert &quot;Traceback (m...yError('c')\n&quot; == &quot;Traceback (m...yError('c')\n&quot;&#10;  &#10;  Skipping 271 identical leading characters in diff, use -v to show&#10;  -  Target: {'a': {'b': {}}}&#10;  -  - Spec: ('a', 'b', 'c')&#10;  +  Target: {&#10;  +                                                       ... (len=1)&#10;  +  - Spec: (...&#10;  &#10;  ...Full output truncated (10 lines hidden), use '-vv' to show">glom/test/test_error.py:372: in test_nesting_stack
+    assert _make_stack(('a', 'b', 'c'), target={'a': {'b': {}}}) == """\
+E   assert "Traceback (m...yError('c')\n" == "Traceback (m...yError('c')\n"
+E     
+E     Skipping 271 identical leading characters in diff, use -v to show
+E     -  Target: {'a': {'b': {}}}
+E     -  - Spec: ('a', 'b', 'c')
+E     +  Target: {
+E     +                                                       ... (len=1)
+E     +  - Spec: (...
+E     
+E     ...Full output truncated (10 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_partially_failing_branch" time="0.001"><failure message="assert 'Traceback (m...ute \'c\'&quot;)\n' == 'Traceback (m...ute \'c\'&quot;)\n'&#10;  &#10;  Skipping 285 identical leading characters in diff, use -v to show&#10;  -  - Spec: (Or('a', T), Or('b', T), 'c')&#10;  +  - Spec: (&#10;  +                                                         ... (len=3)&#10;     - Spec: Or('a', T)&#10;     - Spec: Or('b', T)&#10;     - Spec: 'c'&#10;    glom.core.PathAccessError: could not access 'c', part 0 of Path('c'), got error: AttributeError(&quot;'NoneType' object has no attribute 'c'&quot;)">glom/test/test_error.py:327: in test_partially_failing_branch
+    assert _make_stack((Or('a', T), Or('b', T), 'c'), target=None) == """\
+E   assert 'Traceback (m...ute \'c\'")\n' == 'Traceback (m...ute \'c\'")\n'
+E     
+E     Skipping 285 identical leading characters in diff, use -v to show
+E     -  - Spec: (Or('a', T), Or('b', T), 'c')
+E     +  - Spec: (
+E     +                                                         ... (len=3)
+E        - Spec: Or('a', T)
+E        - Spec: Or('b', T)
+E        - Spec: 'c'
+E       glom.core.PathAccessError: could not access 'c', part 0 of Path('c'), got error: AttributeError("'NoneType' object has no attribute 'c'")</failure></testcase><testcase classname="glom.test.test_error" name="test_regular_error_stack" time="0.001"><failure message="AssertionError: assert 'Traceback (m...que message\n' == 'Traceback (m...que message\n'&#10;  &#10;  Skipping 281 identical leading characters in diff, use -v to show&#10;  -  Target: [&#10;  +  Target: [None]&#10;  ?           +++++&#10;  +  - Spec: {'results': [{'value': &lt;function _raise_exc at&#10;  +  - Spec: [{'value': &lt;function _raise_exc at...&#10;  &#10;  ...Full output truncated (13 lines hidden), use '-vv' to show">glom/test/test_error.py:154: in test_regular_error_stack
+    assert expected == actual
+E   AssertionError: assert 'Traceback (m...que message\n' == 'Traceback (m...que message\n'
+E     
+E     Skipping 281 identical leading characters in diff, use -v to show
+E     -  Target: [
+E     +  Target: [None]
+E     ?           +++++
+E     +  - Spec: {'results': [{'value': &lt;function _raise_exc at
+E     +  - Spec: [{'value': &lt;function _raise_exc at...
+E     
+E     ...Full output truncated (13 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_unicode_stack" time="0.001"><failure message="assert 'beyonc' in 'Traceback (most recent call last):\n  File &quot;test_error.py&quot;, line ___, in _make_stack\n    glom(target, spec)\n  File ...core.PathAccessError: could not access \'a\', part 0 of Path(\'a\', \'é\', \'i\', \'o\'), got error: KeyError(\'a\')\n'">glom/test/test_error.py:508: in test_unicode_stack
+    assert 'beyonc' in stack
+E   assert 'beyonc' in 'Traceback (most recent call last):\n  File "test_error.py", line ___, in _make_stack\n    glom(target, spec)\n  File ...core.PathAccessError: could not access \'a\', part 0 of Path(\'a\', \'é\', \'i\', \'o\'), got error: KeyError(\'a\')\n'</failure></testcase><testcase classname="glom.test.test_match" name="test_check_ported_tests" time="0.002"><failure message="TypeError: can only concatenate str (not &quot;int&quot;) to str">glom/test/test_match.py:483: in test_check_ported_tests
+    actual_msg = str(exc_info.value)
+                 ^^^^^^^^^^^^^^^^^^^
+glom/core.py:170: in __str__
+    self._target_spec_trace = format_target_spec_trace(self._scope, self.__wrapped)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:265: in format_target_spec_trace
+    segments.append(fmt_s(spec))
+                    ^^^^^^^^^^^
+glom/core.py:249: in &lt;lambda&gt;
+    return lambda v: pre + _format_trace_value(v, fmt_width)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:229: in _format_trace_value
+    s = bbrepr(value).replace("\\'", "'")
+        ^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:21: in wrapper
+    result = user_function(self)
+             ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:70: in repr
+    return self.repr1(x, self.maxlevel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:517: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:88: in repr1
+    return method(x, level)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:166: in repr_dict
+    valrepr = repr1(x[key], newlevel)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:517: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:88: in repr1
+    return method(x, level)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:128: in repr_tuple
+    return self._repr_iterable(x, level, '(', ')', self.maxtuple, ',')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:119: in _repr_iterable
+    pieces = [repr1(elem, newlevel) for elem in islice(x, maxiter)]
+              ^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:517: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:90: in repr1
+    return self.repr_instance(x, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:200: in repr_instance
+    s = s[:i] + self.fillvalue + s[len(s)-j:]
+        ^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: can only concatenate str (not "int") to str</failure></testcase><testcase classname="glom.test.test_scope_vars" name="test_vars" time="0.001"><failure message="TypeError: can only concatenate str (not &quot;int&quot;) to str">glom/test/test_scope_vars.py:57: in test_vars
+    assert repr(let) == "S(v=Vars({'b': 2}, c=3))"
+           ^^^^^^^^^
+glom/core.py:1497: in __repr__
+    return _format_t(t_path[1:], t_path[0])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:1734: in _format_t
+    prepr.append(format_invocation(args=args, kwargs=kwargs, repr=bbrepr))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:562: in format_invocation
+    kw_text = ', '.join(['%s=%s' % (k, _repr(v)) for k, v in kwarg_items])
+                                       ^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:21: in wrapper
+    result = user_function(self)
+             ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:70: in repr
+    return self.repr1(x, self.maxlevel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:517: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:90: in repr1
+    return self.repr_instance(x, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:200: in repr_instance
+    s = s[:i] + self.fillvalue + s[len(s)-j:]
+        ^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: can only concatenate str (not "int") to str</failure></testcase><testcase classname="glom.test.test_streaming" name="test_all" time="0.001"><failure message="AssertionError: assert 'Pipe(\n     ...     list,\n)' == 'Pipe(Iter(), list)'&#10;  &#10;  - Pipe(Iter(), list)&#10;  + Pipe(&#10;  +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ...&#10;  &#10;  ...Full output truncated (3 lines hidden), use '-vv' to show">glom/test/test_streaming.py:210: in test_all
+    assert repr(Iter().all()) == 'Pipe(Iter(), list)'
+E   AssertionError: assert 'Pipe(\n     ...     list,\n)' == 'Pipe(Iter(), list)'
+E     
+E     - Pipe(Iter(), list)
+E     + Pipe(
+E     +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show</failure></testcase></testsuite></testsuites>

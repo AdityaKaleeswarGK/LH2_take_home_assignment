@@ -18,7 +18,10 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
+
+if TYPE_CHECKING:
+    from stress_stack.project_detector import ProjectProfile
 
 from stress_stack.atomic import atomic_write_json
 from stress_stack.errors import StressStackError
@@ -29,6 +32,25 @@ from stress_stack.errors import StressStackError
 # difficulty tier with a reasoned one, and the measured tier is still there when
 # no model answers.
 _OPTIONAL = frozenset({"enrich", "adjudicate"})
+
+# Stages that only understand Python. The environment stages (hygiene, deps,
+# container) and the symbol graph dispatch on the profile and work for every
+# detected ecosystem; coverage and task generation still need pytest, per-test
+# coverage contexts, and `ast`. Skipping them explicitly for other ecosystems is
+# not a convenience: on a Go repository `coverage` failed only because pip could
+# not install a Go module, which reads as a broken pipeline rather than an
+# inapplicable stage. A stage that cannot apply should say so, not fail for an
+# incidental reason.
+_PYTHON_ONLY = frozenset(
+    {
+        # Generated tests are written against pytest's idioms and asserted with
+        # Python mutation; enrichment and the SQLite projection both read the
+        # Python graph's richer edge set.
+        "testgen",
+        "enrich",
+        "index",
+    }
+)
 
 
 @dataclass
@@ -52,16 +74,35 @@ class PipelineResult:
     repository_root: str = ""
     stages: list[StageResult] = field(default_factory=list)
     manifest: dict[str, Any] = field(default_factory=dict)
+    # The detected ecosystem this run was processed as. Recorded because every
+    # stage verdict below is only meaningful relative to it.
+    profile: dict[str, Any] = field(default_factory=dict)
 
     @property
     def ok(self) -> bool:
+        """No stage failed. Not the same as having produced the deliverable."""
         return all(stage.status in {"ok", "skipped", "degraded"} for stage in self.stages)
+
+    @property
+    def deliverable_complete(self) -> bool:
+        """Whether tasks were actually emitted and bundled.
+
+        A run that skips task generation because the ecosystem is unsupported
+        has no failures and no deliverable. Reporting only `ok` would present
+        that as a success.
+        """
+        produced = {
+            stage.name for stage in self.stages if stage.status in {"ok", "degraded"}
+        }
+        return {"emit", "bundle"} <= produced
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "repository_root": self.repository_root,
             "ok": self.ok,
+            "deliverable_complete": self.deliverable_complete,
             "seconds": round(sum(stage.seconds for stage in self.stages), 2),
+            "project_profile": self.profile,
             "stages": [stage.to_dict() for stage in self.stages],
             "manifest": self.manifest,
         }
@@ -76,24 +117,38 @@ def run_pipeline(
     repeats: int = 2,
     skip: tuple[str, ...] = (),
     output: str = "output",
+    profile: ProjectProfile | None = None,
 ) -> PipelineResult:
-    """Run the whole thing, from a URL or a path, and return what each stage did."""
+    """Run the whole thing, from a URL or a path, and return what each stage did.
+
+    ``profile`` is a ``ProjectProfile``. When omitted it is detected from the
+    repository once ``ingest`` has produced a working tree — which is why it is
+    resolved inside the loop rather than here: before ingest there may be no
+    tree to look at, only a URL.
+
+    The environment stages resolve through the doctor modules rather than
+    calling the Python implementations directly. For a Python repository the
+    doctors delegate straight back to those same implementations, so this is the
+    identical code path with the same gates; for every other ecosystem it is the
+    difference between running and not running at all.
+    """
+    from stress_stack.container_doctor import run_container_verification
+    from stress_stack.dependency_doctor import lock_dependencies
+    from stress_stack.hygiene_dispatcher import dispatch_hygiene
+    from stress_stack.project_detector import detect_project_profile
+
+    # `build_container_artifacts` and `build_dependency_artifacts` are no longer
+    # imported here: the container and dependency doctors call them for Python.
     from stress_stack.graph import (
         build_adjudication_artifacts,
-        build_container_artifacts,
-        build_coverage_artifacts,
-        build_dependency_artifacts,
         build_emission_artifacts,
         build_enrichment_artifacts,
-        build_graph_artifacts,
         build_bundle_artifacts,
         build_index_artifacts,
-        build_mining_artifacts,
         build_selection_artifacts,
         build_test_generation_artifacts,
         build_validation_artifacts,
     )
-    from stress_stack.hygiene import run_hygiene
     from stress_stack.ingest import ingest
 
     working = cwd or Path.cwd()
@@ -106,19 +161,22 @@ def run_pipeline(
                 current.to_dict(),
             )
 
-    here = {"source": source_value}
+    # Both entries are read lazily by the stage lambdas below: `source` becomes
+    # the clone path once ingest runs, and `profile` is filled in at the same
+    # point. A stage table built eagerly would capture the pre-ingest values.
+    here: dict[str, Any] = {"source": source_value, "profile": profile}
 
     stages: list[tuple[str, Callable[[], Any]]] = [
         ("ingest", lambda: ingest(here["source"], cwd=working)),
-        ("hygiene", lambda: run_hygiene(here["source"], cwd=working)),
-        ("deps", lambda: build_dependency_artifacts(here["source"], cwd=working)),
-        ("graph", lambda: build_graph_artifacts(here["source"], cwd=working)),
-        ("coverage", lambda: build_coverage_artifacts(here["source"], cwd=working)),
+        ("hygiene", lambda: dispatch_hygiene(here["source"], here["profile"])),
+        ("deps", lambda: lock_dependencies(here["source"], here["profile"])),
+        ("graph", lambda: _build_graph(here, working)),
+        ("coverage", lambda: _build_coverage(here, working)),
         ("testgen", lambda: build_test_generation_artifacts(here["source"], cwd=working)),
-        ("container", lambda: build_container_artifacts(here["source"], cwd=working)),
+        ("container", lambda: run_container_verification(here["source"], here["profile"])),
         ("enrich", lambda: build_enrichment_artifacts(here["source"], cwd=working)),
         ("index", lambda: build_index_artifacts(here["source"], cwd=working)),
-        ("mine", lambda: build_mining_artifacts(here["source"], cwd=working)),
+        ("mine", lambda: _build_mining(here, working)),
         (
             "validate",
             lambda: build_validation_artifacts(
@@ -144,6 +202,13 @@ def run_pipeline(
         if name in skip:
             result.stages.append(StageResult(name, "skipped", 0.0, "skipped by request"))
             live.stage_end(name, "skipped", 0.0, "skipped by request")
+            continue
+        language = getattr(here["profile"], "primary_language", "python")
+        if language != "python" and name in _PYTHON_ONLY:
+            detail = f"not implemented for {language}"
+            result.stages.append(StageResult(name, "skipped", 0.0, detail))
+            live.stage_end(name, "skipped", 0.0, detail)
+            _record(result)
             continue
         started = time.monotonic()
         live.stage_start(name, position, len(stages))
@@ -196,6 +261,12 @@ def run_pipeline(
             if root:
                 here["source"] = root
                 result.repository_root = root
+                # Detected once, from the tree ingest just produced, and reused
+                # by every later stage. Detecting per stage would let a stage
+                # that rewrites manifests change the ecosystem mid-run.
+                if here["profile"] is None:
+                    here["profile"] = detect_project_profile(Path(root))
+                result.profile = here["profile"].to_dict()
         if name == "emit" and isinstance(produced, dict):
             result.manifest = produced
         # Persisted after every stage, not once at the end. bundle runs inside
@@ -216,20 +287,84 @@ def run_pipeline(
     return result
 
 
+def _build_graph(here: dict[str, Any], working: Path) -> Any:
+    """Symbol graph from `ast` for Python, from tree-sitter for anything else.
+
+    Python keeps the existing builder: it resolves dotted imports, call edges
+    and inheritance, which the tree-sitter layer does not attempt. The
+    tree-sitter builder produces the same artifact files with containment and
+    import edges, validated the same way.
+    """
+    language = getattr(here["profile"], "primary_language", "python")
+    if language == "python":
+        from stress_stack.graph import build_graph_artifacts
+
+        return build_graph_artifacts(here["source"], cwd=working)
+
+    from stress_stack.graph_multilang import build_graph_artifacts as build_multilang
+
+    return build_multilang(here["source"])
+
+
+def _language(here: dict[str, Any]) -> str:
+    return getattr(here["profile"], "primary_language", "python")
+
+
+def _build_coverage(here: dict[str, Any], working: Path) -> Any:
+    """Per-test coverage: coverage.py contexts for Python, one run per test elsewhere."""
+    if _language(here) == "python":
+        from stress_stack.graph import build_coverage_artifacts
+
+        return build_coverage_artifacts(here["source"], cwd=working)
+
+    from stress_stack.graph_multilang import build_coverage_artifacts as build_multilang
+
+    return build_multilang(here["source"], _language(here))
+
+
+def _build_mining(here: dict[str, Any], working: Path) -> Any:
+    """Rank candidates. Only Python mines history today; see the multilang note."""
+    if _language(here) == "python":
+        from stress_stack.graph import build_mining_artifacts
+
+        return build_mining_artifacts(here["source"], cwd=working)
+
+    from stress_stack.graph_multilang import build_mining_artifacts as build_multilang
+
+    return build_multilang(here["source"], _language(here))
+
+
 def _announce(live: Any, stage: StageResult) -> None:
     live.stage_end(stage.name, stage.status, stage.seconds, stage.detail[:80])
 
 
 def _semantic_failure(stage: str, produced: Any) -> str | None:
     """Turn a returned-but-unsuccessful stage result into a pipeline failure."""
-    if stage == "hygiene" and getattr(produced, "status", None) != "complete":
-        return f"hygiene status is {getattr(produced, 'status', 'unknown')}"
+    if stage == "hygiene":
+        status = getattr(produced, "status", "unknown")
+        # A stage that measured before/after must show a clean `complete`; one
+        # that could not measure is held to `complete_unverified` instead, so it
+        # cannot pass itself off as verified. Python always measures, so the
+        # default of True keeps its gate exactly as strict as it was.
+        if getattr(produced, "regressions_verified", True):
+            if status != "complete":
+                return f"hygiene status is {status}"
+        elif status != "complete_unverified":
+            return f"hygiene status is {status}"
     if stage == "deps":
-        lock = getattr(produced, "lock", {}) or {}
-        if not getattr(produced, "environment_available", False):
-            return "test environment is unavailable"
-        if not str(lock.get("status") or "").startswith("locked"):
-            return f"dependency lock status is {lock.get('status') or 'unknown'}"
+        if hasattr(produced, "measured"):  # DependencyLockReport
+            if getattr(produced, "test_environment_available", None) is False:
+                return "test environment is unavailable"
+            if getattr(produced, "status", None) != "locked":
+                status = getattr(produced, "status", "unknown")
+                reason = getattr(produced, "reason", "")
+                return f"dependency lock status is {status}{f' ({reason})' if reason else ''}"
+        else:  # legacy DependencyArtifacts
+            lock = getattr(produced, "lock", {}) or {}
+            if not getattr(produced, "environment_available", False):
+                return "test environment is unavailable"
+            if not str(lock.get("status") or "").startswith("locked"):
+                return f"dependency lock status is {lock.get('status') or 'unknown'}"
     if stage == "container" and getattr(produced, "status", None) != "verified":
         return f"container status is {getattr(produced, 'status', 'unknown')}"
     if stage == "graph":

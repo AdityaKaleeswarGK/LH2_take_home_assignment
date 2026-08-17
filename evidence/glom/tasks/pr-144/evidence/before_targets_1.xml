@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="5" time="0.207" timestamp="2026-08-17T15:08:27.899592+00:00" hostname="481baca758b2"><testcase classname="glom.test.test_mutation" name="test_star_broadcast" time="0.001"><failure message="glom.core.PathAccessError: error raised while processing, details below.&#10; Target-spec trace (most recent last):&#10; - Target: {&#10;                                                      ... (len=1)&#10; - Spec: (&#10;                                                        ... (len=2)&#10; - Spec: Assign(Path('a', '*', 'b', '*', 'd'), 'a')&#10; - Spec: Path('a', '*', 'b', '*')&#10;glom.core.PathAccessError: could not access '*', part 1 of Path('a', '*', 'b', '*'), got error: ValueError(&quot;invalid literal for int() with base 10: '*'&quot;)">glom/test/test_mutation.py:314: in test_star_broadcast
+    assert glom(val, (Assign('a.*.b.*.d', 'a'), 'a.*.b.*.d')) == [['a', 'a', 'a']]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:2180: in glom
+    raise err
+E   glom.core.PathAccessError: error raised while processing, details below.
+E    Target-spec trace (most recent last):
+E    - Target: {
+E                                                         ... (len=1)
+E    - Spec: (
+E                                                           ... (len=2)
+E    - Spec: Assign(Path('a', '*', 'b', '*', 'd'), 'a')
+E    - Spec: Path('a', '*', 'b', '*')
+E   glom.core.PathAccessError: could not access '*', part 1 of Path('a', '*', 'b', '*'), got error: ValueError("invalid literal for int() with base 10: '*'")</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_path_star" time="0.000"><failure message="glom.core.PathAccessError: error raised while processing, details below.&#10; Target-spec trace (most recent last):&#10; - Target: {&#10;                                                      ... (len=1)&#10; - Spec: 'a.*'&#10;glom.core.PathAccessError: could not access '*', part 1 of Path('a', '*'), got error: ValueError(&quot;invalid literal for int() with base 10: '*'&quot;)">glom/test/test_path_and_t.py:200: in test_path_star
+    assert glom(val, 'a.*') == [1, 2, 3]
+           ^^^^^^^^^^^^^^^^
+glom/core.py:2180: in glom
+    raise err
+E   glom.core.PathAccessError: error raised while processing, details below.
+E    Target-spec trace (most recent last):
+E    - Target: {
+E                                                         ... (len=1)
+E    - Spec: 'a.*'
+E   glom.core.PathAccessError: could not access '*', part 1 of Path('a', '*'), got error: ValueError("invalid literal for int() with base 10: '*'")</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_path_t_roundtrip" time="0.000"><failure message="AttributeError: T instances reserve dunder attributes. To access the &quot;__star__&quot; attribute, use T.__(&quot;star__&quot;). Did you mean: '__str__'?">glom/test/test_path_and_t.py:56: in test_path_t_roundtrip
+    assert repr(T.__star__().__starstar__()) == 'T.__star__().__starstar__()'
+                ^^^^^^^^^^
+glom/core.py:1416: in __getattr__
+    raise AttributeError('T instances reserve dunder attributes.'
+E   AttributeError: T instances reserve dunder attributes. To access the "__star__" attribute, use T.__("star__"). Did you mean: '__str__'?</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_star_broadcast" time="0.000"><failure message="glom.core.PathAccessError: error raised while processing, details below.&#10; Target-spec trace (most recent last):&#10; - Target: {&#10;                                                      ... (len=1)&#10; - Spec: Path('a', '*', T + 1)&#10;glom.core.PathAccessError: could not access '*', part 1 of Path('a', '*', T + 1), got error: ValueError(&quot;invalid literal for int() with base 10: '*'&quot;)">glom/test/test_path_and_t.py:233: in test_star_broadcast
+    assert glom(val, Path.from_text('a.*').path_t + 1) == [2, 3, 4]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:2180: in glom
+    raise err
+E   glom.core.PathAccessError: error raised while processing, details below.
+E    Target-spec trace (most recent last):
+E    - Target: {
+E                                                         ... (len=1)
+E    - Spec: Path('a', '*', T + 1)
+E   glom.core.PathAccessError: could not access '*', part 1 of Path('a', '*', T + 1), got error: ValueError("invalid literal for int() with base 10: '*'")</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_star_warning" time="0.000"><failure message="AttributeError: type object 'Path' has no attribute '_STAR_WARNED'">glom/test/test_path_and_t.py:242: in test_star_warning
+    assert Path._STAR_WARNED
+           ^^^^^^^^^^^^^^^^^
+E   AttributeError: type object 'Path' has no attribute '_STAR_WARNED'</failure></testcase></testsuite></testsuites>

@@ -1,0 +1,286 @@
+{
+  "difficulty": {
+    "agrees_with_measurement": true,
+    "criteria": [
+      "cross_module_reasoning",
+      "coordinated_multi_file_change",
+      "non_local_cause"
+    ],
+    "dominant_factors": [
+      "coordinated_change",
+      "cross_module"
+    ],
+    "exploration": {
+      "refused": [],
+      "tool_calls": 17,
+      "tools_used": [
+        "grep",
+        "read_file"
+      ]
+    },
+    "factors": {
+      "business_logic": 258.0,
+      "coordinated_change": 4.0,
+      "cross_module": 4.0,
+      "misleading_similarity": 0.0,
+      "scale": 248.0
+    },
+    "justification": "Builtin representation and invocation semantics span core, mutation, reduction, and streaming. Compatibility depends on interactions with Path/T composition, Check defaults, reduction initialization, and streaming SKIP behavior across modules.",
+    "measured_justification": "This task requires coordinated edits across 4 source files; and it spans 4 modules, so the change cannot be reasoned about locally.",
+    "measured_tier": "hard",
+    "score": 0.8293,
+    "tercile_cuts": [
+      0.2155,
+      0.3969
+    ],
+    "tier": "hard",
+    "tier_origin": "agent",
+    "verification_state": "reasoning_unverified_label_only"
+  },
+  "files_in_scope": [
+    "glom/core.py",
+    "glom/mutation.py",
+    "glom/reduction.py",
+    "glom/streaming.py"
+  ],
+  "gates": [
+    {
+      "detail": {
+        "targets": {
+          "glom.test.test_basic::test_invoke": "AssertionError: assert 'Invoke(<buil...en>).specs(T)' == 'Invoke(len).specs(T)'",
+          "glom.test.test_check::test_check_basic": "assert \"Check(instan...lass 'dict'>)\" == 'Check(instance_of=dict)'",
+          "glom.test.test_fill::test": "AssertionError: assert 'Fill(<built-...unction len>)' == 'Fill(len)'",
+          "glom.test.test_mutation::test_assign": "assert \"Assign(T.a, ...lass 'dict'>)\" == 'Assign(T.a, 1, missing=dict)'",
+          "glom.test.test_path_and_t::test_path_t_roundtrip": "AssertionError: assert 'T[<built-in function len>]' == 'T[len]'",
+          "glom.test.test_reduction::test_flatten": "assert \"Flatten(T, i...lass 'list'>)\" == 'Flatten()'",
+          "glom.test.test_reduction::test_fold": "AssertionError: assert 'Fold(T, init...nction iadd>)' == 'Fold(T, init=int)'",
+          "glom.test.test_reduction::test_sum_integers": "assert \"Sum(T, init=<class 'int'>)\" == 'Sum()'",
+          "glom.test.test_streaming::test_filter": "assert \"Iter(<class ...unction sum>)\" == 'Iter(list).filter(sum)'"
+        }
+      },
+      "gate": "fail_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "targets": [
+          "glom.test.test_basic::test_invoke",
+          "glom.test.test_check::test_check_basic",
+          "glom.test.test_fill::test",
+          "glom.test.test_mutation::test_assign",
+          "glom.test.test_path_and_t::test_path_t_roundtrip",
+          "glom.test.test_reduction::test_flatten",
+          "glom.test.test_reduction::test_fold",
+          "glom.test.test_reduction::test_sum_integers",
+          "glom.test.test_streaming::test_filter"
+        ]
+      },
+      "gate": "pass_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "after_passing": 97,
+        "baseline_passing": 97,
+        "deliberately_removed": []
+      },
+      "gate": "collateral",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "files_checked": 9
+      },
+      "gate": "verifier_integrity",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "clean": true,
+        "leaked_paths": [],
+        "stale_bytecode": [],
+        "stray_patches": []
+      },
+      "gate": "solver_bundle",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "coupling": {
+          "exact_representation": [
+            "glom/test/test_basic.py:87",
+            "glom/test/test_basic.py:175",
+            "glom/test/test_basic.py:195",
+            "glom/test/test_basic.py:236",
+            "glom/test/test_basic.py:249",
+            "glom/test/test_basic.py:263",
+            "glom/test/test_basic.py:270",
+            "glom/test/test_basic.py:278",
+            "glom/test/test_basic.py:284",
+            "glom/test/test_basic.py:374"
+          ],
+          "findings": 65,
+          "patched_internals": [],
+          "private_references": [],
+          "type_identity": []
+        },
+        "coupling_findings": 65,
+        "mutation": {
+          "files_changed": [],
+          "renames": {}
+        },
+        "portable": true,
+        "status": "no_internals_to_rename"
+      },
+      "gate": "alternative_implementation",
+      "passed": true,
+      "reason_code": null
+    }
+  ],
+  "generation": {
+    "cache_key": "a830f9554678eb4fedf03b18e194e08d56ee76539ff734b27075d5991c017083",
+    "cached": false,
+    "fell_back": null,
+    "leak_check": {
+      "clean": true,
+      "copied_spans": [],
+      "private_names_leaked": [],
+      "public_names_mentioned": []
+    },
+    "model": "openai/gpt-5.6-luna"
+  },
+  "id": "pr-117",
+  "instruction": "Ensure glom.core can consistently evaluate and report callable-based specifications on all supported Python versions, including built-in functions, ordinary functions, bound methods, partials, and callable objects. Callable invocation must correctly resolve positional and keyword arguments from glom specifications, preserve the expected target and scope behavior, and support zero-argument and multi-argument callables.\n\nThe completed behavior must support the existing invoke, check, test, assign, path/T round-trip, flatten, fold, sum, and filter workflows. Checks and predicates must return their documented values, apply defaults or raise the documented glom errors when validation fails, and retain useful formatted context identifying the failing operation and path. Assignments must create or update nested destinations addressed by dot-delimited paths without corrupting existing data. Path conversion to and from T expressions must preserve equivalent paths, including paths that require non-attribute access. Flattening, folding, summing integer values, and filtering must work when their callable arguments are built-ins as well as user-defined callables.\n\nDo not make behavior depend on callable repr formats or introspection APIs that differ between Python implementations or versions. Existing public APIs and normal error types must remain compatible, and invalid paths, failed predicates, unsupported argument shapes, and callable exceptions must produce the library’s established error behavior rather than being silently ignored.",
+  "instruction_origin": "generated",
+  "leak_check": {
+    "clean": true,
+    "copied_spans": [],
+    "private_names_leaked": [],
+    "public_names_mentioned": []
+  },
+  "modules": [
+    "glom.core",
+    "glom.mutation",
+    "glom.reduction",
+    "glom.streaming"
+  ],
+  "paths": {
+    "evidence": "pr-117/evidence",
+    "golden_diff": "pr-117/goldenSolution.diff",
+    "golden_solution": "pr-117/goldenSolution.md",
+    "input": "pr-117/input",
+    "solution": "pr-117/solution",
+    "verifier": "pr-117/verifier"
+  },
+  "primary_module": "glom.core",
+  "provenance": {
+    "base_sha": "690716746cae8e6caac35979a61c598df73595f8",
+    "commit_sha": "12e05553d33bf80384668fbc0b67dc84814d906d",
+    "kind": "commit",
+    "merged_at": "2019-11-13T20:19:41Z",
+    "pull_request": 117,
+    "url": "https://github.com/mahmoud/glom/pull/117"
+  },
+  "source": "history",
+  "title": "Make callable-based glom specs reliable across platforms",
+  "validation": {
+    "fail_before_classes": {
+      "glom.test.test_basic::test_invoke": "assertion",
+      "glom.test.test_check::test_check_basic": "assertion",
+      "glom.test.test_fill::test": "assertion",
+      "glom.test.test_mutation::test_assign": "assertion",
+      "glom.test.test_path_and_t::test_path_t_roundtrip": "assertion",
+      "glom.test.test_reduction::test_flatten": "assertion",
+      "glom.test.test_reduction::test_fold": "assertion",
+      "glom.test.test_reduction::test_sum_integers": "assertion",
+      "glom.test.test_streaming::test_filter": "assertion"
+    },
+    "gates_failed": [],
+    "gates_passed": [
+      "fail_before",
+      "pass_after",
+      "collateral",
+      "determinism_before",
+      "determinism_after",
+      "verifier_integrity",
+      "solver_bundle",
+      "alternative_implementation"
+    ],
+    "repeats": 2,
+    "runs": [
+      "after_full",
+      "before_full",
+      "baseline_full",
+      "before_targets_1",
+      "before_targets_2",
+      "after_targets_1",
+      "after_targets_2"
+    ],
+    "status": "validated"
+  },
+  "verifier": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "--continue-on-collection-errors",
+      "-q",
+      "glom/test/test_basic.py::test_invoke",
+      "glom/test/test_check.py::test_check_basic",
+      "glom/test/test_fill.py::test",
+      "glom/test/test_mutation.py::test_assign",
+      "glom/test/test_path_and_t.py::test_path_t_roundtrip",
+      "glom/test/test_reduction.py::test_flatten",
+      "glom/test/test_reduction.py::test_fold",
+      "glom/test/test_reduction.py::test_sum_integers",
+      "glom/test/test_streaming.py::test_filter"
+    ],
+    "command_line": "python -m pytest -p no:cacheprovider --continue-on-collection-errors -q glom/test/test_basic.py::test_invoke glom/test/test_check.py::test_check_basic glom/test/test_fill.py::test glom/test/test_mutation.py::test_assign glom/test/test_path_and_t.py::test_path_t_roundtrip glom/test/test_reduction.py::test_flatten glom/test/test_reduction.py::test_fold glom/test/test_reduction.py::test_sum_integers glom/test/test_streaming.py::test_filter",
+    "files": [
+      "glom/test/test_basic.py",
+      "glom/test/test_check.py",
+      "glom/test/test_fill.py",
+      "glom/test/test_mutation.py",
+      "glom/test/test_path_and_t.py",
+      "glom/test/test_reduction.py",
+      "glom/test/test_streaming.py",
+      "glom/test/test_target_types.py",
+      "glom/test/test_tutorial.py"
+    ],
+    "node_ids": [
+      "glom.test.test_basic::test_invoke",
+      "glom.test.test_check::test_check_basic",
+      "glom.test.test_fill::test",
+      "glom.test.test_mutation::test_assign",
+      "glom.test.test_path_and_t::test_path_t_roundtrip",
+      "glom.test.test_reduction::test_flatten",
+      "glom.test.test_reduction::test_fold",
+      "glom.test.test_reduction::test_sum_integers",
+      "glom.test.test_streaming::test_filter"
+    ],
+    "procedure": "Copy input/, overlay verifier/ onto it, then run the command below from the tree root. It must fail before the change and pass after."
+  }
+}

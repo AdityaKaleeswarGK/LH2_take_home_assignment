@@ -1,0 +1,73 @@
+{
+  "_meta": {
+    "cached": false,
+    "cost": 0.006046,
+    "files_cited": 23,
+    "model": "google/gemini-3.7-flash",
+    "status": "grounded",
+    "unknown_files": [],
+    "verification_state": "file_citations_verified_semantics_unverified"
+  },
+  "features": [
+    {
+      "definition": "Navigate, extract, and transform nested data structures using dot-delimited paths, T-expressions, callable invocations, scope variables, fallbacks, and formatted error reporting.",
+      "files": [
+        "glom/__init__.py",
+        "glom/core.py",
+        "glom/test/test_basic.py",
+        "glom/test/test_error.py",
+        "glom/test/test_fill.py",
+        "glom/test/test_path_and_t.py",
+        "glom/test/test_reduction.py",
+        "glom/test/test_scope_vars.py",
+        "glom/test/test_spec.py",
+        "glom/test/test_target_types.py"
+      ],
+      "name": "Core Declarative Transformation and Path Traversal"
+    },
+    {
+      "definition": "Check, validate, and conditionally branch on target data against types, regular expressions, exact values, and custom match specifications.",
+      "files": [
+        "glom/matching.py",
+        "glom/test/test_check.py",
+        "glom/test/test_match.py"
+      ],
+      "name": "Pattern Matching and Validation"
+    },
+    {
+      "definition": "Perform deep assignment and deletion operations at nested paths within dicts, sequences, and objects, with configurable policies for missing intermediate targets.",
+      "files": [
+        "glom/mutation.py",
+        "glom/test/test_mutation.py"
+      ],
+      "name": "Deep Data Mutation"
+    },
+    {
+      "definition": "Bucket target collection elements into structured groups and apply nested aggregation operations such as averages, limits, sampling, or min/max selections.",
+      "files": [
+        "glom/grouping.py",
+        "glom/test/test_grouping.py"
+      ],
+      "name": "Grouping and Aggregation"
+    },
+    {
+      "definition": "Process iterable data streams lazily with operations including mapping, filtering, splitting, chunking, windowing, deduplicating, slicing, and conditional iterations.",
+      "files": [
+        "glom/streaming.py",
+        "glom/test/test_streaming.py"
+      ],
+      "name": "Lazy Streaming Transformations"
+    },
+    {
+      "definition": "Execute glom transformations and specs directly from the console on JSON, YAML, TOML, or Python target data read from arguments, files, or standard input.",
+      "files": [
+        "glom/__main__.py",
+        "glom/cli.py",
+        "glom/test/test_cli.py",
+        "tests/stress_stack_generated/test_generated_2.py"
+      ],
+      "name": "Command-Line Interface"
+    }
+  ],
+  "project_purpose": "glom is a Python library for declarative data transformation, restructuring, and querying of deeply nested data structures. It provides expressive path-based navigation, pattern matching, streaming, mutation, and a command-line interface for manipulating Python objects and serialized data."
+}

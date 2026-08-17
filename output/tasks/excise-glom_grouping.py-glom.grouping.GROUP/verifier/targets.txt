@@ -1,0 +1,6 @@
+glom.test.test_error::test_all_public_errors
+glom.test.test_grouping::test_agg
+glom.test.test_grouping::test_bucketing
+glom.test.test_grouping::test_corner_cases
+glom.test.test_grouping::test_limit
+glom.test.test_grouping::test_sample

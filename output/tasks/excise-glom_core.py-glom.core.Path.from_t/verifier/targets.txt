@@ -1,0 +1,3 @@
+glom.test.test_mutation::test_delete
+glom.test.test_mutation::test_s_assign
+glom.test.test_path_and_t::test_from_t_identity

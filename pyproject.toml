@@ -10,7 +10,13 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Aditya Kaleeswar" }]
-dependencies = []
+dependencies = [
+  # Real grammars for the non-Python knowledge layer. Without these the
+  # multi-language parsers fall back to regex, which cannot find a function
+  # body's true extent — so excision would cut the wrong lines.
+  "tree-sitter>=0.23",
+  "tree-sitter-language-pack>=0.9",
+]
 
 [project.optional-dependencies]
 dev = [

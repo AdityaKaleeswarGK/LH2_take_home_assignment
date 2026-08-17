@@ -1,0 +1,46 @@
+{
+  "declared_extras": [
+    "toml",
+    "yaml",
+    "test"
+  ],
+  "declared_groups": [],
+  "declared_requirements": [
+    "PyYAML",
+    "attrs",
+    "boltons",
+    "coverage",
+    "face",
+    "pytest",
+    "tomli"
+  ],
+  "installed": true,
+  "installed_extras": [
+    "test"
+  ],
+  "installed_groups": [],
+  "project_name": "glom",
+  "project_version": "25.12.1.dev0",
+  "python": "/Users/adityagk/Desktop/projects/stress_stack/glom/.stress_stack/tools/test/bin/python",
+  "reason": null,
+  "requirements_by_extra": {
+    "": [
+      "attrs",
+      "boltons",
+      "face"
+    ],
+    "test": [
+      "PyYAML",
+      "coverage",
+      "pytest",
+      "tomli"
+    ],
+    "toml": [
+      "tomli"
+    ],
+    "yaml": [
+      "PyYAML"
+    ]
+  },
+  "requires_python": null
+}

@@ -1,0 +1,234 @@
+{
+  "difficulty": {
+    "agrees_with_measurement": false,
+    "criteria": [
+      "coordinated_multi_file_change",
+      "cross_module_reasoning"
+    ],
+    "dominant_factors": [
+      "misleading_similarity",
+      "coordinated_change"
+    ],
+    "exploration": {
+      "refused": [],
+      "tool_calls": 8,
+      "tools_used": [
+        "callers_of",
+        "grep",
+        "read_file"
+      ]
+    },
+    "factors": {
+      "business_logic": 273.0,
+      "coordinated_change": 2.0,
+      "cross_module": 2.0,
+      "misleading_similarity": 0.0,
+      "scale": 43.0
+    },
+    "justification": "The feature requires coordinated changes between CLI format parsing and setup dependency configuration, with user-facing validation and error behavior constrained by tests; a change in one module is incomplete without the other.",
+    "measured_justification": "This task requires coordinated edits across 2 source files; and it spans 2 modules, so the change cannot be reasoned about locally.",
+    "measured_tier": "medium",
+    "score": 0.3969,
+    "tercile_cuts": [
+      0.2155,
+      0.3969
+    ],
+    "tier": "hard",
+    "tier_origin": "agent",
+    "verification_state": "reasoning_unverified_label_only"
+  },
+  "files_in_scope": [
+    "glom/cli.py",
+    "setup.py"
+  ],
+  "gates": [
+    {
+      "detail": {
+        "targets": {
+          "glom.test.test_cli::test_main_toml_target": "face.errors.UsageError: expected target-format to be one of python, json, or yaml",
+          "glom.test.test_cli::test_usage_errors": "assert 'could not load target data' in 'error: expected target-format to be one of python, json, or yaml\\n'"
+        }
+      },
+      "gate": "fail_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "targets": [
+          "glom.test.test_cli::test_main_toml_target",
+          "glom.test.test_cli::test_usage_errors"
+        ]
+      },
+      "gate": "pass_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "after_passing": 196,
+        "baseline_passing": 195,
+        "deliberately_removed": []
+      },
+      "gate": "collateral",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "files_checked": 3
+      },
+      "gate": "verifier_integrity",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "clean": true,
+        "leaked_paths": [],
+        "stale_bytecode": [],
+        "stray_patches": []
+      },
+      "gate": "solver_bundle",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "coupling": {
+          "exact_representation": [],
+          "findings": 0,
+          "patched_internals": [],
+          "private_references": [],
+          "type_identity": []
+        },
+        "coupling_findings": 0,
+        "mutation": {
+          "files_changed": [],
+          "renames": {}
+        },
+        "portable": true,
+        "status": "no_internals_to_rename"
+      },
+      "gate": "alternative_implementation",
+      "passed": true,
+      "reason_code": null
+    }
+  ],
+  "generation": {
+    "cache_key": "69b6ad76bbb8b166d8d8c0de305e5e93f65297a4cd8fca66f6395e396cf7bf93",
+    "cached": false,
+    "fell_back": null,
+    "leak_check": {
+      "clean": true,
+      "copied_spans": [],
+      "private_names_leaked": [],
+      "public_names_mentioned": [
+        "missing"
+      ]
+    },
+    "model": "openai/gpt-5.6-luna"
+  },
+  "id": "pr-277",
+  "instruction": "Extend the glom command-line interface so TOML is a supported target-data format alongside JSON, YAML, and Python. A user must be able to select TOML through the CLI’s existing format and input mechanisms, including target data supplied as an argument, loaded from a file, or read from standard input. TOML documents must be parsed into the native mapping/list/scalar structures expected by glom, then passed through the requested spec or transformation with the same output and error behavior as other target formats. Existing JSON, YAML, and Python workflows must remain compatible. Invalid or incomplete command-line usage—including missing required inputs, unsupported format selections, or invalid option combinations—must produce a nonzero CLI result with a clear usage-oriented error rather than an unhandled traceback; malformed TOML must likewise fail cleanly and identify the input problem.",
+  "instruction_origin": "generated",
+  "leak_check": {
+    "clean": true,
+    "copied_spans": [],
+    "private_names_leaked": [],
+    "public_names_mentioned": [
+      "missing"
+    ]
+  },
+  "modules": [
+    "glom.cli",
+    "setup"
+  ],
+  "paths": {
+    "evidence": "pr-277/evidence",
+    "golden_diff": "pr-277/goldenSolution.diff",
+    "golden_solution": "pr-277/goldenSolution.md",
+    "input": "pr-277/input",
+    "solution": "pr-277/solution",
+    "verifier": "pr-277/verifier"
+  },
+  "primary_module": "glom.cli",
+  "provenance": {
+    "base_sha": "573cb911aee0af7149ea8376a05f61b3435b23e7",
+    "commit_sha": "9082ab6f98b018856fc9d37aec4077d27662f025",
+    "kind": "commit",
+    "merged_at": "2023-11-25T23:55:51Z",
+    "pull_request": 277,
+    "url": "https://github.com/mahmoud/glom/pull/277"
+  },
+  "source": "history",
+  "title": "Add TOML target support to the glom CLI",
+  "validation": {
+    "fail_before_classes": {
+      "glom.test.test_cli::test_main_toml_target": "behavioral_exception",
+      "glom.test.test_cli::test_usage_errors": "assertion"
+    },
+    "gates_failed": [],
+    "gates_passed": [
+      "fail_before",
+      "pass_after",
+      "collateral",
+      "determinism_before",
+      "determinism_after",
+      "verifier_integrity",
+      "solver_bundle",
+      "alternative_implementation"
+    ],
+    "repeats": 2,
+    "runs": [
+      "after_full",
+      "before_full",
+      "baseline_full",
+      "before_targets_1",
+      "before_targets_2",
+      "after_targets_1",
+      "after_targets_2"
+    ],
+    "status": "validated"
+  },
+  "verifier": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "--continue-on-collection-errors",
+      "-q",
+      "glom/test/test_cli.py::test_main_toml_target",
+      "glom/test/test_cli.py::test_usage_errors"
+    ],
+    "command_line": "python -m pytest -p no:cacheprovider --continue-on-collection-errors -q glom/test/test_cli.py::test_main_toml_target glom/test/test_cli.py::test_usage_errors",
+    "files": [
+      "glom/test/data/test_invalid.toml",
+      "glom/test/data/test_valid.toml",
+      "glom/test/test_cli.py"
+    ],
+    "node_ids": [
+      "glom.test.test_cli::test_main_toml_target",
+      "glom.test.test_cli::test_usage_errors"
+    ],
+    "procedure": "Copy input/, overlay verifier/ onto it, then run the command below from the tree root. It must fail before the change and pass after."
+  }
+}

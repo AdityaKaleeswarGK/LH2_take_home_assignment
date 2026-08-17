@@ -1,0 +1,243 @@
+{
+  "difficulty": {
+    "agrees_with_measurement": false,
+    "criteria": [
+      "cross_module_reasoning",
+      "non_local_cause"
+    ],
+    "dominant_factors": [
+      "misleading_similarity",
+      "scale"
+    ],
+    "exploration": {
+      "refused": [],
+      "tool_calls": 12,
+      "tools_used": [
+        "callers_of",
+        "grep",
+        "read_file"
+      ]
+    },
+    "factors": {
+      "business_logic": 0.0,
+      "coordinated_change": 1.0,
+      "cross_module": 1.0,
+      "misleading_similarity": 0.0,
+      "scale": 11.0
+    },
+    "justification": "The correct semantics are constrained by mutation callers that convert S-rooted paths for evaluation against an outer target, as well as Path identity behavior tested elsewhere; the symbol cannot be implemented reliably from its local definition alone.",
+    "measured_justification": "This task touches 8 lines with 3 tests that must end up passing.",
+    "measured_tier": "easy",
+    "score": 0.2065,
+    "tercile_cuts": [
+      0.2155,
+      0.3969
+    ],
+    "tier": "medium",
+    "tier_origin": "agent",
+    "verification_state": "reasoning_unverified_label_only"
+  },
+  "files_in_scope": [
+    "glom/core.py"
+  ],
+  "gates": [
+    {
+      "detail": {
+        "targets": {
+          "glom.test.test_mutation::test_delete": "glom.core.GlomError.wrap(TypeError): error raised while processing, details below.",
+          "glom.test.test_mutation::test_s_assign": "glom.core.GlomError.wrap(TypeError): error raised while processing, details below.",
+          "glom.test.test_path_and_t::test_from_t_identity": "assert None == T.a.b"
+        }
+      },
+      "gate": "fail_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "targets": [
+          "glom.test.test_mutation::test_delete",
+          "glom.test.test_mutation::test_s_assign",
+          "glom.test.test_path_and_t::test_from_t_identity"
+        ]
+      },
+      "gate": "pass_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "after_passing": 202,
+        "baseline_passing": 199,
+        "deliberately_removed": []
+      },
+      "gate": "collateral",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "files_checked": 2
+      },
+      "gate": "verifier_integrity",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "clean": true,
+        "leaked_paths": [],
+        "stale_bytecode": [],
+        "stray_patches": []
+      },
+      "gate": "solver_bundle",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "coupling": {
+          "exact_representation": [
+            "glom/test/test_mutation.py:33",
+            "glom/test/test_mutation.py:35",
+            "glom/test/test_mutation.py:36",
+            "glom/test/test_mutation.py:239",
+            "glom/test/test_path_and_t.py:31",
+            "glom/test/test_path_and_t.py:32",
+            "glom/test/test_path_and_t.py:33",
+            "glom/test/test_path_and_t.py:36",
+            "glom/test/test_path_and_t.py:39",
+            "glom/test/test_path_and_t.py:42"
+          ],
+          "findings": 25,
+          "patched_internals": [],
+          "private_references": [],
+          "type_identity": []
+        },
+        "coupling_findings": 25,
+        "mutation": {
+          "files_changed": [],
+          "renames": {}
+        },
+        "portable": true,
+        "status": "no_internals_to_rename"
+      },
+      "gate": "alternative_implementation",
+      "passed": true,
+      "reason_code": null
+    }
+  ],
+  "generation": {
+    "cache_key": "9700b86e006f494cceab977c5ebca3c22689bf7666334262ccf66a3b80ac4506",
+    "cached": false,
+    "fell_back": null,
+    "leak_check": {
+      "clean": true,
+      "copied_spans": [],
+      "private_names_leaked": [],
+      "public_names_mentioned": []
+    },
+    "model": "openai/gpt-5.6-luna"
+  },
+  "id": "excise-glom_core.py-glom.core.Path.from_t",
+  "instruction": "Implement only the existing `Path.from_t` function. It must return a new `Path` representing the original path rooted at `T`: `T` is the first component, followed by every component of the original path in the same order. Preserve all path components, including an empty path, without mutating the original object. The result must integrate with existing T-expression navigation, deletion, and assignment behavior, and all existing tests—including deletion, assignment, and from-T identity checks—must pass.",
+  "instruction_origin": "generated",
+  "leak_check": {
+    "clean": true,
+    "copied_spans": [],
+    "private_names_leaked": [],
+    "public_names_mentioned": []
+  },
+  "modules": [
+    "glom.core"
+  ],
+  "paths": {
+    "evidence": "excise-glom_core.py-glom.core.Path.from_t/evidence",
+    "golden_diff": "excise-glom_core.py-glom.core.Path.from_t/goldenSolution.diff",
+    "golden_solution": "excise-glom_core.py-glom.core.Path.from_t/goldenSolution.md",
+    "input": "excise-glom_core.py-glom.core.Path.from_t/input",
+    "solution": "excise-glom_core.py-glom.core.Path.from_t/solution",
+    "verifier": "excise-glom_core.py-glom.core.Path.from_t/verifier"
+  },
+  "primary_module": "glom.core",
+  "provenance": {
+    "commit_sha": "30b477ab65560914a38f331614947d0894701044",
+    "kind": "excision_target",
+    "path": "glom/core.py",
+    "qualified_name": "glom.core.Path.from_t",
+    "stub_strategy": "neutral",
+    "symbol_id": "glom/core.py::glom.core.Path.from_t"
+  },
+  "source": "excision",
+  "title": "Implement `glom.core.Path.from_t`",
+  "validation": {
+    "fail_before_classes": {
+      "glom.test.test_mutation::test_delete": "behavioral_exception",
+      "glom.test.test_mutation::test_s_assign": "behavioral_exception",
+      "glom.test.test_path_and_t::test_from_t_identity": "assertion"
+    },
+    "gates_failed": [],
+    "gates_passed": [
+      "fail_before",
+      "pass_after",
+      "collateral",
+      "determinism_before",
+      "determinism_after",
+      "verifier_integrity",
+      "solver_bundle",
+      "alternative_implementation"
+    ],
+    "repeats": 2,
+    "runs": [
+      "after_full",
+      "before_full",
+      "baseline_full",
+      "before_targets_1",
+      "before_targets_2",
+      "after_targets_1",
+      "after_targets_2"
+    ],
+    "status": "validated"
+  },
+  "verifier": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "--continue-on-collection-errors",
+      "-q",
+      "glom/test/test_mutation.py::test_delete",
+      "glom/test/test_mutation.py::test_s_assign",
+      "glom/test/test_path_and_t.py::test_from_t_identity"
+    ],
+    "command_line": "python -m pytest -p no:cacheprovider --continue-on-collection-errors -q glom/test/test_mutation.py::test_delete glom/test/test_mutation.py::test_s_assign glom/test/test_path_and_t.py::test_from_t_identity",
+    "files": [
+      "glom/test/test_mutation.py",
+      "glom/test/test_path_and_t.py"
+    ],
+    "node_ids": [
+      "glom.test.test_mutation::test_delete",
+      "glom.test.test_mutation::test_s_assign",
+      "glom.test.test_path_and_t::test_from_t_identity"
+    ],
+    "procedure": "Copy input/, overlay verifier/ onto it, then run the command below from the tree root. It must fail before the change and pass after."
+  }
+}

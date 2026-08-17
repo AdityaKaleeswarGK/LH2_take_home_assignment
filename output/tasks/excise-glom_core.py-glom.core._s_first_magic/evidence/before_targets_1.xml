@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="9" time="0.244" timestamp="2026-08-17T15:09:25.041978+00:00" hostname="d005ff1cc5a0"><testcase classname="glom.test.test_match" name="test_nested_dict" time="0.001"><failure message="assert {1: None} == {1: 1}&#10;  &#10;  Differing items:&#10;  {1: None} != {1: 1}&#10;  Use -v to get more diff">glom/test/test_match.py:510: in test_nested_dict
+    assert glom({1: 2}, Match({A.t: S.t})) == {1: 1}
+E   assert {1: None} == {1: 1}
+E     
+E     Differing items:
+E     {1: None} != {1: 1}
+E     Use -v to get more diff</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_s_magic" time="0.000"><failure message="AssertionError: assert None == 'value'&#10; +  where None = glom(None, S.test, scope={'test': 'value'})&#10; +    where S.test = S.test">glom/test/test_path_and_t.py:138: in test_s_magic
+    assert glom(None, S.test, scope={'test': 'value'}) == 'value'
+E   AssertionError: assert None == 'value'
+E    +  where None = glom(None, S.test, scope={'test': 'value'})
+E    +    where S.test = S.test</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_t_subspec" time="0.001"><failure message="glom.core.GlomError.wrap(TypeError): error raised while processing, details below.&#10; Target-spec trace (most recent last):&#10; - Target: [{'id': 1}, {'pk': 1}]&#10; - Spec: (S(id_type=int), [S.id_type(Or('id', 'pk'))])&#10; - Spec: S(id_type=int)&#10; - Spec: [S.id_type(Or('id', 'pk'))]&#10; - Target: {'id': 1}&#10; - Spec: S.id_type(Or('id', 'pk'))&#10; - Spec: Call(T, args=(1,), kwargs={})&#10;TypeError: 'dict' object is not callable">glom/test/test_path_and_t.py:117: in test_t_subspec
+    assert glom(data, get_ids) == [1, 1]
+           ^^^^^^^^^^^^^^^^^^^
+glom/core.py:2291: in glom
+    raise err
+E   glom.core.GlomError.wrap(TypeError): error raised while processing, details below.
+E    Target-spec trace (most recent last):
+E    - Target: [{'id': 1}, {'pk': 1}]
+E    - Spec: (S(id_type=int), [S.id_type(Or('id', 'pk'))])
+E    - Spec: S(id_type=int)
+E    - Spec: [S.id_type(Or('id', 'pk'))]
+E    - Target: {'id': 1}
+E    - Spec: S.id_type(Or('id', 'pk'))
+E    - Spec: Call(T, args=(1,), kwargs={})
+E   TypeError: 'dict' object is not callable</failure></testcase><testcase classname="glom.test.test_scope_vars" name="test_globals" time="0.001"><failure message="glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'a'">glom/test/test_scope_vars.py:40: in test_globals
+    assert glom([[1]], ([[A.globals.a]], S.globals.a)) == 1
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:2291: in glom
+    raise err
+E   glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'a'</failure></testcase><testcase classname="glom.test.test_scope_vars" name="test_let" time="0.001"><failure message="glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'a'">glom/test/test_scope_vars.py:94: in test_let
+    assert glom([[1]], (Let(v=Vars()), [[A.v.a]], S.v.a)) == 1
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:2291: in glom
+    raise err
+E   glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'a'</failure></testcase><testcase classname="glom.test.test_scope_vars" name="test_max_skip" time="0.000"><failure message="AttributeError: 'NoneType' object has no attribute 'max'">glom/test/test_scope_vars.py:80: in test_max_skip
+    assert result.max == 9
+           ^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'max'</failure></testcase><testcase classname="glom.test.test_scope_vars" name="test_s_scope_assign" time="0.001"><failure message="glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'a'">glom/test/test_scope_vars.py:19: in test_s_scope_assign
+    assert glom([[1]], (S(v=Vars()), [[A.v.a]], S.v.a)) == 1
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:2291: in glom
+    raise err
+E   glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'a'</failure></testcase><testcase classname="glom.test.test_scope_vars" name="test_scoped_vars" time="0.001"><failure message="glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'last'">glom/test/test_scope_vars.py:68: in test_scoped_vars
+    scope_globals = glom(target, ([A.globals.last], S.globals))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:2291: in glom
+    raise err
+E   glom.core.GlomError.wrap(AttributeError): 'NoneType' object has no attribute 'last'</failure></testcase><testcase classname="glom.test.test_scope_vars" name="test_vars" time="0.000"><failure message="assert None == 1&#10; +  where None = glom(1, (A.a, S.a))">glom/test/test_scope_vars.py:45: in test_vars
+    assert glom(1, (A.a, S.a)) == 1
+E   assert None == 1
+E    +  where None = glom(1, (A.a, S.a))</failure></testcase></testsuite></testsuites>

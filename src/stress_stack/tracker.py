@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
 from threading import Condition, Lock
 from typing import Any
 

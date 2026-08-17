@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="2" failures="3" skipped="0" tests="11" time="0.113" timestamp="2026-08-17T15:08:51.434585+00:00" hostname="636fb4e6b270"><testcase classname="" name="glom.test.test_basic" time="0.000"><error message="collection failure">ImportError while importing test module '/work/glom/test/test_basic.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/test/test_basic.py:4: in &lt;module&gt;
+    from glom import glom, OMIT, Path, Inspect, Coalesce, CoalesceError, Literal, Call, T, S
+E   ImportError: cannot import name 'S' from 'glom' (/work/glom/__init__.py)</error></testcase><testcase classname="" name="glom.test.test_target_types" time="0.000"><error message="collection failure">ImportError while importing test module '/work/glom/test/test_target_types.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/test/test_target_types.py:8: in &lt;module&gt;
+    from glom.core import _TargetRegistry
+E   ImportError: cannot import name '_TargetRegistry' from 'glom.core' (/work/glom/core.py)</error></testcase><testcase classname="glom.test.test_main" name="test_main_basic" time="0.002" /><testcase classname="glom.test.test_main" name="test_yaml_target" time="0.008"><failure message="face.errors.CommandLineError: could not load target data, got: load() missing 1 required positional argument: 'Loader'">glom/cli.py:126: in mw_handle_target
+    target = yaml.load(target_text)
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: load() missing 1 required positional argument: 'Loader'
+
+During handling of the above exception, another exception occurred:
+glom/test/test_main.py:23: in test_yaml_target
+    assert main(argv) == 0
+           ^^^^^^^^^^
+glom/cli.py:83: in main
+    return cmd.run(argv) or 0
+           ^^^^^^^^^^^^^
+/usr/local/lib/python3.12/site-packages/face/command.py:478: in run
+    ret = inject(wrapped, kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/site-packages/face/sinter.py:55: in inject
+    return f(**kwargs)
+           ^^^^^^^^^^^
+&lt;sinter generated next_ 11c35372ae72c9d1&gt;:6: in next_
+    return funcs[0](next_=next_, posargs_=posargs_, spec_file=spec_file, spec_format=spec_format, target_file=target_file, target_format=target_format)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/cli.py:178: in mw_get_target
+    target = mw_handle_target(target_text, target_format)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/cli.py:128: in mw_handle_target
+    _error('could not load target data, got: %s' % e)
+glom/cli.py:101: in _error
+    raise CommandLineError(msg)
+E   face.errors.CommandLineError: could not load target data, got: load() missing 1 required positional argument: 'Loader'</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_list_path_access" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_empty_path_access" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_t_roundtrip" time="0.000"><failure message="AttributeError: 'Path' object has no attribute 'path_t'">glom/test/test_path_and_t.py:40: in test_path_t_roundtrip
+    assert repr(Path(T['a'].b, 'c', T['d'].e).path_t) == "Path(T['a'].b, 'c', T['d'].e)"
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'Path' object has no attribute 'path_t'</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_path_access_error_message" time="0.001"><failure message="assert &quot;PathAccessError: could not access 'a', part 0 of Path('a', 'b'), got error: KeyError&quot; in &quot;glom.core.PathAccessError: could not access 'a', index 0 in path Path('a', 'b'), got error: KeyError('a')&quot;&#10; +  where &quot;glom.core.PathAccessError: could not access 'a', index 0 in path Path('a', 'b'), got error: KeyError('a')&quot; = exconly()&#10; +    where exconly = &lt;ExceptionInfo PathAccessError(KeyError('a'), Path('a', 'b'), 0) tblen=4&gt;.exconly">glom/test/test_path_and_t.py:54: in test_path_access_error_message
+    assert ("PathAccessError: could not access 'a', part 0 of Path('a', 'b'), got error: KeyError"
+E   assert "PathAccessError: could not access 'a', part 0 of Path('a', 'b'), got error: KeyError" in "glom.core.PathAccessError: could not access 'a', index 0 in path Path('a', 'b'), got error: KeyError('a')"
+E    +  where "glom.core.PathAccessError: could not access 'a', index 0 in path Path('a', 'b'), got error: KeyError('a')" = exconly()
+E    +    where exconly = &lt;ExceptionInfo PathAccessError(KeyError('a'), Path('a', 'b'), 0) tblen=4&gt;.exconly</failure></testcase><testcase classname="glom.test.test_tutorial" name="test_tutorial_data" time="0.000" /><testcase classname="glom.test.test_tutorial" name="test_tutorial" time="0.000" /></testsuite></testsuites>

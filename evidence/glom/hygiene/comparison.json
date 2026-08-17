@@ -1,0 +1,12 @@
+{
+  "appeared": [],
+  "disappeared": [],
+  "generated_at": "2026-08-17T14:50:57.678462+00:00",
+  "passing_after": 203,
+  "passing_before": 203,
+  "regressions": [],
+  "repairs": [],
+  "schema_version": "0.1.0",
+  "status": "complete",
+  "unsafe_fixes_applied": false
+}

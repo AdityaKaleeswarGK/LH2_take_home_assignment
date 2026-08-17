@@ -24,13 +24,18 @@ ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 # count. meta/muse-glimmer-30b was the *worst* option on every axis — 67s and
 # $0.0086 per call, versus 4.7s and $0.00053 for the worker model below —
 # because it spends thousands of billed reasoning tokens on a description task.
+# The worker role is the wall clock: it runs adjudication's agent turns and one
+# statement per task, so its per-call latency multiplies by roughly ten in each
+# of those stages. A flash-class model is the right shape for both — they are
+# summarisation over supplied context, not open-ended reasoning.
 DEFAULT_MODELS: dict[str, str] = {
-    "worker": "openai/gpt-5.6-luna",
+    "worker": "qwen/qwen3.7-flash",
     "synthesis": "google/gemini-3.7-flash",
     "reasoning": "openai/gpt-5.6-luna-pro",
 }
 
 KNOWN_MODELS: tuple[str, ...] = (
+    "qwen/qwen3.7-flash",
     "openai/gpt-5.6-luna",
     "openai/gpt-5.6-luna-pro",
     "meta/muse-glimmer-30b",

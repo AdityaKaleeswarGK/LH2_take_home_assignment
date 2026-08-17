@@ -1,322 +1,299 @@
-# Engineering report — stress_stack
+# REPORT
 
-Every figure below was measured against `mahmoud/glom` by the pipeline itself and
-is reproducible from the artifacts in `output/`. A second repository,
-`pallets/click`, was run end to end to test generality; what it found is in
-section 5.
+Target repository: **[mahmoud/glom](https://github.com/mahmoud/glom)** — a Python
+library for restructuring nested data. Chosen artefacts from the run are committed
+in this branch so every claim below can be inspected without re-running anything:
+
+| Where | What |
+|---|---|
+| [`evidence/glom/`](evidence/glom) | the run's evidence — lint report, container determinism runs, knowledge layer, per-task gate logs |
+| [`output/`](output) | the deliverable — ten tasks, manifest, knowledge layer, transformed repo |
 
 ---
 
-## 1. What was broken in the repo, and how the pipeline fixes each class of problem
+## 1. What was broken, and how the pipeline fixes each class
 
-**Unpinned dependencies.** glom declared dependencies without exact versions, so
-two installs a week apart are two different environments and any test result is
-unattributable. `deps` classifies every import as internal, stdlib or
-third-party by asking the *provisioned interpreter* rather than by matching
-names, then compiles a hash-pinned lock: 11 packages, hashed. It also audits in
-both directions and reports what it cannot verify — glom declares `coverage` and
-`tomli` without importing them, and four distributions (`setuptools`, `sphinx`,
-`sphinx_rtd_theme`, `tomli`) do not resolve to an importable top level. Those are
-reported rather than silently reconciled.
+glom is a mature, well-tested Python library that is nonetheless missing every piece
+of reproducible engineering infrastructure the brief asks for.
 
-**No reproducible execution environment.** `container` generates a Dockerfile
-from the lock, pins the base image by digest at the exact interpreter patch
-level (`python:3.12.9-slim`), builds, and runs the suite **twice**, requiring
-identical results: 204/204 passing on both runs, matching the host baseline.
-Acceptance requires all three — build, identical repeats, and baseline parity —
-so a stably-failing suite cannot be blessed as verified.
+| Class of problem | State before | What the pipeline does | Evidence |
+|---|---|---|---|
+| **No dependency pinning** | `setup.py` with unpinned ranges; a fresh clone resolves differently on different days | `uv pip compile` with `--generate-hashes`, including the `test` extra, into `requirements.lock` | [`knowledge/dependencies.json`](evidence/glom/knowledge/dependencies.json) — `hashed: true` |
+| **No containerization** | none | Dockerfile generated from measured facts, base image pinned by **digest** (`python@sha256:48a11b7b…`), not tag | [`container/container.json`](evidence/glom/container/container.json) |
+| **No proof of determinism** | none | suite run twice in the container and compared per test, plus against the host baseline | `run1` / `run2`: **203 tests, 203 passed, 0 failed**, `baseline_match: matches` |
+| **No lint or format config** | none | `ruff.toml` generated; `ruff format` and `ruff check --fix` applied; result verified | [`hygiene/lint.json`](evidence/glom/hygiene/lint.json) — `lint_clean: true`, `format_clean: true` |
+| **Formatting could silently break tests** | n/a | full suite snapshotted before and after; any regression reverts the change | [`hygiene/comparison.json`](evidence/glom/hygiene/comparison.json) |
+| **No machine-readable structure** | none | symbol graph re-derived from a second parse and compared edge by edge | [`knowledge/graph_validation.json`](evidence/glom/knowledge/graph_validation.json) |
 
-**Inconsistent style masking real defects.** `hygiene` runs `ruff check --fix`
-then `ruff format`, in that order because fixing after formatting leaves the
-tree unformatted and breaks byte-identical re-runs. 31 files were reformatted;
-145 violations dropped to a baseline of 10 explicitly ignored rules, annotated
-with per-rule counts (`F401` 57, `E731` 19, and so on) so the debt is visible
-rather than hidden. The suite is snapshotted before and after: **202 passing
-before, 202 after, 0 regressions.**
+One number deserves to be stated plainly rather than buried: glom has **94 residual
+lint violations**, and the pipeline fixed **zero** of them. `violations_before: 94`,
+`violations_after_fix: 94`. What it did instead was generate a `ruff.toml` whose rule
+selection the repository passes, moving those 94 into ten explicitly ignored rules
+(`F401` ×57, `E731` ×19, `E402` ×3, …). The repo is genuinely lint-clean *under a
+config that is committed and readable*, not lint-clean because the code changed.
+That is the right trade — rewriting 57 re-export `F401`s in a library whose
+`__init__.py` exists to re-export would break the public API to satisfy a linter —
+but "lint-clean" means "clean under a stated policy", and the policy is the artefact.
 
-Unsafe fixes were measured and rejected on evidence, not on principle:
-`--unsafe-fixes` resolved 28 more violations but rewrote
-`assert glom(True, Fill(M | "default")) == True` into a bare truthiness check —
-in a library whose entire purpose is overloading `==`. It broke two tests *and*
-weakened the surviving assertions. The baseline absorbs those violations anyway,
-so the trade buys nothing and costs behaviour.
+### The ten tasks generated for glom
 
-**Untested public surface.** `testgen` finds public callables with no covering
-test, asks a model for tests, and then refuses to take its word for it. A
-generated test ships only if it (a) contains a real assertion or `pytest.raises`,
-checked on the AST; (b) passes against the original; and (c) **fails against a
-mutant** whose body is replaced with a raising stub. On glom one file shipped,
-catching its mutation of `glom/cli.py:console_main` — exit 1, two failures
-against the mutant. That is the brief's "do your tests catch deliberately
-introduced bugs" measured directly rather than asserted.
+6 history-derived, 4 excision, spanning **9 distinct modules**, quota satisfied,
+zero instructions failing the leak check.
 
-**No machine-readable model of the code.** `graph` parses every file with `ast`
-into 668 symbols and 2364 edges across 32 files, each edge carrying the anchor it
-was derived from. `validate_graph` then re-parses the whole repository from
-scratch and re-derives every edge: **edge match 1.0000, anchor match 1.0000.**
-1738 references remain unresolved and are recorded *with a reason* — 653
-builtins, 598 dynamic-or-local — rather than pointed at a guess.
+| # | Task | Source | Module | Difficulty |
+|---|---|---|---|---|
+| 1 | Make `PathAccessError` formatting robust for scope and non-path accesses | [PR #298](https://github.com/mahmoud/glom/pull/298) | `glom.core` | hard |
+| 2 | Add `--scalar` flag to CLI | [PR #280](https://github.com/mahmoud/glom/pull/280) | `glom.cli` | medium |
+| 3 | Make nested glom specifications and arguments evaluate consistently | [PR #196](https://github.com/mahmoud/glom/pull/196) | `glom.core` | hard |
+| 4 | Add TOML target support to the glom CLI | [PR #277](https://github.com/mahmoud/glom/pull/277) | `glom.cli` | hard |
+| 5 | Implement the grouping mode dispatcher | excision — `glom.grouping.GROUP` | `glom.grouping` | medium |
+| 6 | Implement matching precedence | excision — `glom.matching._precedence` | `glom.matching` | medium |
+| 7 | Implement `glom.core.Path.from_t` | excision — `glom.core.Path.from_t` | `glom.core` | medium |
+| 8 | Implement scope-path resolution for `_s_first_magic` | excision — `glom.core._s_first_magic` | `glom.core` | medium |
+| 9 | Expand and harden the glom command-line interface | [PR #262](https://github.com/mahmoud/glom/pull/262) | `glom.cli` | easy |
+| 10 | Better builtin roundtripping | [PR #117](https://github.com/mahmoud/glom/pull/117) | `glom.core` | hard |
+
+Difficulty spread: 1 easy, 5 medium, 4 hard.
+
+Each task's `evidence/` holds JUnit XML for every gate run. Task 1's fail-before, for
+example, is classified `behavioral_exception` on both designated tests — an assertion
+about behaviour, not an import error, which is what §5.4 requires.
+
+**Net-new tasks (§5.1, max 3 of 10) are not implemented.** The quota is satisfied
+without them (6 history ≥ 4 required, 4 excision ≤ 4 allowed), so the deliverable is
+complete, but that task category does not exist in this codebase. See §6.
 
 ---
 
 ## 2. Design decisions and trade-offs
 
-**The model may contextualise; it may never gate.** Every decision about which
-task ships is made by a container: does the designated test fail before, pass
-after, stay deterministic, break nothing else. Model output is prose — the
-instruction's wording, a feature name, this report — and is stored with its
-model id and prompt hash. The consequence is a property worth stating: with no
-API key the pipeline still produces ten validated tasks, with mechanical
-instruction text. The model improves the deliverable; it is never load-bearing.
+**A model never decides what ships.** Every acceptance decision is a measured
+container run. Models write prose (`enrich`), phrase instructions (`emit`), and judge
+difficulty (`adjudicate`) — all three degrade gracefully to a complete, validated
+deliverable when no API key is configured. This is the single most important
+constraint in the design: a benchmark whose acceptance criteria are model opinions
+measures the judge, not the agent.
 
-**Mining ranks; it does not judge.** This was reversed during development, and
-the reversal is the most useful thing in this report. Mining originally rejected
-pull requests that changed no test file, that touched only `docs/`, or whose
-churn exceeded the 90th percentile. Each looked like a measurement and was
-actually a prediction, and each encoded a fact about glom rather than about
-repositories. The killer counterexample: **a bug fix whose failing test was
-already committed touches no test file at all**, and its fail-before evidence is
-stronger than a new test's, because the repository itself pinned the bug. An
-adversarial fixture repository (`tests/adversarial.py`) was built to contain
-exactly that case, plus a `src/` layout, no docstrings, one test per function,
-and real code under `docs/`. Three of those filters failed against it.
+**Validation only ever happens in a container.** There was a host-interpreter
+fallback; it was removed deliberately. A verdict reached without network isolation, a
+read-only tree and a resource ceiling is a weaker claim than the brief asks for, and
+a pipeline that silently produces the weaker claim is worse than one that stops.
 
-What survives as a rejection is only what makes a task impossible to build: no
-commit, no parent, no Python changed, no covering test, a symbol that is itself
-a test. Everything else became a ranking term, where being wrong costs a
-candidate a position instead of its existence.
+**Doctors, not a second pipeline.** Multi-language support dispatches through
+`hygiene_dispatcher` / `dependency_doctor` / `container_doctor`, each of which routes
+Python straight back to the original implementation. The alternative — a parallel
+multi-language pipeline — means two code paths to keep in agreement, and the Python
+one is the one with all the evidence behind it.
 
-**Thresholds are measured, never declared.** The infrastructure ceiling for
-excision is a share of the suite (a symbol run by more than one test in seven is
-load-bearing), not a constant — "12 covering tests" was true of glom and of
-nothing else. Difficulty tiers are cut by rank into equal thirds rather than at
-fixed line counts. Churn is recorded for tiering and cost, and rejects nothing.
+**`unsupported` is a first-class result.** A tool that cannot run reports
+`unsupported` with a reason and `measured: false`, never a zero. This was a
+correction: earlier revisions hard-coded `runs_identical=True`, an "approximate" pin
+count of 10, and an unconditional `status: complete`. Those looked like success on a
+held-out repo while measuring nothing. A doctor may report ignorance; it may not
+report a success it did not measure.
 
-**The verifier is applied at evaluation time, not shipped in `input/`.** A
-history task's tests are the ones the pull request added. An agent that can read
-them does not need the instruction — it transcribes the assertions. So `input/`
-is the repository as it stood before, `verifier/` holds the post-change tests,
-and the evaluation tree is rebuilt from those two on demand. Anyone can
-reconstruct it, which is what makes the fail-before claim checkable rather than
-merely reported.
+**Tree-sitter over regex, for a specific reason.** The knowledge layer for
+non-Python languages parses with real grammars because excision needs a function
+body's *exact* extent. Regex brace-counting gets `let s = "}";` wrong — it ends the
+function at that line, and excising it produces an `input/` tree that never compiles.
+Byte spans from the grammar are used rather than line ranges, because a single-line
+definition (`func Mul(a, b int) int { return a * b }`) shares its line with the
+signature, and rewriting that line deletes the declaration.
 
-**Validation runs only in a container.** A host fallback existed and was deleted.
-An isolated run and an unisolated one do not support the same claim, and a
-pipeline that silently substitutes the weaker one is worse than one that stops.
+**Python keeps `ast`.** Even with tree-sitter available, Python parses with `ast`:
+it is the same parser CPython uses, it resolves dotted names and decorators without a
+node-type table, and every downstream stage is already built on its output.
 
-**Automated vs. manual.** Automated: everything above, plus selection,
-difficulty, instruction writing, leak checking and bundling. Manual: the choice
-of adversarial cases in the fixture repository, the decision to park net-new
-(section 6), and refinement of this document.
+**Automated vs. manual.** Everything in the pipeline is automated — there are no
+manual fix-ups, and no glom-specific branches anywhere in `src/`. What was done by
+hand is *calibration*: the adjudication turn budget (8) and the validation surplus
+(14 attempted for 10 shipped) were chosen by reading measured runs, and both are
+documented in the code beside the constant.
+
+**Parallelism where the property allows it.** `adjudicate` runs ten agents
+concurrently. `emit` originally generated statements serially so each prompt could
+carry the titles written so far, avoiding ten near-identical titles — 915 s on glom,
+the largest single cost in the pipeline. Ordering was never the goal; distinct titles
+were. Statements are now drafted in parallel and any title collision is regenerated
+with context: **915 s → 96 s**, 10/10 titles still unique, zero collisions in
+practice.
+
+**Model responses are cached on the request hash.** The cache is both the
+determinism mechanism (`temperature=0` is not sufficient) and the transcript. It is
+also the difference between a 50-minute cold run and a 16-minute warm one — `emit`
+915 s → 1.5 s, `adjudicate` 818 s → 0.7 s on re-run.
 
 ---
 
 ## 3. How task-candidate selection works
 
-**Mined.** 70 history candidates from 86 merged pull requests; 302 excision
-candidates from the coverage map. Only structural impossibility was rejected: 16
-pull requests changed no Python at all; 250 excision candidates were themselves
-tests (excising a test deletes the verifier) and 84 had no covering test.
+Selection is a funnel, and every rejection is recorded with its reason.
 
-**Ranked.** History ranks on added test functions (0.35), verifier presence,
-coordination, cross-module reach, description length and recency. Added-test
-count dominates because breadth does not predict viability — an earlier weighting
-that rewarded breadth put glom's "Add Python 3.12" sweep at the top with 31 files
-changed and not one new assertion. Excision ranks on a continuous focus score
-over coverage ratio, breadth, body size and contract presence.
+**History candidates — 86 considered, 70 kept.** Merged pull requests linked to
+commits that changed both source and tests. 16 dropped for `no_python_change`.
 
-**Validated.** 28 candidates attempted, **14 eligible**. Rejections: 2 for
-collateral breakage, 6 whose designated tests changed no verdict, 6 where the
-only tests changing verdict could not be collected before the change.
+**Excision candidates — 635 considered, 302 kept.** Every symbol in the graph with
+measured covering tests. Dropped: 249 `is_itself_a_test`, 84 `no_covering_test`. A
+symbol nothing exercises cannot produce a task whose verifier means anything.
 
-That last class is worth explaining. A feature's new test file imports the symbol
-the feature adds, so before the change it cannot even be imported — pytest
-reports a collection error and no test body runs. The brief excludes import
-errors. Both readings were implemented and measured: the permissive one yields
-**zero** additional tasks, because pytest cannot report a per-test verdict for a
-test it never collected. The strict reading is therefore the default on
-measurement, not on preference.
+**Validation — 28 attempted, 14 eligible.** The pool is validated in ranked order
+until enough survive. Rejections, all recorded in
+[`knowledge/validation.json`](evidence/glom/knowledge/validation.json):
 
-**Selected.** 10 of 14, greedily maximising score minus a penalty for reusing a
-module. The penalty is not optional: on this pool a naive top-ten returns almost
-entirely `glom.core` and fails the four-module floor silently. Result: **6
-history + 4 excision, 9 distinct modules, difficulty 4 easy / 3 medium / 3
-hard**, every quota satisfied, no instruction failing the leak check.
+| Reason | Count | Why it disqualifies |
+|---|---|---|
+| `only_uncollectable_tests_changed_verdict` | 6 | the PR's tests fail to import at the base commit — an infrastructure failure, not behavioural |
+| `no_test_changed_verdict` | 6 | tests pass identically before and after; nothing to measure |
+| `collateral` | 2 | the reference solution broke an unrelated passing test |
 
-Every rejection is recorded with its reason in `candidates.json` and
-`validation.json`. A drop with no stated reason is indistinguishable from a bug.
+**Selection — 14 eligible → 10 shipped**, under the brief's quotas (≥4 history, ≤4
+excision, ≤3 net-new) plus a diversity floor. The result spans 9 modules, so the
+"at least 4 distinct modules" requirement is met with margin.
+
+Each of the eight gates a task must pass:
+
+`fail_before` (and for the right reason) · `pass_after` · `collateral` ·
+`determinism_before` · `determinism_after` · `verifier_integrity` · `solver_bundle` ·
+`alternative_implementation`
 
 ---
 
 ## 4. How to run everything
 
-One command, from a clean checkout, with Docker running:
+Setup is in [README.md](README.md). End to end:
 
 ```bash
 ./run.sh https://github.com/mahmoud/glom
 ```
 
-Stages run in dependency order — that order is load-bearing, not cosmetic:
-`hygiene` reformats the tree `graph` parses, `deps` compiles the lock `container`
-builds from, `validate` runs inside the image `container` verified.
-
-Individual stages, in order:
+Stage by stage, in dependency order — each reads what the previous one wrote:
 
 ```bash
-stress-stack ingest https://github.com/mahmoud/glom
-stress-stack hygiene
-stress-stack deps
-stress-stack graph
-stress-stack coverage
-stress-stack testgen
-stress-stack container
-stress-stack enrich
-stress-stack index
-stress-stack mine
-stress-stack validate --history-limit 30 --excision-limit 12
-stress-stack select
-stress-stack emit
-stress-stack bundle --output ../glom-output
+stress-stack ingest    https://github.com/mahmoud/glom
+```
+```bash
+stress-stack hygiene   glom && stress-stack deps glom && stress-stack graph glom
+```
+```bash
+stress-stack coverage  glom && stress-stack testgen glom && stress-stack container glom
+```
+```bash
+stress-stack enrich    glom && stress-stack index glom && stress-stack mine glom
+```
+```bash
+stress-stack validate  glom && stress-stack select glom && stress-stack adjudicate glom
+```
+```bash
+stress-stack emit      glom && stress-stack bundle glom --output output
 ```
 
-The container test run, standalone:
+Without a model, skip the two optional stages — the ten tasks are still produced and
+validated:
 
 ```bash
-docker build --tag stress-stack/glom:verify --file Dockerfile .
-docker run --rm --network=none --read-only --cap-drop=ALL \
-  --volume "$PWD:/work:ro" --workdir /work \
-  stress-stack/glom:verify python -m pytest -q
+stress-stack run glom --skip enrich,adjudicate
 ```
 
-Re-running one task's verifier, exactly as validation did:
+### The container test run
 
 ```bash
-cp -R output/tasks/<task_id>/input /tmp/attempt
-cp -R output/tasks/<task_id>/verifier/. /tmp/attempt/
-cd /tmp/attempt && bash /path/to/output/tasks/<task_id>/verifier/run.sh
+docker run --rm --network=none --cap-drop=ALL stress-stack/glom:verify
 ```
 
-Model calls are content-addressed and replayed from `.stress_stack/cache/llm`,
-so a re-run reproduces byte-identically and spends nothing. That cache is also
-the `transcripts/` deliverable.
+Run it twice; the results are identical (203 passed, 0 failed). To re-verify one
+task's evidence by hand, copy `input/`, overlay `verifier/`, and run the command in
+that task's `task.json` — it must fail before the change and pass after.
 
 ---
 
 ## 5. Scale: what breaks at 100 repositories
 
-**Wall-clock, immediately.** One repository takes minutes, dominated by
-validation: seven container runs per candidate, executed serially. A hundred
-repositories is days of serial work and there is no concurrency at any level.
-Candidates are independent and each run is already capped at two CPUs, so a
-process pool is a near-linear win. Two cheaper wins come first: a run cache keyed
-on `(tree hash, image id, targets, policy)` — the same content-addressing already
-used for model calls — collapses the excision case, where `solution/` is the
-identical tree for every candidate; and stopping once a surplus exists rather
-than validating the whole ranked pool.
+**Wall clock is the wall.** A cold glom run is ~50 minutes, 68% of it model
+inference. 100 repositories serially is roughly three and a half days. The fix is
+process-level parallelism across repositories — each run is already independent and
+writes only into its own `.stress_stack/` — plus a shared model-response cache
+instead of a per-repo one.
 
-**State, next.** Everything lives inside each cloned repository under
-`.stress_stack/`, so there is no way to ask a fleet-wide question — which
-repositories failed containerization, and why — and no cache is shared between
-them. The SQLite schema in `index.py` generalises to Postgres almost unchanged
-and already has the right tables.
+**Container churn dominates the rest.** Each candidate costs 7+ container
+invocations, and validation is serial within a repo. Two changes matter more than
+anything else here: a persistent per-repo image reused across candidates (already the
+case) and a bounded worker pool over the candidate pool (`TaskTracker` exists and is
+tested; it is not yet wired in).
 
-**Disk, then.** Every attempted candidate keeps a full `input/` and `solution/`
-tree. At a hundred repositories that is thousands of repository copies, plus a
-Docker image per repository built into the local daemon and never collected.
+**Disk grows faster than expected.** Every task stages four full copies of the
+repository. Ten tasks × 100 repos is 4,000 trees. At scale these should be git
+worktrees or content-addressed overlays, not `cp -r`.
 
-**The GitHub API**, unauthenticated at sixty requests an hour shared across the
-fleet. The client already records rate-limit state per fetch, so a token pool
-with backoff is a small change.
-
-**What I would build differently.** A two-level work queue — one job per
-repository, one per candidate — so concurrency is a deployment parameter rather
-than a code change. Artifacts to content-addressed object storage; image builds
-as their own cached step keyed on lock hash plus base digest, pushed to a shared
-registry. And a per-repository validation budget whose exhaustion is recorded in
-the funnel as a legitimate outcome: at fleet scale a partial repository that says
-so honestly is the common result, and the design has to treat it as first-class
-rather than as failure.
+**What I would build differently.** A work queue with per-repo idempotent stages and
+resumable state, rather than one long linear process; the stage table already records
+per-stage status, so this is a scheduler change rather than a rewrite. And I would
+make the interpreter/toolchain *per candidate* rather than per repository — see §6.
 
 ---
 
 ## 6. Honest gaps
 
-**Scope: Python repositories with a pytest suite.** This is a decision, not an
-oversight. Every Pipeline 1 output binds to a language toolchain — dependency
-resolution, the container's interpreter, test generation, lint — and so do the
-symbol graph, coverage attribution and mutation checks. Supporting a second
-language means a parallel parser and runner, not a parallel pipeline: the stage
-boundaries are already language-neutral, and `graph`, `coverage` and `testgen`
-are the only three modules that would need a sibling implementation. Generality
-was spent instead on *repository* shape within Python, which is where the brief
-places its warning — proven on three repositories with three different layouts
-(flat, `src/`, and a single-module historical form) and two different ways of
-declaring test dependencies.
+**Language coverage is narrower than the architecture implies.** The design is
+grammar-agnostic — dispatch is a table, and adding a language is adding rows — but
+the current implementation only genuinely supports **Python, Go, Rust, TypeScript and
+JavaScript**, and not equally:
 
-**Net-new tasks are de-scoped, deliberately.** The brief caps them at three of
-ten; history has no ceiling, so 6 + 4 satisfies every stated constraint. The
-phrase "a capability the repo lacks" reads either as genuinely absent or as
-adjacent-but-missing, and the reading changes what gets built. This is recorded
-as a decision, not an omission — `net_new: 0 of up to 3`.
+| | parser | linter | test plan | coverage | tasks |
+|---|---|---|---|---|---|
+| Python | `ast` | ruff | pytest | per-test | history + excision |
+| Go | tree-sitter | go vet | `go test -json` | per-test | excision |
+| Rust | tree-sitter | clippy | libtest | ✗ | ✗ |
+| TS / JS | tree-sitter | eslint | ✗ | ✗ | ✗ |
+| C / C++ | tree-sitter | clang-tidy | ✗ | ✗ | ✗ |
 
-**The alternative-implementation gate is real but shallow.** It renames the
-private symbols a change introduced and requires the verifier to still pass,
-which proves the verifier is not pinned to internal names. It does not prove that
-a genuinely different algorithm would pass. A stronger version would generate an
-alternative implementation and run the verifier against it.
+*Next step:* JS/TS need a reporter the repo already provides (`vitest --reporter=json`);
+C++ needs `compile_commands.json` from a CMake configure. Both are wiring, not
+research. Rust coverage needs `cargo-llvm-cov` per test.
 
-**Generated tests are gated on body-removal mutation only.** A test must fail
-when the target's body is replaced by a raising stub. That proves the test
-reaches and depends on the function; it does not prove the assertion is tight.
-Operator and boundary mutations would measure assertion strength.
+**Net-new tasks are not implemented.** §5.1 allows up to 3 of 10 tasks to be
+net-new features defined entirely by tests we author. The category is de-scoped: the
+quota is satisfiable without it, and a net-new task is the one category with no
+ground truth to validate against — the reference solution would be ours, so
+"pass-after" would only prove we can pass our own tests. *Next step:* generate the
+feature from the repository's own issue tracker and require the alternative-
+implementation gate at a higher bar.
 
-**Historical tasks are bounded by the container's interpreter.** The image is
-built at HEAD's declared Python version, so commits from 2018 may not run under
-it. `pass_after` catches this correctly and expensively; recency ranking spends
-the budget where it is likely to pay. Per-era images would fix it properly.
+**Linting is name-level and compile-level only, because of an LLM cost ceiling.**
+The repair agent fixes what a linter can identify but not rewrite. Doing that
+*properly* means giving a model the whole project context plus the full linter log
+for the repository, and deciding per violation whether a fix is safe. On a repo the
+size of glom that is a very large prompt, repeated per round — the cost scales with
+repository size, not with violation count. So the current agent works from a bounded
+file set (12 files, 60 KB each) and only accepts changes that lower the violation
+count *and* leave suite output byte-identical. Everything else reverts. *Next step:*
+cluster violations by rule and fix per-rule with a minimal witness set rather than
+whole files.
 
-**Hygiene and coverage still execute repository code on the host.** `sandbox.py`
-argues correctly that running a repository's suite is arbitrary code execution
-and belongs in a container, and validation obeys that. The three stages that run
-first do not. This is an acknowledged inconsistency, not an oversight.
+**Historical PRs are validated under HEAD's interpreter.** `select_python_version`
+reads HEAD's `requires-python` once, and the lockfile compiles from HEAD. A 2017 PR
+gets tested under Python 3.12. This does not produce wrong results — such PRs fail
+collection and are discarded by the gates — but it silently biases the pool toward
+recent history and could starve the ≥4 history quota on an older repository. *Next
+step:* resolve the interpreter per candidate from the base commit's metadata and
+cache one image per version.
 
-**The knowledge index is under-consumed.** `index.sqlite` is built every run and
-its `test_modules` view answers the diversity question, but selection still counts
-modules from the in-memory graph. The `shared_tests` query would answer something
-currently unaskable — whether two "diverse" tasks share verifier tests — and is
-not yet wired in.
+**Host vs. container asymmetry is closed for hygiene, not everywhere.** Formatting
+and linting for non-Python ecosystems now run their before/after suite comparison in
+a container. But `deps` probing and Python's `coverage` still execute repository code
+on the host. *Next step:* move both behind the same sandbox `validate` already uses.
 
-**A repository the test runner depends on cannot be verified this way.**
-Validation puts the task tree on `PYTHONPATH` so the mounted code wins over the
-installed copy. When the repository under test *is* a dependency of pytest —
-`pluggy`, `iniconfig`, `packaging` — that shadows the copy pytest is itself
-running on, and a historical version will not satisfy a modern pytest. Running
-`pytest-dev/pluggy` end to end, 16 of 30 history candidates failed exactly here:
-pre-`src`-layout commits ship a flat `pluggy.py` at the root, pytest imports it
-instead of its own, and cannot start. The funnel now names this
-`runner_dependency_shadowed` rather than reporting a generic infrastructure
-failure, so the cause is visible rather than mysterious. Fixing it properly
-means running the verifier under an interpreter whose runner dependencies come
-from a separate, unshadowed path — a real change to the execution model, and
-deliberately not attempted at this stage. pluggy consequently yields 7 eligible
-tasks rather than 10, and that shortfall is reported rather than papered over.
+**Candidate validation is serial.** `--workers` is accepted and documented as
+reserved; `TaskTracker` is written and tested but not wired in. This is the single
+biggest available speedup after model inference.
 
-A related fix did land: setuptools-scm writes `_version.py` at build time and
-git never contains it, so a package whose `__init__` imports from it cannot be
-imported from any materialised tree. That version module is now synthesised into
-both sides from `git describe` at the task's own commit, which repaired every
-modern pluggy tree and affects the large fraction of Python projects using that
-build backend.
+**Three vendored C++ headers fail to parse.** `httplib.h`, `json.hpp`, `xxhash.h` —
+heavy macro metaprogramming that tree-sitter's C++ grammar handles only partially. It
+still extracts 2,290 symbols from them and reports `has_error` honestly rather than
+claiming a clean parse.
 
-**Second-repository findings.** Running `pallets/click` end to end found four
-bugs invisible on glom, each of which would have produced confident wrong output
-on a held-out repository: a container built without a test runner because click
-declares test dependencies under PEP 735 `[dependency-groups]` rather than as an
-extra; runs that collected zero tests being accepted as verdicts, which reported
-"no candidate has a behavioural test change" when the suite had never run; a
-`src/` layout where `PYTHONPATH=/work` resolved imports to the copy baked into
-the image rather than the mounted task tree, so **every verdict measured frozen
-code**; and an unquoted `pytest>=8,<9` in a generated `RUN` line. All four are
-fixed. The lesson is recorded deliberately: none was visible to the unit suite,
-and all four required running the pipeline cold against a repository that did
-not share the sample's habits.
+**Testing breadth.** The Go path is proven end to end on a small purpose-built
+repository (all 8 gates pass on real excision tasks). It has not been run against a
+large real-world Go codebase, and the per-test coverage strategy — one process per
+test — will be slow on a suite with thousands of tests. `max_tests` bounds it and the
+map records how many tests were actually measured, so a truncated attribution is
+never mistaken for a complete one.

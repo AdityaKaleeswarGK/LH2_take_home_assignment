@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="0.077" timestamp="2026-08-17T13:52:13.814804+00:00" hostname="457ae184fa12"><testcase classname="glom.test.test_mutable" name="test_s_assign" time="0.000"><failure message="ValueError: path segment must be path from T, not T">glom/test/test_mutable.py:193: in test_s_assign
+    glom({}, (Assign(S['foo'], 'bar'), S['foo']))
+              ^^^^^^^^^^^^^^^^^^^^^^^
+glom/mutable.py:112: in __init__
+    path = Path(path)
+           ^^^^^^^^^^
+glom/core.py:276: in __init__
+    raise ValueError('path segment must be path from T, not %r'
+E   ValueError: path segment must be path from T, not T</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_from_t_identity" time="0.000"><failure message="AttributeError: 'Path' object has no attribute 'from_t'">glom/test/test_path_and_t.py:195: in test_from_t_identity
+    assert ref.from_t() == ref
+           ^^^^^^^^^^
+E   AttributeError: 'Path' object has no attribute 'from_t'</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_startswith" time="0.000"><failure message="AttributeError: 'Path' object has no attribute 'startswith'">glom/test/test_path_and_t.py:179: in test_startswith
+    assert Path(ref).startswith(T)
+           ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'Path' object has no attribute 'startswith'</failure></testcase></testsuite></testsuites>

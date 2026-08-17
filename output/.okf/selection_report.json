@@ -1,0 +1,424 @@
+{
+  "coherent_pool_size": 14,
+  "difficulty": {
+    "excise-glom_core.py-glom.core.Path.from_t": {
+      "dominant_factors": [
+        "misleading_similarity",
+        "scale"
+      ],
+      "factors": {
+        "business_logic": 0.0,
+        "coordinated_change": 1.0,
+        "cross_module": 1.0,
+        "misleading_similarity": 0.0,
+        "scale": 11.0
+      },
+      "justification": "This task touches 8 lines with 3 tests that must end up passing.",
+      "score": 0.2065,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "easy"
+    },
+    "excise-glom_core.py-glom.core._s_first_magic": {
+      "dominant_factors": [
+        "misleading_similarity",
+        "scale"
+      ],
+      "factors": {
+        "business_logic": 0.0,
+        "coordinated_change": 1.0,
+        "cross_module": 1.0,
+        "misleading_similarity": 0.0,
+        "scale": 22.0
+      },
+      "justification": "This task touches 13 lines with 9 tests that must end up passing.",
+      "score": 0.2155,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "easy"
+    },
+    "excise-glom_grouping.py-glom.grouping.GROUP": {
+      "dominant_factors": [
+        "misleading_similarity",
+        "scale"
+      ],
+      "factors": {
+        "business_logic": 0.0,
+        "coordinated_change": 1.0,
+        "cross_module": 1.0,
+        "misleading_similarity": 0.0,
+        "scale": 68.0
+      },
+      "justification": "This task touches 62 lines with 6 tests that must end up passing.",
+      "score": 0.2531,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "medium"
+    },
+    "excise-glom_matching.py-glom.matching._precedence": {
+      "dominant_factors": [
+        "misleading_similarity",
+        "scale"
+      ],
+      "factors": {
+        "business_logic": 0.0,
+        "coordinated_change": 1.0,
+        "cross_module": 1.0,
+        "misleading_similarity": 0.0,
+        "scale": 21.0
+      },
+      "justification": "This task touches 18 lines with 3 tests that must end up passing.",
+      "score": 0.2147,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "easy"
+    },
+    "pr-117": {
+      "dominant_factors": [
+        "coordinated_change",
+        "cross_module"
+      ],
+      "factors": {
+        "business_logic": 258.0,
+        "coordinated_change": 4.0,
+        "cross_module": 4.0,
+        "misleading_similarity": 0.0,
+        "scale": 248.0
+      },
+      "justification": "This task requires coordinated edits across 4 source files; and it spans 4 modules, so the change cannot be reasoned about locally.",
+      "score": 0.8293,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "hard"
+    },
+    "pr-196": {
+      "dominant_factors": [
+        "coordinated_change",
+        "cross_module"
+      ],
+      "factors": {
+        "business_logic": 280.0,
+        "coordinated_change": 4.0,
+        "cross_module": 4.0,
+        "misleading_similarity": 0.0,
+        "scale": 233.0
+      },
+      "justification": "This task requires coordinated edits across 4 source files; and it spans 4 modules, so the change cannot be reasoned about locally.",
+      "score": 0.8195,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "hard"
+    },
+    "pr-262": {
+      "dominant_factors": [
+        "misleading_similarity",
+        "business_logic"
+      ],
+      "factors": {
+        "business_logic": 34.0,
+        "coordinated_change": 1.0,
+        "cross_module": 1.0,
+        "misleading_similarity": 0.0,
+        "scale": 3.0
+      },
+      "justification": "This task is a contained change verified by 1 test.",
+      "score": 0.2039,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "easy"
+    },
+    "pr-277": {
+      "dominant_factors": [
+        "misleading_similarity",
+        "coordinated_change"
+      ],
+      "factors": {
+        "business_logic": 273.0,
+        "coordinated_change": 2.0,
+        "cross_module": 2.0,
+        "misleading_similarity": 0.0,
+        "scale": 43.0
+      },
+      "justification": "This task requires coordinated edits across 2 source files; and it spans 2 modules, so the change cannot be reasoned about locally.",
+      "score": 0.3969,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "medium"
+    },
+    "pr-280": {
+      "dominant_factors": [
+        "misleading_similarity",
+        "business_logic"
+      ],
+      "factors": {
+        "business_logic": 1023.0,
+        "coordinated_change": 1.0,
+        "cross_module": 1.0,
+        "misleading_similarity": 0.0,
+        "scale": 26.0
+      },
+      "justification": "This task depends on rules recorded in the change's description rather than inferable from the surrounding code.",
+      "score": 0.3348,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "medium"
+    },
+    "pr-298": {
+      "dominant_factors": [
+        "misleading_similarity",
+        "business_logic"
+      ],
+      "factors": {
+        "business_logic": 1764.0,
+        "coordinated_change": 1.0,
+        "cross_module": 1.0,
+        "misleading_similarity": 0.0,
+        "scale": 38.0
+      },
+      "justification": "This task depends on rules recorded in the change's description rather than inferable from the surrounding code.",
+      "score": 0.4286,
+      "tercile_cuts": [
+        0.2155,
+        0.3969
+      ],
+      "tier": "hard"
+    }
+  },
+  "ledger": {
+    "by_primary_module": {
+      "glom.cli": 3,
+      "glom.core": 5,
+      "glom.grouping": 1,
+      "glom.matching": 1
+    },
+    "by_source": {
+      "excision": 4,
+      "history": 6
+    },
+    "distinct_modules": 9,
+    "entries": [
+      {
+        "module": "glom.core",
+        "modules": [
+          "glom.core"
+        ],
+        "source": "history",
+        "task_id": "pr-298",
+        "title": "Keep PathAccessError printable for Scope/S paths (#249)"
+      },
+      {
+        "module": "glom.cli",
+        "modules": [
+          "glom.cli"
+        ],
+        "source": "history",
+        "task_id": "pr-280",
+        "title": "Add --scalar flag to CLI"
+      },
+      {
+        "module": "glom.core",
+        "modules": [
+          "glom.core",
+          "glom.matching",
+          "glom.mutation",
+          "glom.reprlib_backport"
+        ],
+        "source": "history",
+        "task_id": "pr-196",
+        "title": "Arg Mode"
+      },
+      {
+        "module": "glom.cli",
+        "modules": [
+          "glom.cli",
+          "setup"
+        ],
+        "source": "history",
+        "task_id": "pr-277",
+        "title": "Add support for TOML files to the CLI."
+      },
+      {
+        "module": "glom.grouping",
+        "modules": [
+          "glom.grouping"
+        ],
+        "source": "excision",
+        "task_id": "excise-glom_grouping.py-glom.grouping.GROUP",
+        "title": "Reimplement glom.grouping.GROUP"
+      },
+      {
+        "module": "glom.matching",
+        "modules": [
+          "glom.matching"
+        ],
+        "source": "excision",
+        "task_id": "excise-glom_matching.py-glom.matching._precedence",
+        "title": "Reimplement glom.matching._precedence"
+      },
+      {
+        "module": "glom.core",
+        "modules": [
+          "glom.core"
+        ],
+        "source": "excision",
+        "task_id": "excise-glom_core.py-glom.core.Path.from_t",
+        "title": "Reimplement glom.core.Path.from_t"
+      },
+      {
+        "module": "glom.core",
+        "modules": [
+          "glom.core"
+        ],
+        "source": "excision",
+        "task_id": "excise-glom_core.py-glom.core._s_first_magic",
+        "title": "Reimplement glom.core._s_first_magic"
+      },
+      {
+        "module": "glom.cli",
+        "modules": [
+          "glom.cli"
+        ],
+        "source": "history",
+        "task_id": "pr-262",
+        "title": "Bump yaml in tests to 6.0+ and switch to safe_load"
+      },
+      {
+        "module": "glom.core",
+        "modules": [
+          "glom.core",
+          "glom.mutation",
+          "glom.reduction",
+          "glom.streaming"
+        ],
+        "source": "history",
+        "task_id": "pr-117",
+        "title": "Better builtin roundtripping"
+      }
+    ],
+    "modules_covered": [
+      "glom.cli",
+      "glom.core",
+      "glom.grouping",
+      "glom.matching",
+      "glom.mutation",
+      "glom.reduction",
+      "glom.reprlib_backport",
+      "glom.streaming",
+      "setup"
+    ],
+    "quota": {
+      "maximum": {
+        "excision": 4,
+        "net_new": 3
+      },
+      "minimum": {
+        "history": 4
+      },
+      "minimum_modules": 4,
+      "total": 10
+    },
+    "satisfied": true,
+    "selected": 10,
+    "shortfalls": []
+  },
+  "pool_size": 14,
+  "quality_rejected": {},
+  "schema_version": "0.1.0",
+  "selection": {
+    "penalty": 0.35,
+    "repairs": [],
+    "shortfalls": [],
+    "trace": [
+      {
+        "adjusted": -0.0167,
+        "module": "glom.core",
+        "reason": "minimum_history",
+        "task_id": "pr-298"
+      },
+      {
+        "adjusted": -0.107,
+        "module": "glom.cli",
+        "reason": "minimum_history",
+        "task_id": "pr-280"
+      },
+      {
+        "adjusted": -0.449,
+        "module": "glom.core",
+        "reason": "minimum_history",
+        "task_id": "pr-196"
+      },
+      {
+        "adjusted": -0.505,
+        "module": "glom.cli",
+        "reason": "minimum_history",
+        "task_id": "pr-277"
+      },
+      {
+        "adjusted": 0.65,
+        "module": "glom.grouping",
+        "reason": "ranked",
+        "task_id": "excise-glom_grouping.py-glom.grouping.GROUP"
+      },
+      {
+        "adjusted": 0.5166,
+        "module": "glom.matching",
+        "reason": "ranked",
+        "task_id": "excise-glom_matching.py-glom.matching._precedence"
+      },
+      {
+        "adjusted": -0.1544,
+        "module": "glom.core",
+        "reason": "ranked",
+        "task_id": "excise-glom_core.py-glom.core.Path.from_t"
+      },
+      {
+        "adjusted": -0.5313,
+        "module": "glom.core",
+        "reason": "ranked",
+        "task_id": "excise-glom_core.py-glom.core._s_first_magic"
+      },
+      {
+        "adjusted": -0.9095,
+        "module": "glom.cli",
+        "reason": "ranked",
+        "task_id": "pr-262"
+      },
+      {
+        "adjusted": -1.5524,
+        "module": "glom.core",
+        "reason": "ranked",
+        "task_id": "pr-117"
+      }
+    ]
+  },
+  "task_ids": [
+    "pr-298",
+    "pr-280",
+    "pr-196",
+    "pr-277",
+    "excise-glom_grouping.py-glom.grouping.GROUP",
+    "excise-glom_matching.py-glom.matching._precedence",
+    "excise-glom_core.py-glom.core.Path.from_t",
+    "excise-glom_core.py-glom.core._s_first_magic",
+    "pr-262",
+    "pr-117"
+  ]
+}

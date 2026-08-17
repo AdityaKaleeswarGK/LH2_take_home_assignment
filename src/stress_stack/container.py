@@ -125,9 +125,13 @@ def _version_tuple(value: str) -> tuple[int, ...]:
     return tuple(parts) or (0,)
 
 
-def resolve_base_image(python_version: str) -> tuple[str, str]:
-    """Pin the base by digest when we can — tags move, digests do not."""
-    tag = f"python:{python_version}-slim"
+def pin_image_by_digest(tag: str) -> tuple[str, str]:
+    """Resolve any registry tag to an immutable digest reference.
+
+    Tags move; digests do not. Every ecosystem's base image needs this, not just
+    Python's, so the logic lives here and takes the tag as an argument rather
+    than deriving it from an interpreter version.
+    """
     # Public base images do not need credentials. A broken desktop keychain
     # helper should not prevent a reproducible pull, so use an isolated empty
     # Docker config for this one public registry operation.
@@ -145,6 +149,16 @@ def resolve_base_image(python_version: str) -> tuple[str, str]:
     digest = inspect.stdout.strip()
     if inspect.ok and "@sha256:" in digest:
         return digest, "digest_pinned" if pull.ok else "digest_pinned_cached"
+    return tag, "tag_unpinned_no_digest" if pull.ok else "tag_unpinned_pull_failed"
+
+
+def resolve_base_image(python_version: str) -> tuple[str, str]:
+    """Pin the Python base by digest, falling back to the minor-version tag."""
+    tag = f"python:{python_version}-slim"
+    reference, status = pin_image_by_digest(tag)
+    if status.startswith("digest_pinned"):
+        return reference, status
+    pull_ok = not status.endswith("pull_failed")
     if python_version.count(".") == 2:
         minor_tag = f"python:{python_version.rsplit('.', 1)[0]}-slim"
         cached = run(
@@ -154,7 +168,7 @@ def resolve_base_image(python_version: str) -> tuple[str, str]:
         cached_digest = cached.stdout.strip()
         if cached.ok and "@sha256:" in cached_digest:
             return cached_digest, "digest_pinned_cached_patch_fallback"
-    return tag, "tag_unpinned_no_digest" if pull.ok else "tag_unpinned_pull_failed"
+    return tag, "tag_unpinned_no_digest" if pull_ok else "tag_unpinned_pull_failed"
 
 
 _PYTEST_REQUIREMENT = "pytest>=8,<9"

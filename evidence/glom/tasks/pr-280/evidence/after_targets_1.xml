@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="0.069" timestamp="2026-08-17T15:07:42.887380+00:00" hostname="91f5fb034959"><testcase classname="glom.test.test_cli" name="test_cli_scalar" time="0.002" /></testsuite></testsuites>

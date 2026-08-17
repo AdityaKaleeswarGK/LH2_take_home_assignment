@@ -1,0 +1,74 @@
+{
+  "cache_key": "455b37ee2cd91aa715f99beb99e125063b78e697fc918229562f391df8cb0ffe",
+  "latency_seconds": 16.286,
+  "model": "openai/gpt-5.6-luna-pro",
+  "prompt_version": "1",
+  "request": {
+    "max_tokens": 6000,
+    "messages": [
+      {
+        "content": "You are settling the difficulty labels for a set of benchmark tasks that were\neach judged on their own. Easy, medium and hard are only meaningful relative to\nthis set, and a per-task pass cannot see that.\n\nTier definitions:\n\neasy\n  One symbol in one module. The contract is visible where the agent is already\n  looking — a docstring, a type signature, or the failing test itself. No hidden\n  coupling: getting it right does not require knowing anything the local code\n  does not say.\n\nmedium\n  Several symbols, or one whose correct behaviour is constrained by rules that\n  are not visible at the call site. The agent has to read callers, neighbouring\n  tests, or a sibling module to learn what \"correct\" means here. Edge cases and\n  error paths carry real weight.\n\nhard\n  At least one of:\n  - coordinated edits across modules, where a change in one place is wrong\n    unless a matching change is made elsewhere;\n  - business-logic or domain knowledge that cannot be derived from the code in\n    scope;\n  - misleading similar code nearby — a near-identical helper, an overload, or a\n    parallel code path that an agent will plausibly edit instead;\n  - a failing test that pins a symptom whose cause lives in a different module.\n\n\nRules:\n1. Keep a per-task verdict unless the set makes it wrong. Moving a label needs a\n   reason that only becomes visible in comparison — \"this is the same shape as\n   two others already called medium, and strictly smaller\".\n2. Do not force a distribution. If seven tasks are genuinely medium, say medium\n   seven times. Spread is not a goal.\n3. Return every task_id you were given, exactly once.\n4. Each justification names the specific source of difficulty. Never restate the\n   fix.\n5. Reply with JSON only.\n",
+        "role": "system"
+      },
+      {
+        "content": "# Per-task verdicts\n\n## pr-196\n- title: Arg Mode\n- source: history\n- modules: glom.core, glom.matching, glom.mutation, glom.reprlib_backport\n- proposed tier: hard\n- criteria: cross_module_reasoning, coordinated_multi_file_change, non_local_cause\n- measured tier: hard\n- reasoning: The behavior is coordinated through glom.core's recursive MODE and scope machinery, while Match, Assign, T subspecs, and S/Vars each depend on that machinery in different ways. A locally plausible change can preserve one path while breaking nested matching, mutation, or scope evaluation, requiring reasoning across the four affected modules.\n\n## pr-117\n- title: Better builtin roundtripping\n- source: history\n- modules: glom.core, glom.mutation, glom.reduction, glom.streaming\n- proposed tier: hard\n- criteria: cross_module_reasoning, business_logic_knowledge, coordinated_multi_file_change, local_and_self_describing\n- measured tier: hard\n- reasoning: The change spans core plus mutation, reduction, and streaming, where multiple specifier repr implementations must coordinate with core's T/Path and builtin-callable formatting semantics. Correctness is not confined to one local symbol: tests cover Invoke, Check, Assign, reductions, and Iter filtering, with callable and nested-spec edge cases distributed across modules.\n\n## pr-144\n- title: Path * and ** support for multiple element access, assign, and delete\n- source: history\n- modules: glom.core, glom.mutation\n- proposed tier: hard\n- criteria: cross_module_reasoning, business_logic_knowledge, coordinated_multi_file_change, non_local_cause\n- measured tier: medium\n- reasoning: Wildcard access must be represented, formatted, evaluated, and broadcast correctly in glom.core while Assign and Delete in glom.mutation must coordinate with that evaluation rather than treating a path as one destination. Correct behavior also depends on subtle path encoding, recursive wildcard traversal, mutation ordering, and warning/error semantics that are not visible in any single local symbol.\n\n## pr-170\n- title: Error tree / branched errors\n- source: history\n- modules: glom.core, glom.matching\n- proposed tier: hard\n- criteria: cross_module_reasoning, coordinated_multi_file_change\n- measured tier: hard\n- reasoning: Correct behavior requires coordinated changes between core's error-tree/scope machinery and matching's recursive error paths; changing either module independently can produce incorrect trace or nested-match results. The substantial error propagation behavior is not specified locally at the individual call sites.\n\n## pr-262\n- title: Bump yaml in tests to 6.0+ and switch to safe_load\n- source: history\n- modules: glom.cli\n- proposed tier: easy\n- criteria: local_and_self_describing\n- measured tier: medium\n- reasoning: The task is a small, single-module compatibility adjustment in a helper whose YAML branch and error handling are immediately visible. The deciding test explicitly covers the affected path, so no caller or domain knowledge beyond the local code is needed.\n\n## pr-250\n- title: ** now considers root element part of iteration\n- source: history\n- modules: glom.core\n- proposed tier: medium\n- criteria: cross_module_reasoning, business_logic_knowledge, misleading_similar_code, local_and_self_describing\n- measured tier: easy\n- reasoning: The implementation is confined to glom.core, but correct behavior is not apparent from Path.from_text alone: the agent must connect star parsing with _t_eval's distinct x/X traversal semantics and infer root-inclusive recursive iteration from the comprehensive test. The nearby shallow '*' and recursive '**' paths are similar enough to make a narrowly scoped edit error-prone.\n\n## excise-glom_grouping.py-glom.grouping.GROUP\n- title: Reimplement glom.grouping.GROUP\n- source: excision\n- modules: glom.grouping\n- proposed tier: medium\n- criteria: cross_module_reasoning\n- measured tier: medium\n- reasoning: The implementation is confined to one module, but correct dispatch requires understanding how core invokes mode handlers and how reduction.py's Fold-based aggregators coordinate through shared scope state. The grouping tests impose meaningful nested and control-flow edge cases beyond the local GROUP docstring.\n\n## excise-glom_core.py-glom.core.Path.from_t\n- title: Reimplement glom.core.Path.from_t\n- source: excision\n- modules: glom.core\n- proposed tier: medium\n- criteria: cross_module_reasoning\n- measured tier: easy\n- reasoning: Although the change is confined to one method, correct behavior is constrained by the `Assign` and `Delete` implementations in `glom/mutation.py`, which use `from_t()` specifically for `S`-relative paths. The agent must understand the internal T-expression operation representation and the identity requirement beyond the stub itself.\n\n## excise-glom_core.py-glom.core._s_first_magic\n- title: Reimplement glom.core._s_first_magic\n- source: excision\n- modules: glom.core\n- proposed tier: medium\n- criteria: local_and_self_describing\n- measured tier: easy\n- reasoning: Although the change is confined to one locally documented helper, the correct behavior is constrained by _t_eval’s S/A path handling and by scope-variable tests covering nested access, assignment, and missing keys. An agent must infer those edge cases from callers and neighboring tests rather than from the helper’s short docstring alone.\n\n## excise-glom_matching.py-glom.matching._precedence\n- title: Reimplement glom.matching._precedence\n- source: excision\n- modules: glom.matching\n- proposed tier: medium\n- criteria: local_and_self_describing\n- measured tier: easy\n- reasoning: Although the change is confined to one helper, its correct result is constrained by how _handle_dict classifies and iterates keys and by the Optional/Required validation rules. The exact precedence categories are not fully specified in the function body, so the agent must inspect neighboring code and tests.\n\nReturn JSON with key: tiers.",
+        "role": "user"
+      }
+    ],
+    "model": "openai/gpt-5.6-luna-pro",
+    "response_format": {
+      "json_schema": {
+        "name": "response",
+        "schema": {
+          "additionalProperties": false,
+          "properties": {
+            "tiers": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "justification": {
+                    "type": "string"
+                  },
+                  "task_id": {
+                    "type": "string"
+                  },
+                  "tier": {
+                    "enum": [
+                      "easy",
+                      "medium",
+                      "hard"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "task_id",
+                  "tier",
+                  "justification"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "tiers"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      "type": "json_schema"
+    },
+    "temperature": 0.0
+  },
+  "response": {
+    "content": "{\"tiers\":[{\"task_id\":\"pr-196\",\"tier\":\"hard\",\"justification\":\"Correctness depends on coordinated MODE and scope behavior across core, matching, mutation, and reprlib_backport; a locally valid change can break nested matching, mutation, or scope evaluation.\"},{\"task_id\":\"pr-117\",\"tier\":\"hard\",\"justification\":\"Specifier repr implementations across core, mutation, reduction, and streaming must stay coordinated with T/Path and callable-formatting semantics, with edge cases distributed across several code paths.\"},{\"task_id\":\"pr-144\",\"tier\":\"hard\",\"justification\":\"Wildcard paths require coordinated representation and traversal in core plus broadcast assignment and deletion in mutation, including recursive traversal, mutation ordering, and warning/error behavior.\"},{\"task_id\":\"pr-170\",\"tier\":\"hard\",\"justification\":\"Error-tree propagation requires matching changes in core scope machinery and matching’s recursive error paths; editing either side alone can corrupt nested traces.\"},{\"task_id\":\"pr-262\",\"tier\":\"easy\",\"justification\":\"This is a single-module compatibility adjustment with the affected YAML branch and its test-visible behavior directly apparent in the local code.\"},{\"task_id\":\"pr-250\",\"tier\":\"hard\",\"justification\":\"The task has a misleading parallel path implementation: shallow '*' and recursive '**' traversal are similar but differ in root inclusion, making it plausible to edit the wrong path.\"},{\"task_id\":\"excise-glom_grouping.py-glom.grouping.GROUP\",\"tier\":\"medium\",\"justification\":\"Correct dispatch is constrained by core mode-handler invocation and reduction Fold scope behavior, with nested and control-flow cases requiring inspection beyond the local implementation.\"},{\"task_id\":\"excise-glom_core.py-glom.core.Path.from_t\",\"tier\":\"medium\",\"justification\":\"The method’s semantics are constrained by mutation’s Assign and Delete callers, which depend on its internal T-expression representation and S-relative path identity.\"},{\"task_id\":\"excise-glom_core.py-glom.core._s_first_magic\",\"tier\":\"medium\",\"justification\":\"The helper’s behavior is determined by _t_eval’s S/A handling and scope-variable edge cases such as nested access, assignment, and missing keys, rather than by its short local documentation.\"},{\"task_id\":\"excise-glom_matching.py-glom.matching._precedence\",\"tier\":\"medium\",\"justification\":\"Its categories are defined by _handle_dict’s key classification and iteration plus Optional/Required validation rules, requiring neighboring code and tests to establish the contract.\"}]}",
+    "finish_reason": "stop",
+    "tool_calls": []
+  },
+  "usage": {
+    "completion_tokens": 2907,
+    "prompt_tokens": 11002
+  }
+}

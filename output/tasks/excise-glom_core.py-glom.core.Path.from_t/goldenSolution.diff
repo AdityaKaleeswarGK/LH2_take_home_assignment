@@ -1,0 +1,16 @@
+--- a/glom/core.py
++++ b/glom/core.py
+@@ -721,7 +721,12 @@
+ 
+     def from_t(self):
+         '''return the same path but starting from T'''
+-        return None
++        t_path = self.path_t.__ops__
++        if t_path[0] is S:
++            new_t = TType()
++            new_t.__ops__ = (T,) + t_path[1:]
++            return Path(new_t)
++        return self
+ 
+     def __getitem__(self, i):
+         cur_t_path = self.path_t.__ops__

@@ -1,0 +1,47 @@
+{
+  "blueprint": {
+    "cached": false,
+    "cost": 0.006046,
+    "files_cited": 23,
+    "model": "google/gemini-3.7-flash",
+    "status": "grounded",
+    "unknown_files": [],
+    "verification_state": "file_citations_verified_semantics_unverified"
+  },
+  "cards": {
+    "by_status": {
+      "described": 32,
+      "ungrounded": 1
+    },
+    "cost_usd": 0.00083,
+    "files": 33,
+    "grounded": 32,
+    "mean_entity_coverage": 0.644
+  },
+  "coverage": "available",
+  "coverage_statistics": {
+    "covering_ceiling": 30,
+    "excision_candidates": 302,
+    "excision_preferred": 8,
+    "mean_tests_per_covered_symbol": 7.84,
+    "symbols_covered": 551,
+    "symbols_total": 635,
+    "tests_observed": 203
+  },
+  "knowledge_root": "/Users/adityagk/Desktop/projects/stress_stack/glom/.stress_stack/knowledge",
+  "usage": {
+    "by_model": {
+      "google/gemini-3.7-flash": 1,
+      "openai/gpt-5.6-luna": 34
+    },
+    "cache_hits": 33,
+    "calls": 35,
+    "completion_tokens": 18293,
+    "cost_usd": 0.006877,
+    "live_calls": 2,
+    "prompt_tokens": 36562,
+    "seconds": 178.26,
+    "total_tokens": 54855,
+    "truncations": 0
+  }
+}

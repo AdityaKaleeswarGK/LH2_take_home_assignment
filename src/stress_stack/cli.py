@@ -166,7 +166,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run project-aware agentic orchestration end-to-end",
     )
     orchestrate_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
-    orchestrate_parser.add_argument("--workers", type=int, default=4)
+    orchestrate_parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="reserved; candidate validation is currently serial",
+    )
     orchestrate_parser.add_argument("--history-limit", type=int, default=30)
     orchestrate_parser.add_argument("--excision-limit", type=int, default=12)
     orchestrate_parser.add_argument("--output", default="output")
@@ -215,7 +220,7 @@ def _print_commands(source: str) -> int:
 
 # Commands that take long enough that silence reads as a hang.
 _LIVE = frozenset(
-    {"run", "validate", "adjudicate", "emit", "enrich", "testgen", "container", "mine"}
+    {"run", "orchestrate", "validate", "adjudicate", "emit", "enrich", "testgen", "container", "mine"}
 )
 
 
@@ -225,8 +230,8 @@ def main(arguments: list[str] | None = None) -> int:
     if namespace.command in _LIVE and not getattr(namespace, "quiet", False):
         from stress_stack.progress import Console, reporting
 
-        # `run` renames the stage as it goes; a single stage names itself.
-        console = Console(stage="" if namespace.command == "run" else namespace.command)
+        # `run` and `orchestrate` rename the stage as it goes; a single stage names itself.
+        console = Console(stage="" if namespace.command in {"run", "orchestrate"} else namespace.command)
         with reporting(console):
             return _dispatch(parser, namespace)
     return _dispatch(parser, namespace)
@@ -322,10 +327,7 @@ def _dispatch(parser: argparse.ArgumentParser, namespace: argparse.Namespace) ->
                 excision_limit=namespace.excision_limit,
                 output_dir=namespace.output,
             )
-            print(f"Orchestration complete: {orch_res.repository_root}")
-            print(f"Ecosystem: {orch_res.profile.ecosystem} | Toolchain: {orch_res.profile.toolchain}")
-            print(f"Tasks validated: {orch_res.tasks_validated} | Selected: {orch_res.tasks_selected}")
-            return 0 if orch_res.ok else 1
+            return _print_orchestrator(orch_res)
         else:
             parser.error(f"Unsupported command: {namespace.command}")
     except StressStackError as exc:
@@ -520,6 +522,12 @@ def _print_validation_result(report: dict) -> int:
 
 def _print_pipeline(result: PipelineResult) -> int:
     print(f"Repository: {result.repository_root or '(not resolved)'}")
+    if result.profile:
+        print(
+            f"Ecosystem: {result.profile.get('primary_language')} | "
+            f"toolchain: {result.profile.get('toolchain')} | "
+            f"test: {result.profile.get('default_test_command')}"
+        )
     for stage in result.stages:
         line = f"  {stage.name:<10} {stage.status:<9} {stage.seconds:>7.1f}s"
         print(line if not stage.detail else f"{line}  {stage.detail.splitlines()[0][:90]}")
@@ -532,8 +540,52 @@ def _print_pipeline(result: PipelineResult) -> int:
             f"quota satisfied {manifest.get('quota_satisfied')}"
         )
         print(f"Leaking instructions: {manifest.get('instructions_leaking') or 'none'}")
-    print(f"Pipeline: {'ok' if result.ok else 'failed'}")
-    return 0 if result.ok and manifest.get("quota_satisfied") else 1
+    verdict = (
+        "ok"
+        if result.ok and result.deliverable_complete
+        else ("no deliverable" if result.ok else "failed")
+    )
+    print(f"Pipeline: {verdict}")
+    # `deliverable_complete` and the quota check overlap (emit's own gate
+    # requires the quota), but keeping both means a future change to either
+    # gate cannot quietly turn an incomplete run into exit 0.
+    return 0 if result.ok and result.deliverable_complete and manifest.get("quota_satisfied") else 1
+
+
+def _print_orchestrator(result) -> int:
+    prof = result.profile
+    print(f"Repository: {result.repository_root or '(not resolved)'}")
+    print(f"Ecosystem: {prof.ecosystem} | Toolchain: {prof.toolchain} | Monorepo: {prof.is_monorepo}")
+    print(f"Test command: {prof.default_test_command} | Base image: {prof.base_image}")
+    for stage in result.stages:
+        line = f"  {stage['stage']:<10} {stage['status']:<9} {stage['seconds']:>7.1f}s"
+        detail = stage.get("detail", "")
+        print(line if not detail else f"{line}  {detail.splitlines()[0][:90]}")
+    manifest = result.manifest
+    if manifest:
+        print(f"Tasks: {manifest.get('task_count')} {manifest.get('by_source')}")
+        print(
+            f"Modules: {manifest.get('distinct_modules')} | "
+            f"difficulty {manifest.get('difficulty_spread')} | "
+            f"quota satisfied {manifest.get('quota_satisfied')}"
+        )
+        print(f"Leaking instructions: {manifest.get('instructions_leaking') or 'none'}")
+    if not result.deliverable_complete:
+        # A run can reach the end without failing and still produce nothing —
+        # every task-generation stage is skipped for a non-Python ecosystem.
+        # Saying only "ok" here would read as a successful benchmark run.
+        skipped = [s["stage"] for s in result.stages if s["status"] == "skipped"]
+        print(
+            f"No tasks produced: {len(skipped)} stage(s) skipped "
+            f"({', '.join(skipped[:6])}{'…' if len(skipped) > 6 else ''})"
+        )
+    verdict = (
+        "ok"
+        if result.ok and result.deliverable_complete
+        else ("no deliverable" if result.ok else "failed")
+    )
+    print(f"Orchestration: {verdict}")
+    return 0 if result.ok and result.deliverable_complete else 1
 
 
 def _print_bundle(report: dict) -> int:

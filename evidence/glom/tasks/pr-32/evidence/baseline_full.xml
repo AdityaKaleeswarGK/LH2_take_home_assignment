@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="27" time="0.100" timestamp="2026-08-17T15:08:52.089194+00:00" hostname="2d6f72eec27e"><testcase classname="glom.test.test_basic" name="test_initial_integration" time="0.001" /><testcase classname="glom.test.test_basic" name="test_list_path_access" time="0.000" /><testcase classname="glom.test.test_basic" name="test_list_item_lift_and_access" time="0.000" /><testcase classname="glom.test.test_basic" name="test_empty_path_access" time="0.000" /><testcase classname="glom.test.test_basic" name="test_coalesce" time="0.000" /><testcase classname="glom.test.test_basic" name="test_omit" time="0.000" /><testcase classname="glom.test.test_basic" name="test_top_level_default" time="0.000" /><testcase classname="glom.test.test_basic" name="test_literal" time="0.000" /><testcase classname="glom.test.test_basic" name="test_path" time="0.000" /><testcase classname="glom.test.test_basic" name="test_abstract_iterable" time="0.000" /><testcase classname="glom.test.test_basic" name="test_call_and_target" time="0.000" /><testcase classname="glom.test.test_basic" name="test_spec_and_recursion" time="0.000" /><testcase classname="glom.test.test_basic" name="test_seq_getitem" time="0.000" /><testcase classname="glom.test.test_basic" name="test_beyond_access" time="0.000" /><testcase classname="glom.test.test_basic" name="test_python_native" time="0.000" /><testcase classname="glom.test.test_main" name="test_main_basic" time="0.001" /><testcase classname="glom.test.test_main" name="test_yaml_target" time="0.008"><failure message="face.errors.CommandLineError: could not load target data, got: load() missing 1 required positional argument: 'Loader'">glom/cli.py:126: in mw_handle_target
+    target = yaml.load(target_text)
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: load() missing 1 required positional argument: 'Loader'
+
+During handling of the above exception, another exception occurred:
+glom/test/test_main.py:21: in test_yaml_target
+    assert main(argv) == 0
+           ^^^^^^^^^^
+glom/cli.py:83: in main
+    return cmd.run(argv) or 0
+           ^^^^^^^^^^^^^
+/usr/local/lib/python3.12/site-packages/face/command.py:478: in run
+    ret = inject(wrapped, kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/site-packages/face/sinter.py:55: in inject
+    return f(**kwargs)
+           ^^^^^^^^^^^
+&lt;sinter generated next_ 11c35372ae72c9d1&gt;:6: in next_
+    return funcs[0](next_=next_, posargs_=posargs_, spec_file=spec_file, spec_format=spec_format, target_file=target_file, target_format=target_format)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/cli.py:178: in mw_get_target
+    target = mw_handle_target(target_text, target_format)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/cli.py:128: in mw_handle_target
+    _error('could not load target data, got: %s' % e)
+glom/cli.py:101: in _error
+    raise CommandLineError(msg)
+E   face.errors.CommandLineError: could not load target data, got: load() missing 1 required positional argument: 'Loader'</failure></testcase><testcase classname="glom.test.test_target_types" name="test_types_leave_one_out" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_types_bare" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_invalid_register" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_exact_register" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_duck_register" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_bypass_getitem" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_iter_set" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_iter_str" time="0.000" /><testcase classname="glom.test.test_tutorial" name="test_tutorial_data" time="0.000" /><testcase classname="glom.test.test_tutorial" name="test_tutorial" time="0.000" /></testsuite></testsuites>

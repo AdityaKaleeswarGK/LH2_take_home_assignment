@@ -1,0 +1,2 @@
+glom.test.test_cli::test_main_toml_target
+glom.test.test_cli::test_usage_errors

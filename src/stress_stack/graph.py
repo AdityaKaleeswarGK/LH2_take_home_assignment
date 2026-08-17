@@ -860,7 +860,13 @@ def build_validation_artifacts(
     # image rather than building a second one, so the environment a task is
     # judged in is the environment the container stage already proved
     # deterministic.
-    runner = select_runner(image=f"stress-stack/{repository.root.name.lower()}:verify")
+    from stress_stack.project_detector import detect_project_profile
+
+    language = detect_project_profile(repository.root).primary_language
+    runner = select_runner(
+        image=f"stress-stack/{repository.root.name.lower()}:verify",
+        language=language,
+    )
 
     graph = build_graph(repository.root)
     built: list[Any] = []

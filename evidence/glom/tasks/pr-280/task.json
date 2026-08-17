@@ -1,0 +1,218 @@
+{
+  "difficulty": {
+    "agrees_with_measurement": true,
+    "criteria": [
+      "local_and_self_describing"
+    ],
+    "dominant_factors": [
+      "misleading_similarity",
+      "business_logic"
+    ],
+    "exploration": {
+      "refused": [],
+      "tool_calls": 7,
+      "tools_used": [
+        "grep",
+        "read_file"
+      ]
+    },
+    "factors": {
+      "business_logic": 1023.0,
+      "coordinated_change": 1.0,
+      "cross_module": 1.0,
+      "misleading_similarity": 0.0,
+      "scale": 26.0
+    },
+    "justification": "Although confined to the CLI, the agent must trace the argument registration through centralized output handling and preserve the existing invocation and output-mode behavior; the relevant contract is not just a single symbol’s signature.",
+    "measured_justification": "This task depends on rules recorded in the change's description rather than inferable from the surrounding code.",
+    "measured_tier": "medium",
+    "score": 0.3348,
+    "tercile_cuts": [
+      0.2155,
+      0.3969
+    ],
+    "tier": "medium",
+    "tier_origin": "agent",
+    "verification_state": "reasoning_unverified_label_only"
+  },
+  "files_in_scope": [
+    "glom/cli.py"
+  ],
+  "gates": [
+    {
+      "detail": {
+        "targets": {
+          "glom.test.test_cli::test_cli_scalar": "face.testing.CheckError: Got exit code 1 (expected 0) when running command: glom --scalar a.b.c \"{\\\"a\\\": {\\\"b\\\": {\\\"c\\\": \\\"d\\\"}}}\""
+        }
+      },
+      "gate": "fail_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "targets": [
+          "glom.test.test_cli::test_cli_scalar"
+        ]
+      },
+      "gate": "pass_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "after_passing": 200,
+        "baseline_passing": 199,
+        "deliberately_removed": []
+      },
+      "gate": "collateral",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_before",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "repeats": 2
+      },
+      "gate": "determinism_after",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "files_checked": 1
+      },
+      "gate": "verifier_integrity",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "clean": true,
+        "leaked_paths": [],
+        "stale_bytecode": [],
+        "stray_patches": []
+      },
+      "gate": "solver_bundle",
+      "passed": true,
+      "reason_code": null
+    },
+    {
+      "detail": {
+        "coupling": {
+          "exact_representation": [],
+          "findings": 0,
+          "patched_internals": [],
+          "private_references": [],
+          "type_identity": []
+        },
+        "coupling_findings": 0,
+        "mutation": {
+          "files_changed": [],
+          "renames": {}
+        },
+        "portable": true,
+        "status": "no_internals_to_rename"
+      },
+      "gate": "alternative_implementation",
+      "passed": true,
+      "reason_code": null
+    }
+  ],
+  "generation": {
+    "detail": {
+      "clean": false,
+      "copied_spans": [
+        "if the result is a"
+      ],
+      "private_names_leaked": [],
+      "public_names_mentioned": []
+    },
+    "fell_back": "leaked"
+  },
+  "id": "pr-280",
+  "instruction": "glom.cli — Execute glom transformations and specs directly from the console on JSON, YAML, TOML, or Python target data read from arguments, files, or standard input.\n\nRequired behavior: I was using glom in a script this week, specifically to extract single values from API calls. I noticed I kept having to trim the quotes and whitespace off of the JSON output, because even when it's a single value, it's quoted and followed by a newline. So this feature strips the quotes and whitespace when passed a new flag: . This is only done when the glom result is not a collection. If it is, it falls back to normal json output. Some items to consider: 1. Name? 1. Should it be an error if the output is not a single value? 1. Right now, output is always json. Would it be better to do ? None of these are blockers, I am good to merge as is.\n\nImplement the behavior exercised by these repository scenarios:\n\n- cli scalar\n\nPreserve existing behavior outside these scenarios. A different implementation is acceptable when it produces the same observable results and the designated tests plus the broader suite pass.\n\nRelevant files: glom/cli.py.",
+  "instruction_origin": "mechanical_model_fallback",
+  "leak_check": {
+    "clean": true,
+    "copied_spans": [],
+    "private_names_leaked": [],
+    "public_names_mentioned": []
+  },
+  "modules": [
+    "glom.cli"
+  ],
+  "paths": {
+    "evidence": "pr-280/evidence",
+    "golden_diff": "pr-280/goldenSolution.diff",
+    "golden_solution": "pr-280/goldenSolution.md",
+    "input": "pr-280/input",
+    "solution": "pr-280/solution",
+    "verifier": "pr-280/verifier"
+  },
+  "primary_module": "glom.cli",
+  "provenance": {
+    "base_sha": "5cef40707d8b4765c621d7a09ad5f35f96bf7d1a",
+    "commit_sha": "24c21dcc44cc81abc193aa3bfa2f66304470d205",
+    "kind": "commit",
+    "merged_at": "2024-11-02T22:43:13Z",
+    "pull_request": 280,
+    "url": "https://github.com/mahmoud/glom/pull/280"
+  },
+  "source": "history",
+  "title": "Add --scalar flag to CLI",
+  "validation": {
+    "fail_before_classes": {
+      "glom.test.test_cli::test_cli_scalar": "behavioral_exception"
+    },
+    "gates_failed": [],
+    "gates_passed": [
+      "fail_before",
+      "pass_after",
+      "collateral",
+      "determinism_before",
+      "determinism_after",
+      "verifier_integrity",
+      "solver_bundle",
+      "alternative_implementation"
+    ],
+    "repeats": 2,
+    "runs": [
+      "after_full",
+      "before_full",
+      "baseline_full",
+      "before_targets_1",
+      "before_targets_2",
+      "after_targets_1",
+      "after_targets_2"
+    ],
+    "status": "validated"
+  },
+  "verifier": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "--continue-on-collection-errors",
+      "-q",
+      "glom/test/test_cli.py::test_cli_scalar"
+    ],
+    "command_line": "python -m pytest -p no:cacheprovider --continue-on-collection-errors -q glom/test/test_cli.py::test_cli_scalar",
+    "files": [
+      "glom/test/test_cli.py"
+    ],
+    "node_ids": [
+      "glom.test.test_cli::test_cli_scalar"
+    ],
+    "procedure": "Copy input/, overlay verifier/ onto it, then run the command below from the tree root. It must fail before the change and pass after."
+  }
+}

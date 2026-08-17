@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="6" time="0.069" timestamp="2026-08-17T15:09:10.113724+00:00" hostname="a67b2b88f7e5"><testcase classname="glom.test.test_error" name="test_all_public_errors" time="0.002"><failure message="Failed: DID NOT RAISE BadSpec">glom/test/test_error.py:490: in test_all_public_errors
+    _test_exc(glom.BadSpec, range(5), glom.grouping.Group([{T: T}]))
+glom/test/test_error.py:481: in _test_exc
+    with pytest.raises(exc_type) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE BadSpec</failure></testcase><testcase classname="glom.test.test_grouping" name="test_agg" time="0.000"><failure message="assert None == 0&#10; +  where None = glom([0, 1, 2, 3, 4, 5, ...], Group(First()))&#10; +    where Group(First()) = Group(First())&#10; +      where First() = First()">glom/test/test_grouping.py:59: in test_agg
+    assert glom(t, Group(First())) == 0
+E   assert None == 0
+E    +  where None = glom([0, 1, 2, 3, 4, 5, ...], Group(First()))
+E    +    where Group(First()) = Group(First())
+E    +      where First() = First()</failure></testcase><testcase classname="glom.test.test_grouping" name="test_bucketing" time="0.000"><failure message="assert None == {0: [0, 2], 1: [1, 3]}&#10; +  where None = glom(range(0, 4), Group({T % 2: [T]}))&#10; +    where range(0, 4) = range(4)&#10; +    and   Group({T % 2: [T]}) = Group({T % 2: [T]})">glom/test/test_grouping.py:10: in test_bucketing
+    assert glom(range(4), Group({T % 2: [T]})) == {0: [0, 2], 1: [1, 3]}
+E   assert None == {0: [0, 2], 1: [1, 3]}
+E    +  where None = glom(range(0, 4), Group({T % 2: [T]}))
+E    +    where range(0, 4) = range(4)
+E    +    and   Group({T % 2: [T]}) = Group({T % 2: [T]})</failure></testcase><testcase classname="glom.test.test_grouping" name="test_corner_cases" time="0.000"><failure message="AssertionError: assert None == {}&#10; +  where None = glom(range(0, 5), Group({Val(Sentinel('STOP')): [T]}))&#10; +    where Group({Val(Sentinel('STOP')): [T]}) = Group({Val(Sentinel('STOP')): [T]})">glom/test/test_grouping.py:20: in test_corner_cases
+    assert glom(target, Group({Val(STOP): [T]})) == {}
+E   AssertionError: assert None == {}
+E    +  where None = glom(range(0, 5), Group({Val(Sentinel('STOP')): [T]}))
+E    +    where Group({Val(Sentinel('STOP')): [T]}) = Group({Val(Sentinel('STOP')): [T]})</failure></testcase><testcase classname="glom.test.test_grouping" name="test_limit" time="0.000"><failure message="assert None == 2&#10; +  where None = glom([0, 1, 2, 3, 4, 5, ...], Group(Limit(3, Max())))&#10; +    where Group(Limit(3, Max())) = Group(Limit(3, Max()))&#10; +      where Limit(3, Max()) = Limit(3, Max())&#10; +        where Max() = Max()">glom/test/test_grouping.py:82: in test_limit
+    assert glom(t, Group(Limit(3, Max()))) == 2
+E   assert None == 2
+E    +  where None = glom([0, 1, 2, 3, 4, 5, ...], Group(Limit(3, Max())))
+E    +    where Group(Limit(3, Max())) = Group(Limit(3, Max()))
+E    +      where Limit(3, Max()) = Limit(3, Max())
+E    +        where Max() = Max()</failure></testcase><testcase classname="glom.test.test_grouping" name="test_sample" time="0.000"><failure message="assert None == [1, 2, 3]&#10; +  where None = glom([1, 2, 3], Group(Sample(5)))">glom/test/test_grouping.py:100: in test_sample
+    assert glom([1, 2, 3], spec) == [1, 2, 3]
+E   assert None == [1, 2, 3]
+E    +  where None = glom([1, 2, 3], Group(Sample(5)))</failure></testcase></testsuite></testsuites>

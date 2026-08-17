@@ -17,6 +17,7 @@ import ast
 import json
 import re
 import statistics
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -360,6 +361,79 @@ def merge_adjudication(
     return merged
 
 
+def _title_key(title: str) -> str:
+    """Normalised title, for deciding whether two statements read as the same."""
+    return " ".join(str(title or "").lower().split())
+
+
+def _generate_statements(
+    client: Any | None,
+    task_ids: list[str],
+    prepared: dict[str, dict[str, Any]],
+    live: Any,
+    *,
+    max_workers: int = 10,
+) -> dict[str, tuple[dict[str, str] | None, dict[str, Any]]]:
+    """Ask the model for every statement at once, then fix any title collisions.
+
+    Statements used to be generated one at a time so each prompt could carry the
+    titles written so far and avoid ten variations of one sentence. That made the
+    stage ten sequential model calls — on glom, fifteen minutes, the largest
+    single cost in the pipeline.
+
+    The ordering was never the goal; distinct titles were. So the calls go out in
+    parallel with no shared context, and any task whose title collides with an
+    earlier one is regenerated with the accepted titles supplied. The property is
+    then guaranteed by the check rather than hoped for from the sequence, and the
+    common case costs one round-trip instead of ten.
+    """
+    empty: dict[str, tuple[dict[str, str] | None, dict[str, Any]]] = {
+        task_id: (None, {}) for task_id in task_ids
+    }
+    if client is None:
+        return empty
+
+    def generate(task_id: str, written_so_far: str = "") -> tuple[Any, dict[str, Any]]:
+        inputs = prepared[task_id]
+        return generated_instruction(
+            client,
+            inputs["task"],
+            inputs["evidence"],
+            diff=inputs["diff"],
+            base_names=inputs["names"],
+            base_text=inputs["text"],
+            written_so_far=written_so_far,
+        )
+
+    live.step(f"drafting {len(task_ids)} statements in parallel")
+    results: dict[str, tuple[dict[str, str] | None, dict[str, Any]]] = dict(empty)
+    with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(task_ids)))) as pool:
+        for task_id, outcome in zip(task_ids, pool.map(generate, task_ids)):
+            results[task_id] = outcome
+
+    # Second pass, serial and usually empty: only a task that duplicated an
+    # earlier title is asked again, and only that task pays for the extra call.
+    accepted: set[str] = set()
+    for task_id in task_ids:
+        produced, _ = results[task_id]
+        if produced is None:
+            continue
+        key = _title_key(produced.get("title", ""))
+        if key and key in accepted:
+            live.step(f"regenerating {task_id}: title collided")
+            context = "\n".join(f"- {title}" for title in sorted(accepted))
+            retry, retry_meta = generate(task_id, context)
+            if retry is not None:
+                results[task_id] = (
+                    retry,
+                    {**retry_meta, "regenerated_for": "title_collision"},
+                )
+                key = _title_key(retry.get("title", ""))
+        if key:
+            accepted.add(key)
+    return results
+
+
 def emit_bundle(
     selection: dict[str, Any],
     eligible: list[dict[str, Any]],
@@ -387,8 +461,9 @@ def emit_bundle(
     from stress_stack.progress import reporter
 
     live = reporter()
-    for position, task_id in enumerate(selection["task_ids"], start=1):
-        live.step(f"writing {task_id}", position, len(selection["task_ids"]))
+
+    def prepare(task_id: str) -> dict[str, Any]:
+        """Everything a statement needs, computed without calling a model."""
         task = by_id[task_id]
         task_root = tasks_root / task_id
         contract = (
@@ -404,15 +479,34 @@ def emit_bundle(
             qualified_name=contract["qualified_name"],
             pr_body=bodies.get(int((task.get("signals") or {}).get("pr_number") or 0), ""),
         )
+        diff_path = task_root / "goldenSolution.diff"
+        input_dir = task_root / "input"
+        return {
+            "task": task,
+            "task_root": task_root,
+            "evidence": evidence,
+            "diff": diff_path.read_text(encoding="utf-8") if diff_path.is_file() else "",
+            "names": base_identifiers(input_dir),
+            "text": base_source_text(input_dir),
+        }
+
+    task_ids = list(selection["task_ids"])
+    prepared = {task_id: prepare(task_id) for task_id in task_ids}
+    generated = _generate_statements(client, task_ids, prepared, live)
+
+    for position, task_id in enumerate(task_ids, start=1):
+        live.step(f"writing {task_id}", position, len(task_ids))
+        inputs = prepared[task_id]
+        task = inputs["task"]
+        task_root = inputs["task_root"]
+        evidence = inputs["evidence"]
+        diff = inputs["diff"]
+        names = inputs["names"]
+        text = inputs["text"]
+
         written = mechanical_instruction(task, evidence)
         origin = "mechanical"
         generated_meta: dict[str, Any] = {}
-
-        diff_path = task_root / "goldenSolution.diff"
-        diff = diff_path.read_text(encoding="utf-8") if diff_path.is_file() else ""
-        input_dir = task_root / "input"
-        names = base_identifiers(input_dir)
-        text = base_source_text(input_dir)
         report = leak_check(written["instruction"], diff, names, text)
 
         # A leaking template is the case that most needs a second attempt, so
@@ -420,15 +514,7 @@ def emit_bundle(
         # way meant three click tasks shipped a leaking mechanical instruction
         # while the model that could have replaced it was never asked.
         if client is not None:
-            produced, generated_meta = generated_instruction(
-                client,
-                task,
-                evidence,
-                diff=diff,
-                base_names=names,
-                base_text=text,
-                written_so_far="\n".join(f"- {entry['title']}" for entry in entries[-4:]),
-            )
+            produced, generated_meta = generated[task_id]
             if produced is not None:
                 written = produced
                 origin = "generated"

@@ -1,27 +1,30 @@
-"""Central Project-Aware Orchestrator Engine.
+"""Central project-aware orchestrator.
 
-Coordinates the multi-language, multi-stage workflow:
-1. Ingests and profiles the project (CI workflows, toolchains, workspaces)
-2. Executes safe hygiene and dependency locking
-3. Extracts universal symbol & dependency graphs via Tree-Sitter
-4. Parallelizes candidate task validation across worker pools (AlphaStack pattern)
-5. Enforces strict container verification gates, leak-checked prompts, and manifests.
+Ingests a repository, profiles its ecosystem, and runs the pipeline under that
+profile. The ``hygiene``, ``deps``, and ``container`` stages resolve through the
+doctor modules, which dispatch on the profile's primary language; a Python
+repository routes back to the original implementations unchanged.
+
+Known limitations, stated here rather than left for a reader to discover:
+
+* Candidate validation is still serial — ``max_workers`` is accepted and not
+  honoured.
+* Only the environment stages are ecosystem-aware. Mining, excision, coverage
+  and validation still assume Python, so a non-Python repository gets a
+  reproducible container and an honest hygiene/lock report, then produces no
+  tasks. That is the next boundary to move.
 """
 
 from __future__ import annotations
 
 import logging
-import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-from stress_stack.container_doctor import run_container_verification
-from stress_stack.dependency_doctor import lock_dependencies
-from stress_stack.hygiene_dispatcher import dispatch_hygiene
+from stress_stack.ingest import ingest
+from stress_stack.pipeline import run_pipeline
 from stress_stack.project_detector import ProjectProfile, detect_project_profile
-from stress_stack.tracker import TaskTracker
 
 logger = logging.getLogger(__name__)
 
@@ -31,79 +34,81 @@ class OrchestratorRunResult:
     repository_root: str
     profile: ProjectProfile
     stages: list[dict[str, Any]] = field(default_factory=list)
+    manifest: dict[str, Any] = field(default_factory=dict)
     tasks_validated: int = 0
     tasks_selected: int = 0
     ok: bool = True
+    # `ok` means nothing failed; this means tasks were actually emitted. They
+    # come apart whenever task generation is skipped as unsupported.
+    deliverable_complete: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "repository_root": self.repository_root,
             "project_profile": self.profile.to_dict(),
             "ok": self.ok,
+            "deliverable_complete": self.deliverable_complete,
             "tasks_validated": self.tasks_validated,
             "tasks_selected": self.tasks_selected,
             "stages": self.stages,
+            "manifest": self.manifest,
         }
 
 
 def orchestrate_repository(
-    source_path: str | Path,
+    source_path: str,
     *,
     max_workers: int = 4,
     history_limit: int = 30,
     excision_limit: int = 12,
     output_dir: str = "output",
 ) -> OrchestratorRunResult:
-    """Run end-to-end benchmark generation with project-aware agentic orchestration."""
-    root = Path(source_path)
+    """Run end-to-end benchmark generation with project-aware orchestration.
+
+    ``max_workers`` is accepted and not yet honoured: candidate validation runs
+    serially inside ``run_pipeline``. It stays in the signature because the
+    parallel pool is the next change here, and silently ignoring a caller's
+    concurrency request is worse than saying so.
+    """
+    del max_workers  # reserved; see docstring
+    # Step 1: Ingest repository if remote URL or local path
+    ingest_result = ingest(source_path, cwd=Path.cwd())
+    root = Path(ingest_result.repository_root)
+
+    # Step 2: Project & CI Doctor Discovery
     profile = detect_project_profile(root)
-    tracker = TaskTracker()
-    stages_log: list[dict[str, Any]] = []
-
     logger.info(
-        f"Orchestrating {root.name} | Ecosystem: {profile.ecosystem} | Toolchain: {profile.toolchain}"
+        "Detected %s (%s); environment stages will dispatch to the %s doctors.",
+        profile.primary_language,
+        profile.toolchain,
+        profile.primary_language,
     )
 
-    # Stage 1: Safe Hygiene
-    t0 = time.monotonic()
-    hygiene_res = dispatch_hygiene(root, profile)
-    stages_log.append(
-        {"stage": "hygiene", "seconds": round(time.monotonic() - t0, 2), "result": hygiene_res.to_dict()}
-    )
-
-    # Stage 2: Dependency Doctor (Locking)
-    t0 = time.monotonic()
-    lock_res = lock_dependencies(root, profile)
-    stages_log.append(
-        {"stage": "deps", "seconds": round(time.monotonic() - t0, 2), "result": lock_res.to_dict()}
-    )
-
-    # Stage 3: Container Doctor
-    t0 = time.monotonic()
-    container_res = run_container_verification(root, profile)
-    stages_log.append(
-        {"stage": "container", "seconds": round(time.monotonic() - t0, 2), "result": container_res.to_dict()}
-    )
-
-    # Stage 4: Run full pipeline validation & emission
-    # Delegate to pipeline harness to guarantee all 8 verification gates and 10 task deliverables
-    from stress_stack.pipeline import run_pipeline
-
+    # Step 3: Run the pipeline against that profile. Passing it rather than
+    # letting the pipeline re-detect keeps the profile this result reports
+    # identical to the one the stages actually ran under.
     pipe_result = run_pipeline(
         str(root),
         history_limit=history_limit,
         excision_limit=excision_limit,
         output=output_dir,
+        profile=profile,
     )
 
-    for st in pipe_result.stages:
-        stages_log.append(st.to_dict())
+    manifest = pipe_result.manifest if isinstance(pipe_result.manifest, dict) else {}
+    tasks_selected = len(manifest.get("tasks") or [])
+    # Selected tasks are the subset of validated ones the quotas kept, so the
+    # two numbers are not interchangeable. Everything shipped passed validation,
+    # and `validated_not_shipped` is the rest of what passed.
+    tasks_validated = tasks_selected + len(manifest.get("validated_not_shipped") or [])
 
     return OrchestratorRunResult(
         repository_root=str(root),
         profile=profile,
-        stages=stages_log,
-        tasks_validated=len(pipe_result.manifest.get("tasks", [])),
-        tasks_selected=len(pipe_result.manifest.get("tasks", [])),
+        stages=[s.to_dict() for s in pipe_result.stages],
+        manifest=manifest,
+        tasks_validated=tasks_validated,
+        tasks_selected=tasks_selected,
         ok=pipe_result.ok,
+        deliverable_complete=pipe_result.deliverable_complete,
     )

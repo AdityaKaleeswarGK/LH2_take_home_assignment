@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="24" skipped="0" tests="194" time="1.012" timestamp="2026-08-17T15:07:28.575608+00:00" hostname="183334a0305e"><testcase classname="glom.test.test_basic" name="test_initial_integration" time="0.001" /><testcase classname="glom.test.test_basic" name="test_list_item_lift_and_access" time="0.000" /><testcase classname="glom.test.test_basic" name="test_coalesce" time="0.000" /><testcase classname="glom.test.test_basic" name="test_skip" time="0.000" /><testcase classname="glom.test.test_basic" name="test_stop" time="0.000" /><testcase classname="glom.test.test_basic" name="test_top_level_default" time="0.001" /><testcase classname="glom.test.test_basic" name="test_val" time="0.000" /><testcase classname="glom.test.test_basic" name="test_abstract_iterable" time="0.000" /><testcase classname="glom.test.test_basic" name="test_call_and_target" time="0.000" /><testcase classname="glom.test.test_basic" name="test_invoke" time="0.000" /><testcase classname="glom.test.test_basic" name="test_spec_and_recursion" time="0.000"><failure message="glom.core.GlomError.wrap(TypeError): &lt;exception str() failed&gt;">glom/test/test_basic.py:295: in test_spec_and_recursion
+    assert glom(
+glom/core.py:2294: in glom
+    raise err
+E   glom.core.GlomError.wrap(TypeError): &lt;exception str() failed&gt;</failure></testcase><testcase classname="glom.test.test_basic" name="test_scope" time="0.000" /><testcase classname="glom.test.test_basic" name="test_seq_getitem" time="0.000" /><testcase classname="glom.test.test_basic" name="test_beyond_access" time="0.000" /><testcase classname="glom.test.test_basic" name="test_python_native" time="0.000" /><testcase classname="glom.test.test_basic" name="test_glom_extra_kwargs" time="0.000" /><testcase classname="glom.test.test_basic" name="test_inspect" time="0.000" /><testcase classname="glom.test.test_basic" name="test_ref" time="0.002"><failure message="assert 'Ref(\n      ...        ),\n)' == &quot;Ref('item', ...Ref('item')))&quot;&#10;  &#10;  - Ref('item', (T[1], Ref('item')))&#10;  + Ref(&#10;  +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ...&#10;  &#10;  ...Full output truncated (6 lines hidden), use '-vv' to show">glom/test/test_basic.py:409: in test_ref
+    assert repr(Ref('item', (T[1], Ref('item')))) == "Ref('item', (T[1], Ref('item')))"
+E   assert 'Ref(\n      ...        ),\n)' == "Ref('item', ...Ref('item')))"
+E     
+E     - Ref('item', (T[1], Ref('item')))
+E     + Ref(
+E     +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ...
+E     
+E     ...Full output truncated (6 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_basic" name="test_pipe" time="0.000"><failure message="TypeError: can only concatenate str (not &quot;int&quot;) to str">glom/test/test_basic.py:429: in test_pipe
+    assert repr(Pipe(1, Pipe([2], dict))) == 'Pipe(1, Pipe([2], dict))'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:1999: in __repr__
+    return self.__class__.__name__ + bbrepr(self.steps)
+                                     ^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:70: in repr
+    return self.repr1(x, self.maxlevel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:523: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:88: in repr1
+    return method(x, level)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:128: in repr_tuple
+    return self._repr_iterable(x, level, '(', ')', self.maxtuple, ',')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:119: in _repr_iterable
+    pieces = [repr1(elem, newlevel) for elem in islice(x, maxiter)]
+              ^^^^^^^^^^^^^^^^^^^^^
+glom/core.py:523: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:90: in repr1
+    return self.repr_instance(x, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:200: in repr_instance
+    s = s[:i] + self.fillvalue + s[len(s)-j:]
+        ^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: can only concatenate str (not "int") to str</failure></testcase><testcase classname="glom.test.test_basic" name="test_api_repr" time="0.000" /><testcase classname="glom.test.test_basic" name="test_bbformat" time="0.000" /><testcase classname="glom.test.test_basic" name="test_bbrepr" time="0.000"><failure message="AssertionError: assert '{\n         ...int: dict,\n}' == '{int: dict}'&#10;  &#10;  - {int: dict}&#10;  + {&#10;  +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ...&#10;  &#10;  ...Full output truncated (2 lines hidden), use '-vv' to show">glom/test/test_basic.py:452: in test_bbrepr
+    assert bbrepr({int: dict}) == "{int: dict}"
+E   AssertionError: assert '{\n         ...int: dict,\n}' == '{int: dict}'
+E     
+E     - {int: dict}
+E     + {
+E     +                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ...
+E     
+E     ...Full output truncated (2 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_check" name="test_check_basic" time="0.002" /><testcase classname="glom.test.test_check" name="test_check_multi" time="0.000" /><testcase classname="glom.test.test_check" name="test_check_signature" time="0.000" /><testcase classname="glom.test.test_cli" name="test_cli_blank" time="0.001" /><testcase classname="glom.test.test_cli" name="test_cli_spec_target_argv_basic" time="0.001" /><testcase classname="glom.test.test_cli" name="test_cli_spec_argv_target_stdin_basic" time="0.001" /><testcase classname="glom.test.test_cli" name="test_cli_spec_target_files_basic" time="0.001" /><testcase classname="glom.test.test_cli" name="test_usage_errors" time="0.011" /><testcase classname="glom.test.test_cli" name="test_main_basic" time="0.001" /><testcase classname="glom.test.test_cli" name="test_main_yaml_target" time="0.001"><failure message="face.errors.UsageError: could not load target data, got: TypeError: load() missing 1 required positional argument: 'Loader'">glom/cli.py:140: in mw_handle_target
+    target = load_func(target_text)
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: load() missing 1 required positional argument: 'Loader'
+
+During handling of the above exception, another exception occurred:
+glom/test/test_cli.py:125: in test_main_yaml_target
+    assert cli.main(argv) == 0
+           ^^^^^^^^^^^^^^
+glom/cli.py:96: in main
+    return cmd.run(argv) or 0
+           ^^^^^^^^^^^^^
+/usr/local/lib/python3.12/site-packages/face/command.py:478: in run
+    ret = inject(wrapped, kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/site-packages/face/sinter.py:55: in inject
+    return f(**kwargs)
+           ^^^^^^^^^^^
+&lt;sinter generated next_ 11c35372ae72c9d1&gt;:6: in next_
+    return funcs[0](next_=next_, posargs_=posargs_, spec_file=spec_file, spec_format=spec_format, target_file=target_file, target_format=target_format)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/cli.py:192: in mw_get_target
+    target = mw_handle_target(target_text, target_format)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+glom/cli.py:142: in mw_handle_target
+    raise UsageError('could not load target data, got: %s: %s'
+E   face.errors.UsageError: could not load target data, got: TypeError: load() missing 1 required positional argument: 'Loader'</failure></testcase><testcase classname="glom.test.test_cli" name="test_main_python_full_spec_python_target" time="0.001" /><testcase classname="glom.test.test_cli" name="test_main" time="0.223" /><testcase classname="glom.test.test_error" name="test_good_error" time="0.001" /><testcase classname="glom.test.test_error" name="test_error" time="0.001" /><testcase classname="glom.test.test_error" name="test_pae_api" time="0.001" /><testcase classname="glom.test.test_error" name="test_unfinalized_glomerror_repr" time="0.000" /><testcase classname="glom.test.test_error" name="test_line_trace" time="0.000" /><testcase classname="glom.test.test_error" name="test_regular_error_stack" time="0.002"><failure message="AssertionError: assert 'Traceback (m...que message\n' == 'Traceback (m...que message\n'&#10;  &#10;  Skipping 281 identical leading characters in diff, use -v to show&#10;  -  Target: [&#10;  +  Target: [None]&#10;  ?           +++++&#10;  +  - Spec: {'results': [{'value': &lt;function _raise_exc at&#10;  +  - Spec: [{'value': &lt;function _raise_exc at...&#10;  &#10;  ...Full output truncated (13 lines hidden), use '-vv' to show">/work/glom/test/test_error.py:167: in test_regular_error_stack
+    assert expected == actual
+E   AssertionError: assert 'Traceback (m...que message\n' == 'Traceback (m...que message\n'
+E     
+E     Skipping 281 identical leading characters in diff, use -v to show
+E     -  Target: [
+E     +  Target: [None]
+E     ?           +++++
+E     +  - Spec: {'results': [{'value': &lt;function _raise_exc at
+E     +  - Spec: [{'value': &lt;function _raise_exc at...
+E     
+E     ...Full output truncated (13 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_glom_error_stack" time="0.001"><failure message="assert 'Traceback (m...\'value\'&quot;)\n' == 'Traceback (m...\'value\'&quot;)\n'&#10;  &#10;  Skipping 271 identical leading characters in diff, use -v to show&#10;  -  Target: [None]&#10;  ?           -----&#10;  +  Target: [&#10;  -  - Spec: {'results': [{'valué': 'value'}]}&#10;  -  - Spec: [{'valué': 'value'}]...&#10;  &#10;  ...Full output truncated (11 lines hidden), use '-vv' to show">/work/glom/test/test_error.py:195: in test_glom_error_stack
+    assert actual == expected
+E   assert 'Traceback (m...\'value\'")\n' == 'Traceback (m...\'value\'")\n'
+E     
+E     Skipping 271 identical leading characters in diff, use -v to show
+E     -  Target: [None]
+E     ?           -----
+E     +  Target: [
+E     -  - Spec: {'results': [{'valué': 'value'}]}
+E     -  - Spec: [{'valué': 'value'}]...
+E     
+E     ...Full output truncated (11 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_glom_error_double_stack" time="0.001"><failure message="assert 'Traceback (m...e \'val\'&quot;)\n' == 'Traceback (m...e \'val\'&quot;)\n'&#10;  &#10;  Skipping 271 identical leading characters in diff, use -v to show&#10;  -  Target: [&#10;  +  Target: [None]&#10;  ?           +++++&#10;  +  - Spec: {'results': [{'value': &lt;function _subglom_wrap at&#10;  +  - Spec: [{'value': &lt;function _subglom_wrap at...&#10;  &#10;  ...Full output truncated (25 lines hidden), use '-vv' to show">/work/glom/test/test_error.py:238: in test_glom_error_double_stack
+    assert expected == actual
+E   assert 'Traceback (m...e \'val\'")\n' == 'Traceback (m...e \'val\'")\n'
+E     
+E     Skipping 271 identical leading characters in diff, use -v to show
+E     -  Target: [
+E     +  Target: [None]
+E     ?           +++++
+E     +  - Spec: {'results': [{'value': &lt;function _subglom_wrap at
+E     +  - Spec: [{'value': &lt;function _subglom_wrap at...
+E     
+E     ...Full output truncated (25 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_long_target_repr" time="0.002"><failure message="assert '...' in 'Traceback (most recent call last):\n  File &quot;test_error.py&quot;, line ___, in _make_stack\n    glom(target, spec)\n  File &quot;core.py&quot;, line ___, in glom\n    raise err\nglom.core.PathAccessError: &lt;exception str() failed&gt;\n'">/work/glom/test/test_error.py:252: in test_long_target_repr
+    assert '...' in actual
+E   assert '...' in 'Traceback (most recent call last):\n  File "test_error.py", line ___, in _make_stack\n    glom(target, spec)\n  File "core.py", line ___, in glom\n    raise err\nglom.core.PathAccessError: &lt;exception str() failed&gt;\n'</failure></testcase><testcase classname="glom.test.test_error" name="test_branching_stack" time="0.001"><failure message="AssertionError: assert 'Traceback (m...r() failed&gt;\n' == 'Traceback (m...t in Switch\n'&#10;  &#10;  Skipping 173 identical leading characters in diff, use -v to show&#10;  + tchError: &lt;exception str() failed&gt;&#10;  - tchError: error raised while processing, details below.&#10;  -  Target-spec trace (most recent last):&#10;  -  - Target: [None]&#10;  -  - Spec: Match(Switch([(1, 1), ('a', 'a'), (T.a, T.a)]))...&#10;  &#10;  ...Full output truncated (8 lines hidden), use '-vv' to show">/work/glom/test/test_error.py:282: in test_branching_stack
+    assert actual == expected
+E   AssertionError: assert 'Traceback (m...r() failed&gt;\n' == 'Traceback (m...t in Switch\n'
+E     
+E     Skipping 173 identical leading characters in diff, use -v to show
+E     + tchError: &lt;exception str() failed&gt;
+E     - tchError: error raised while processing, details below.
+E     -  Target-spec trace (most recent last):
+E     -  - Target: [None]
+E     -  - Spec: Match(Switch([(1, 1), ('a', 'a'), (T.a, T.a)]))...
+E     
+E     ...Full output truncated (8 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_midway_branch" time="0.001"><failure message="assert 'Traceback (m...r() failed&gt;\n' == 'Traceback (m...ute \'a\'&quot;)\n'&#10;  &#10;  Skipping 174 identical leading characters in diff, use -v to show&#10;  + essError: &lt;exception str() failed&gt;&#10;  - essError: error raised while processing, details below.&#10;  -  Target-spec trace (most recent last):&#10;  -  - Target: [None]&#10;  -  - Spec: Match(Switch([(1, 1), ('a', 'a'), ([None], T.a)]))...&#10;  &#10;  ...Full output truncated (8 lines hidden), use '-vv' to show">/work/glom/test/test_error.py:311: in test_midway_branch
+    assert actual == expected
+E   assert 'Traceback (m...r() failed&gt;\n' == 'Traceback (m...ute \'a\'")\n'
+E     
+E     Skipping 174 identical leading characters in diff, use -v to show
+E     + essError: &lt;exception str() failed&gt;
+E     - essError: error raised while processing, details below.
+E     -  Target-spec trace (most recent last):
+E     -  - Target: [None]
+E     -  - Spec: Match(Switch([(1, 1), ('a', 'a'), ([None], T.a)]))...
+E     
+E     ...Full output truncated (8 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_partially_failing_branch" time="0.001"><failure message="assert 'Traceback (m...ute \'c\'&quot;)\n' == 'Traceback (m...ute \'c\'&quot;)\n'&#10;  &#10;  Skipping 285 identical leading characters in diff, use -v to show&#10;  -  - Spec: (Or('a', T), Or('b', T), 'c')&#10;  +  - Spec: (&#10;  +                                                         ... (len=3)&#10;     - Spec: Or('a', T)&#10;     - Spec: Or('b', T)&#10;     - Spec: 'c'&#10;    glom.core.PathAccessError: could not access 'c', part 0 of Path('c'), got error: AttributeError(&quot;'NoneType' object has no attribute 'c'&quot;)">/work/glom/test/test_error.py:350: in test_partially_failing_branch
+    assert _make_stack((Or('a', T), Or('b', T), 'c'), target=None) == """\
+E   assert 'Traceback (m...ute \'c\'")\n' == 'Traceback (m...ute \'c\'")\n'
+E     
+E     Skipping 285 identical leading characters in diff, use -v to show
+E     -  - Spec: (Or('a', T), Or('b', T), 'c')
+E     +  - Spec: (
+E     +                                                         ... (len=3)
+E        - Spec: Or('a', T)
+E        - Spec: Or('b', T)
+E        - Spec: 'c'
+E       glom.core.PathAccessError: could not access 'c', part 0 of Path('c'), got error: AttributeError("'NoneType' object has no attribute 'c'")</failure></testcase><testcase classname="glom.test.test_error" name="test_coalesce_stack" time="0.001"><failure message="AssertionError: assert 'Traceback (m...at path [])\n' == 'Traceback (m...at path [])\n'&#10;  &#10;  Skipping 269 identical leading characters in diff, use -v to show&#10;  Skipping 402 identical trailing characters in diff, use -v to show&#10;  -  Target: {'a': {'b': 'c'}, 'd': {'e': ['f'], 'g': 'h'}, 'i': [{'j... (len=&#10;  +  Target: {&#10;  +                                                       ... (len=">/work/glom/test/test_error.py:393: in test_coalesce_stack
+    assert actual == expected
+E   AssertionError: assert 'Traceback (m...at path [])\n' == 'Traceback (m...at path [])\n'
+E     
+E     Skipping 269 identical leading characters in diff, use -v to show
+E     Skipping 402 identical trailing characters in diff, use -v to show
+E     -  Target: {'a': {'b': 'c'}, 'd': {'e': ['f'], 'g': 'h'}, 'i': [{'j... (len=
+E     +  Target: {
+E     +                                                       ... (len=</failure></testcase><testcase classname="glom.test.test_error" name="test_nesting_stack" time="0.001"><failure message="assert &quot;Traceback (m...yError('c')\n&quot; == &quot;Traceback (m...yError('c')\n&quot;&#10;  &#10;  Skipping 271 identical leading characters in diff, use -v to show&#10;  -  Target: {'a': {'b': {}}}&#10;  -  - Spec: ('a', 'b', 'c')&#10;  +  Target: {&#10;  +                                                       ... (len=1)&#10;  +  - Spec: (...&#10;  &#10;  ...Full output truncated (10 lines hidden), use '-vv' to show">/work/glom/test/test_error.py:398: in test_nesting_stack
+    assert _make_stack(('a', 'b', 'c'), target={'a': {'b': {}}}) == """\
+E   assert "Traceback (m...yError('c')\n" == "Traceback (m...yError('c')\n"
+E     
+E     Skipping 271 identical leading characters in diff, use -v to show
+E     -  Target: {'a': {'b': {}}}
+E     -  - Spec: ('a', 'b', 'c')
+E     +  Target: {
+E     +                                                       ... (len=1)
+E     +  - Spec: (...
+E     
+E     ...Full output truncated (10 lines hidden), use '-vv' to show</failure></testcase><testcase classname="glom.test.test_error" name="test_error_types" time="0.001" /><testcase classname="glom.test.test_error" name="test_fallback" time="0.000" /><testcase classname="glom.test.test_error" name="test_all_public_errors" time="0.003"><failure message="assert '[\n                                                                              ' in &quot;error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: 'kurt'\n - Spec: [\...rget type 'str' not registered for 'iterate', expected one of registered types: (_AbstractIterable, dict, list, tuple)&quot;">/work/glom/test/test_error.py:508: in test_all_public_errors
+    assert bbrepr(spec)[:80] in exc_str
+E   assert '[\n                                                                              ' in "error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: 'kurt'\n - Spec: [\...rget type 'str' not registered for 'iterate', expected one of registered types: (_AbstractIterable, dict, list, tuple)"</failure></testcase><testcase classname="glom.test.test_error" name="test_glom_dev_debug" time="0.000"><failure message="assert 'yesandno' in 'error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: {\n                ... access \'b\', part 1 of Path(\'a\', \'b\', \'c\'), got error: AttributeError(&quot;\'str\' object has no attribute \'b\'&quot;)'&#10; +  where 'error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: {\n                ... access \'b\', part 1 of Path(\'a\', \'b\', \'c\'), got error: AttributeError(&quot;\'str\' object has no attribute \'b\'&quot;)' = str(PathAccessError(AttributeError(&quot;'str' object has no attribute 'b'&quot;), Path('a', 'b', 'c'), 1))&#10; +    where PathAccessError(AttributeError(&quot;'str' object has no attribute 'b'&quot;), Path('a', 'b', 'c'), 1) = &lt;ExceptionInfo PathAccessError(AttributeError(&quot;'str' object has no attribute 'b'&quot;), Path('a', 'b', 'c'), 1) tblen=2&gt;.value">/work/glom/test/test_error.py:521: in test_glom_dev_debug
+    assert 'yesandno' in str(exc_info.value)
+E   assert 'yesandno' in 'error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: {\n                ... access \'b\', part 1 of Path(\'a\', \'b\', \'c\'), got error: AttributeError("\'str\' object has no attribute \'b\'")'
+E    +  where 'error raised while processing, details below.\n Target-spec trace (most recent last):\n - Target: {\n                ... access \'b\', part 1 of Path(\'a\', \'b\', \'c\'), got error: AttributeError("\'str\' object has no attribute \'b\'")' = str(PathAccessError(AttributeError("'str' object has no attribute 'b'"), Path('a', 'b', 'c'), 1))
+E    +    where PathAccessError(AttributeError("'str' object has no attribute 'b'"), Path('a', 'b', 'c'), 1) = &lt;ExceptionInfo PathAccessError(AttributeError("'str' object has no attribute 'b'"), Path('a', 'b', 'c'), 1) tblen=2&gt;.value</failure></testcase><testcase classname="glom.test.test_error" name="test_unicode_stack" time="0.001"><failure message="assert 'beyonc' in 'Traceback (most recent call last):\n  File &quot;test_error.py&quot;, line ___, in _make_stack\n    glom(target, spec)\n  File ...core.PathAccessError: could not access \'a\', part 0 of Path(\'a\', \'é\', \'i\', \'o\'), got error: KeyError(\'a\')\n'">/work/glom/test/test_error.py:534: in test_unicode_stack
+    assert 'beyonc' in stack
+E   assert 'beyonc' in 'Traceback (most recent call last):\n  File "test_error.py", line ___, in _make_stack\n    glom(target, spec)\n  File ...core.PathAccessError: could not access \'a\', part 0 of Path(\'a\', \'é\', \'i\', \'o\'), got error: KeyError(\'a\')\n'</failure></testcase><testcase classname="glom.test.test_fill" name="test" time="0.000" /><testcase classname="glom.test.test_grouping" name="test_bucketing" time="0.000" /><testcase classname="glom.test.test_grouping" name="test_corner_cases" time="0.001" /><testcase classname="glom.test.test_grouping" name="test_agg" time="0.000" /><testcase classname="glom.test.test_grouping" name="test_limit" time="0.000" /><testcase classname="glom.test.test_grouping" name="test_reduce" time="0.000" /><testcase classname="glom.test.test_grouping" name="test_sample" time="0.000" /><testcase classname="glom.test.test_match" name="test_basic" time="0.004" /><testcase classname="glom.test.test_match" name="test_match_expressions" time="0.001" /><testcase classname="glom.test.test_match" name="test_defaults" time="0.000" /><testcase classname="glom.test.test_match" name="test_match_default" time="0.000"><failure message="assert Val([]) is []">/work/glom/test/test_match.py:108: in test_match_default
+    assert res is default
+E   assert Val([]) is []</failure></testcase><testcase classname="glom.test.test_match" name="test_double_wrapping" time="0.000" /><testcase classname="glom.test.test_match" name="test_sets" time="0.001" /><testcase classname="glom.test.test_match" name="test_m_call_match" time="0.000" /><testcase classname="glom.test.test_match" name="test_and_or_reduction" time="0.000" /><testcase classname="glom.test.test_match" name="test_precedence" time="0.000" /><testcase classname="glom.test.test_match" name="test_cruddy_json" time="0.001" /><testcase classname="glom.test.test_match" name="test_pattern_matching" time="0.000" /><testcase classname="glom.test.test_match" name="test_examples" time="0.000" /><testcase classname="glom.test.test_match" name="test_reprs" time="0.000" /><testcase classname="glom.test.test_match" name="test_shortcircuit" time="0.000" /><testcase classname="glom.test.test_match" name="test_sample" time="0.001" /><testcase classname="glom.test.test_match" name="test_regex" time="0.000" /><testcase classname="glom.test.test_match" name="test_ternary" time="0.000" /><testcase classname="glom.test.test_match" name="test_sky" time="0.001" /><testcase classname="glom.test.test_match" name="test_clamp" time="0.000" /><testcase classname="glom.test.test_match" name="test_json_ref" time="0.000" /><testcase classname="glom.test.test_match" name="test_nested_struct" time="0.002" /><testcase classname="glom.test.test_match" name="test_check_ported_tests" time="0.001"><failure message="TypeError: can only concatenate str (not &quot;int&quot;) to str">/work/glom/test/test_match.py:483: in test_check_ported_tests
+    actual_msg = str(exc_info.value)
+                 ^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:174: in __str__
+    self._target_spec_trace = format_target_spec_trace(self._scope, self.__wrapped)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:258: in format_target_spec_trace
+    segments.append(fmt_s(spec))
+                    ^^^^^^^^^^^
+/work/glom/core.py:242: in &lt;lambda&gt;
+    return lambda v: pre + _format_trace_value(v, fmt_width)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:222: in _format_trace_value
+    s = bbrepr(value).replace("\\'", "'")
+        ^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:70: in repr
+    return self.repr1(x, self.maxlevel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:523: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:88: in repr1
+    return method(x, level)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:166: in repr_dict
+    valrepr = repr1(x[key], newlevel)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:523: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:88: in repr1
+    return method(x, level)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:128: in repr_tuple
+    return self._repr_iterable(x, level, '(', ')', self.maxtuple, ',')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:119: in _repr_iterable
+    pieces = [repr1(elem, newlevel) for elem in islice(x, maxiter)]
+              ^^^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:523: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:90: in repr1
+    return self.repr_instance(x, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:200: in repr_instance
+    s = s[:i] + self.fillvalue + s[len(s)-j:]
+        ^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: can only concatenate str (not "int") to str</failure></testcase><testcase classname="glom.test.test_match" name="test_switch" time="0.001"><failure message="glom.core.GlomError.wrap(TypeError): &lt;exception str() failed&gt;">/work/glom/test/test_match.py:506: in test_switch
+    assert glom(None, Switch({S(a=1): S['a']})) == 1
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:2294: in glom
+    raise err
+E   glom.core.GlomError.wrap(TypeError): &lt;exception str() failed&gt;</failure></testcase><testcase classname="glom.test.test_match" name="test_nested_dict" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_assign" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_assign_recursive" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_assign_spec_val" time="0.000"><failure message="AssertionError: assert Or('d', 'b') == 'c'">/work/glom/test/test_mutation.py:50: in test_assign_spec_val
+    assert output['a'] == output['b'] == 'c'
+E   AssertionError: assert Or('d', 'b') == 'c'</failure></testcase><testcase classname="glom.test.test_mutation" name="test_unregistered_assign" time="0.001" /><testcase classname="glom.test.test_mutation" name="test_bad_assign_target" time="0.001" /><testcase classname="glom.test.test_mutation" name="test_sequence_assign" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_invalid_assign_op_target" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_assign_missing_signature" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_assign_missing_dict" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_assign_missing_object" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_assign_missing_with_extant_keys" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_assign_missing_unassignable" time="0.001" /><testcase classname="glom.test.test_mutation" name="test_s_assign" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_delete" time="0.001" /><testcase classname="glom.test.test_mutation" name="test_unregistered_delete" time="0.001" /><testcase classname="glom.test.test_mutation" name="test_bad_delete_target" time="0.001" /><testcase classname="glom.test.test_mutation" name="test_sequence_delete" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_invalid_delete_op_target" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_delete_ignore_missing" time="0.000" /><testcase classname="glom.test.test_mutation" name="test_star_broadcast" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_list_path_access" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_empty_path_access" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_t_roundtrip" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_access_error_message" time="0.001" /><testcase classname="glom.test.test_path_and_t" name="test_t_picklability" time="0.009" /><testcase classname="glom.test.test_path_and_t" name="test_t_subspec" time="0.001"><failure message="glom.core.GlomError.wrap(TypeError): error raised while processing, details below.&#10; Target-spec trace (most recent last):&#10; - Target: [&#10;                                                      ... (len=2)&#10; - Spec: (&#10;                                                        ... (len=2)&#10; - Spec: S(id_type=int)&#10; - Spec: int&#10;           ^^^^^^^^^^^^&#10;TypeError: int() argument must be a string, a bytes-like object or a real number, not 'list'">/work/glom/test/test_path_and_t.py:118: in test_t_subspec
+    assert glom(data, get_ids) == [1, 1]
+           ^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:2294: in glom
+    raise err
+E   glom.core.GlomError.wrap(TypeError): error raised while processing, details below.
+E    Target-spec trace (most recent last):
+E    - Target: [
+E                                                         ... (len=2)
+E    - Spec: (
+E                                                           ... (len=2)
+E    - Spec: S(id_type=int)
+E    - Spec: int
+E              ^^^^^^^^^^^^
+E   TypeError: int() argument must be a string, a bytes-like object or a real number, not 'list'</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_a_forbidden" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_s_magic" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_len" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_getitem" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_slices" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_values" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_items" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_star" time="0.001" /><testcase classname="glom.test.test_path_and_t" name="test_star_broadcast" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_star_warning" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_eq" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_eq_t" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_startswith" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_from_t_identity" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_t_dict_key" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_t_arithmetic" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_t_arithmetic_reprs" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_t_arithmetic_errors" time="0.001" /><testcase classname="glom.test.test_path_and_t" name="test_t_dunders" time="0.000" /><testcase classname="glom.test.test_path_and_t" name="test_path_cache" time="0.000" /><testcase classname="glom.test.test_reduction" name="test_sum_integers" time="0.000" /><testcase classname="glom.test.test_reduction" name="test_sum_seqs" time="0.000" /><testcase classname="glom.test.test_reduction" name="test_fold" time="0.000" /><testcase classname="glom.test.test_reduction" name="test_fold_bad_iter" time="0.001" /><testcase classname="glom.test.test_reduction" name="test_flatten" time="0.000" /><testcase classname="glom.test.test_reduction" name="test_flatten_func" time="0.001" /><testcase classname="glom.test.test_reduction" name="test_merge" time="0.000" /><testcase classname="glom.test.test_reduction" name="test_merge_omd" time="0.000" /><testcase classname="glom.test.test_reduction" name="test_merge_func" time="0.000" /><testcase classname="glom.test.test_scope_vars" name="test_s_scope_assign" time="0.001"><failure message="glom.core.GlomError.wrap(TypeError): error raised while processing, details below.&#10; Target-spec trace (most recent last):&#10; - Target: 1&#10; - Spec: (&#10;                                                        ... (len=2)&#10; - Spec: S(v=&lt;glom.test.test_scope_vars.test_s_scope_assign.&lt;locals&gt;.FailAs...&#10; - Spec: &lt;glom.test.test_scope_vars.test_s_scope_assign.&lt;locals&gt;.FailAssign...&#10;TypeError: expected spec to be dict, list, tuple, callable, string, or other Spec-like type, not: &lt;glom.test.test_scope_vars.test_s_scope_assign.&lt;locals&gt;.FailAssign object at 0xffffa7913f50&gt;">/work/glom/test/test_scope_vars.py:30: in test_s_scope_assign
+    glom(1, (S(v=FailAssign()), Path(A.v, 'a')))
+/work/glom/core.py:2294: in glom
+    raise err
+E   glom.core.GlomError.wrap(TypeError): error raised while processing, details below.
+E    Target-spec trace (most recent last):
+E    - Target: 1
+E    - Spec: (
+E                                                           ... (len=2)
+E    - Spec: S(v=&lt;glom.test.test_scope_vars.test_s_scope_assign.&lt;locals&gt;.FailAs...
+E    - Spec: &lt;glom.test.test_scope_vars.test_s_scope_assign.&lt;locals&gt;.FailAssign...
+E   TypeError: expected spec to be dict, list, tuple, callable, string, or other Spec-like type, not: &lt;glom.test.test_scope_vars.test_s_scope_assign.&lt;locals&gt;.FailAssign object at 0xffffa7913f50&gt;</failure></testcase><testcase classname="glom.test.test_scope_vars" name="test_globals" time="0.000" /><testcase classname="glom.test.test_scope_vars" name="test_vars" time="0.001"><failure message="TypeError: can only concatenate str (not &quot;int&quot;) to str">/work/glom/test/test_scope_vars.py:57: in test_vars
+    assert repr(let) == "S(v=Vars({'b': 2}, c=3))"
+           ^^^^^^^^^
+/work/glom/core.py:1509: in __repr__
+    return _format_t(t_path[1:], t_path[0])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:1749: in _format_t
+    prepr.append(format_invocation(args=args, kwargs=kwargs, repr=bbrepr))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:568: in format_invocation
+    kw_text = ', '.join(['%s=%s' % (k, _repr(v)) for k, v in kwarg_items])
+                                       ^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:70: in repr
+    return self.repr1(x, self.maxlevel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/work/glom/core.py:523: in repr1
+    ret = Repr.repr1(self, x, level)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:90: in repr1
+    return self.repr_instance(x, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/reprlib.py:200: in repr_instance
+    s = s[:i] + self.fillvalue + s[len(s)-j:]
+        ^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: can only concatenate str (not "int") to str</failure></testcase><testcase classname="glom.test.test_scope_vars" name="test_scoped_vars" time="0.000" /><testcase classname="glom.test.test_scope_vars" name="test_max_skip" time="0.000" /><testcase classname="glom.test.test_scope_vars" name="test_let" time="0.001" /><testcase classname="glom.test.test_snippets" name="test_snippet[22-glom([1, 2, 3], (reversed, list))\nglom([1, 2, 3], T[::-1])\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[36-glom([-1, 2, -3], ([abs], tuple))\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[49-glom({1:2, 2:3}, Call(dict, args=(T.items(),)))\nglom({1:2, 2:3}, lambda t: dict(t.items()))\nglom({1:2, 2:3}, dict)\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[67-glom([1, 2, 3], [Decimal])\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[79-glom([1, 2, 3], Call(deque, args=[T, 10]))\nglom([1, 2, 3], lambda t: deque(t, 10))\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[93-glom([1, 2, 3, 4, 5, 6], lambda t: [i for i in t if i % 2])\nglom([1, 2, 3, 4, 5, 6], [lambda i: i if i % 2 else SKIP])\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[109-glom(contacts, [Coalesce('primary_email.email', skip=('', None), default=SKIP)])\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[124-glom((1, 2, 3), (\n    {\n        &quot;type&quot;: type,\n        &quot;result&quot;: [lambda v: v + 1]  # arbitrary operation\n    }, T['type'](T['result'])))\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[147-import glom\nimport django.db.models\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[169-glom(['cat', 1, 'dog', 2], [Check(type=str, default=SKIP)])\n# ['cat', 'dog']\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[185-class If(object):\n    def __init__(self, cond, if_, else_=None):\n        self.cond, self.if_, self.else_ = cond, if_, else_\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[214-class Seq(object):\n    def __init__(self, *subspecs):\n        self.subspecs = subspecs\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[230-glom('1', ({1: float, 2: int}, T.values()))\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[244-glom(range(10), [(M &lt; 7) | Val(7)])\n# [0, 1, 2, 3, 4, 5, 6, 7, 7, 7]\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[252-glom(range(10), [(M &lt; 7) | Val(SKIP)])\n# [0, 1, 2, 3, 4, 5, 6]\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[267-etree2dicts = Ref('ElementTree',\n    {&quot;tag&quot;: &quot;tag&quot;, &quot;text&quot;: &quot;text&quot;, &quot;attrib&quot;: &quot;attrib&quot;, &quot;children&quot;: (iter, [Ref('ElementTree')])})\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[275-etree2tuples = Fill(Ref('ElementTree', (T.tag, Iter(Ref('ElementTree')).all())))\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[296-&gt;&gt;&gt; etree = ElementTree.fromstring(html_text)\n&gt;&gt;&gt; glom(etree, etree2tuples)\n('html', [('head', [('title', [])]), ('body', [('p', [])])])\n]" time="0.000" /><testcase classname="glom.test.test_snippets" name="test_snippet[313-glom(json.loads(data),\n    Ref('json',\n        Match(Switch({\n            dict: {Ref('json'): Ref('json')},\n            list: [Ref('json')],\n            type(u''): Auto(str),\n            object: T}))\n        )\n    )\n]" time="0.000" /><testcase classname="glom.test.test_spec" name="test_spec" time="0.000" /><testcase classname="glom.test.test_spec" name="test_scope_spec" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_iter" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_filter" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_map" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_split_flatten" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_chunked" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_windowed" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_unique" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_slice" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_while" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_iter_composition" time="0.000" /><testcase classname="glom.test.test_streaming" name="test_faulty_iterate" time="0.001" /><testcase classname="glom.test.test_streaming" name="test_first" time="0.001" /><testcase classname="glom.test.test_streaming" name="test_all" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_types_leave_one_out" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_types_bare" time="0.001" /><testcase classname="glom.test.test_target_types" name="test_invalid_register" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_exact_register" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_duck_register" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_bypass_getitem" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_iter_set" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_iter_str" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_default_scope_register" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_faulty_iterate" time="0.001" /><testcase classname="glom.test.test_target_types" name="test_faulty_op_registration" time="0.000" /><testcase classname="glom.test.test_target_types" name="test_reregister_type" time="0.000" /><testcase classname="glom.test.test_tutorial" name="test_tutorial_data" time="0.000" /><testcase classname="glom.test.test_tutorial" name="test_tutorial" time="0.000" /></testsuite></testsuites>

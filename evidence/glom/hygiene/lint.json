@@ -1,0 +1,27 @@
+{
+  "configuration": "/Users/adityagk/Desktop/projects/stress_stack/glom/ruff.toml",
+  "files_reformatted": 0,
+  "ignored_rule_count": 10,
+  "residual_rules": {
+    "E402": 3,
+    "E711": 3,
+    "E712": 2,
+    "E721": 2,
+    "E722": 2,
+    "E731": 19,
+    "E741": 1,
+    "F401": 57,
+    "F811": 1,
+    "F841": 4
+  },
+  "ruff_version": "0.15.7",
+  "verification": {
+    "format_clean": true,
+    "lint_clean": true,
+    "ruff_check_exit_code": 0,
+    "ruff_format_check_exit_code": 0
+  },
+  "violations_after_fix": 94,
+  "violations_before": 94,
+  "violations_fixed": 0
+}

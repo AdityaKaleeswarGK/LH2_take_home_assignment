@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.088" timestamp="2026-08-17T15:07:20.551721+00:00" hostname="70135934ff19"><testcase classname="glom.test.test_error" name="test_pae_fallback_for_non_path" time="0.001"><failure message="IndexError: tuple index out of range">glom/test/test_error.py:68: in test_pae_fallback_for_non_path
+    msg2 = exc2.get_message()
+           ^^^^^^^^^^^^^^^^^^
+glom/core.py:348: in get_message
+    path_part = Path(self.path).values()[self.part_idx]
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   IndexError: tuple index out of range</failure></testcase><testcase classname="glom.test.test_error" name="test_pae_scope_printable" time="0.000"><failure message="ValueError: path segment must be path from T, not S">glom/test/test_error.py:51: in test_pae_scope_printable
+    msg = exc.get_message()
+          ^^^^^^^^^^^^^^^^^
+glom/core.py:348: in get_message
+    path_part = Path(self.path).values()[self.part_idx]
+                ^^^^^^^^^^^^^^^
+glom/core.py:626: in __init__
+    raise ValueError('path segment must be path from T, not %r'
+E   ValueError: path segment must be path from T, not S</failure></testcase></testsuite></testsuites>
