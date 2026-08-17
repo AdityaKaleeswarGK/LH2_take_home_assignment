@@ -39,14 +39,14 @@ flowchart TD
     EMI --> BUN[bundle]
     BUN --> OUT([output])
 
-    HYG -.- N1[format, lint, revert on regression]
+    HYG -.- N1[format, lint, revert]
     DEP -.- N2[hash-pinned lockfile]
-    GRA -.- N3[symbols, imports, edges]
-    COV -.- N4[which test covers which symbol]
-    CON -.- N5[digest-pinned, two identical runs]
-    MIN -.- N6[history and excision candidates]
-    VAL -.- N7[eight gates, in a container]
-    SEL -.- N8[quotas and module diversity]
+    GRA -.- N3[symbols and edges]
+    COV -.- N4[test-to-symbol map]
+    CON -.- N5[digest-pinned, 2 runs]
+    MIN -.- N6[history + excision]
+    VAL -.- N7[8 gates, in container]
+    SEL -.- N8[quotas, diversity]
 
     classDef stage fill:#e8f0fe,stroke:#3b6fd4,color:#12243d
     classDef gate fill:#fdefdc,stroke:#c47f2d,color:#3d2a12
