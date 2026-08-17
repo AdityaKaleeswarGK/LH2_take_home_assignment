@@ -14,58 +14,81 @@ Every acceptance decision is a measured container run, recorded and re-runnable.
 
 ## Architecture
 
-The fifteen stages run in dependency order. The first three set up the environment,
-the next four build the knowledge layer, and the rest generate the tasks and decide
-which of them are good enough to ship.
+A repository comes in at the top, gets profiled once, and then flows down through the
+three pipelines. The two boxes off to the side are what the stages reach for rather
+than steps of their own — the ecosystem's tools, and OpenRouter for the two stages
+that call a model.
+
+The diagram shows the load-bearing stages. `testgen`, `index` and `bundle` also run,
+in that order, but they follow from their neighbours and would only add width here.
 
 ```mermaid
 flowchart TD
-    SRC([repo URL or path]) --> ING[ingest]
-    ING --> PROF{detect ecosystem}
+    SRC([repo URL or path]) --> DET
 
-    PROF --> HYG[hygiene]
-    HYG --> DEP[deps]
-    DEP --> GRA[graph]
-    GRA --> COV[coverage]
-    COV --> TGN[testgen]
-    TGN --> CON[container]
-    CON --> ENR[enrich]
-    ENR --> IDX[index]
-    IDX --> MIN[mine]
-    MIN --> VAL[validate]
-    VAL --> SEL[select]
-    SEL --> ADJ[adjudicate]
-    ADJ --> EMI[emit]
-    EMI --> BUN[bundle]
-    BUN --> OUT([output])
+    subgraph detect["Detection"]
+        DET[project_detector<br/>+ ci_parser]
+    end
 
-    HYG -.- N1[format, lint, revert]
-    DEP -.- N2[hash-pinned lockfile]
-    GRA -.- N3[symbols and edges]
-    COV -.- N4[test-to-symbol map]
-    CON -.- N5[digest-pinned, 2 runs]
-    MIN -.- N6[history + excision]
-    VAL -.- N7[8 gates, in container]
-    SEL -.- N8[quotas, diversity]
+    subgraph env["Pipeline 1"]
+        HYG[hygiene<br/>format + lint]
+        DEP[deps<br/>hash-pinned lock]
+        CON[container<br/>2 identical runs]
+        HYG --> DEP --> CON
+    end
+
+    subgraph know["Pipeline 2"]
+        GRA[graph<br/>symbols + edges]
+        COV[coverage<br/>test to symbol]
+        GRA --> COV
+    end
+
+    subgraph gen["Pipeline 3"]
+        MIN[mine<br/>history + excision]
+        VAL[validate<br/>8 gates]
+        SEL[select<br/>quotas]
+        EMI[emit<br/>tasks + manifest]
+        MIN --> VAL --> SEL --> EMI
+    end
+
+    subgraph tools["Per-language tools"]
+        T1[ruff / clippy<br/>gofmt / eslint]
+        T2[uv / cargo<br/>go mod / npm]
+        T3[ast / tree-sitter]
+        T4[pytest / go test]
+        T1 ~~~ T2 ~~~ T3 ~~~ T4
+    end
+
+    subgraph llm["OpenRouter"]
+        LLM[enrich + adjudicate<br/>optional]
+    end
+
+    DET --> HYG
+    CON --> GRA
+    COV --> MIN
+    EMI --> OUT([output])
+
+    tools -.-> env
+    tools -.-> know
+    tools -.-> gen
+    llm -.-> gen
 
     classDef stage fill:#e8f0fe,stroke:#3b6fd4,color:#12243d
     classDef gate fill:#fdefdc,stroke:#c47f2d,color:#3d2a12
     classDef model fill:#f3ecfb,stroke:#8257b5,color:#2a1a3d
     classDef io fill:#e6f7ed,stroke:#2f9e5f,color:#123d24
-    classDef note fill:#ffffff00,stroke:#ffffff00,color:#5b6b7c
 
-    class ING,HYG,DEP,GRA,COV,TGN,CON,IDX,MIN,SEL,EMI,BUN,PROF stage
+    class DET,HYG,DEP,CON,GRA,COV,MIN,SEL,EMI,T1,T2,T3,T4 stage
     class VAL gate
-    class ENR,ADJ model
+    class LLM model
     class SRC,OUT io
-    class N1,N2,N3,N4,N5,N6,N7,N8 note
 ```
 
-Orange is the gate that decides what ships. Purple are the only two stages that call
-a model, and you can run without either of them — with no API key they degrade and
-you still get ten validated tasks.
+Orange is `validate`, the gate that decides what ships. Purple are the only two
+stages that call a model, and you can run without either — with no API key they
+degrade and you still get ten validated tasks.
 
-Which tool a stage reaches for depends on what the detector found:
+The per-language box expands to this:
 
 | Stage | Python | Go | Rust | TS / JS | C / C++ |
 |---|---|---|---|---|---|
