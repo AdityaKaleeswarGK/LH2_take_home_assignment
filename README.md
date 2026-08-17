@@ -23,6 +23,7 @@ The diagram shows the load-bearing stages. `testgen`, `index` and `bundle` also 
 in that order, but they follow from their neighbours and would only add width here.
 
 ```mermaid
+%%{init: {"flowchart": {"htmlLabels": false, "padding": 18, "nodeSpacing": 55, "rankSpacing": 55}} }%%
 flowchart TD
     SRC([repo URL or path]) --> DET
 
