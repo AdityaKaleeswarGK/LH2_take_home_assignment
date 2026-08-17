@@ -1,0 +1,36 @@
+# .dgatignore — files and dirs to exclude from dgat analysis
+# syntax is the same as .gitignore
+
+# package manager install dirs
+node_modules/
+.pnpm-store/
+.yarn/
+bower_components/
+vendor/
+
+# Python virtualenvs and caches
+__pycache__/
+.venv/
+venv/
+.tox/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# build outputs
+dist/
+build/
+out/
+.next/
+
+# minified / generated assets
+*.min.js
+*.min.css
+*.tsbuildinfo
+
+# auto-generated dgat output files
+file_tree.json
+dep_graph.json
+dgat_blueprint.md
+tree_visualization.dot
+tree_visualization.png

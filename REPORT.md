@@ -269,6 +269,35 @@ count *and* leave suite output byte-identical. Everything else reverts. *Next st
 cluster violations by rule and fix per-rule with a minimal witness set rather than
 whole files.
 
+**A repository that the test runner itself depends on loses most of its
+candidates — measured, not hypothetical.** Validation mounts the task tree and puts
+it on `PYTHONPATH`. When the repository under test *is* a pytest dependency, that
+tree shadows the copy pytest is running on, and a historical version of it will not
+satisfy a modern pytest.
+
+The pipeline detects this and names it (`runner_dependency_shadowed`) rather than
+reporting a generic failure — the guard lists `pluggy`, `iniconfig`, `packaging`,
+`exceptiongroup`, `tomli`, `pytest`, `_pytest`. But detection is not a fix. Running
+against **[pytest-dev/pluggy](https://github.com/pytest-dev/pluggy)**:
+
+| | |
+|---|---|
+| candidates attempted | 35 |
+| **rejected: `runner_dependency_shadowed`** | **16** |
+| rejected: `no_test_changed_verdict` | 9 |
+| rejected: other (collateral, uncollectable, run failed) | 3 |
+| **eligible** | **7** |
+
+Pipelines 1 and 2 completed cleanly on pluggy — hygiene, hash-pinned lockfile,
+digest-pinned container with two identical runs, knowledge layer, coverage. Pipeline
+3 produced 7 validated tasks, not 10, and the single largest cause was shadowing.
+
+*Next step:* stop using `PYTHONPATH` for the Python runner. The image already
+installs the project editable at `/work`, so the mounted task tree is picked up
+without putting it on the import path ahead of the runner's own dependencies. The
+multi-language `LanguageRunner` already sets no `PYTHONPATH` at all for this reason;
+the Python `DockerRunner` is the remaining case.
+
 **Historical PRs are validated under HEAD's interpreter.** `select_python_version`
 reads HEAD's `requires-python` once, and the lockfile compiles from HEAD. A 2017 PR
 gets tested under Python 3.12. This does not produce wrong results — such PRs fail
@@ -290,6 +319,14 @@ biggest available speedup after model inference.
 heavy macro metaprogramming that tree-sitter's C++ grammar handles only partially. It
 still extracts 2,290 symbols from them and reports `has_error` honestly rather than
 claiming a clean parse.
+
+**Held-out generality, tested once and reported honestly.** The brief says the
+pipeline will be run against a repository I have not seen. I tested that claim on
+pluggy rather than assuming it: Pipelines 1 and 2 held up on a repository chosen for
+being hostile, and Pipeline 3 fell to 7 of 10 for the specific, named reason above.
+A second held-out repository that is *not* a test-runner dependency has not been run,
+so the honest statement is that generality is demonstrated for the environment and
+knowledge layers and only partially for task generation.
 
 **Testing breadth.** The Go path is proven end to end on a small purpose-built
 repository (all 8 gates pass on real excision tasks). It has not been run against a
