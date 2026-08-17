@@ -25,15 +25,18 @@ of reproducible engineering infrastructure the brief asks for.
 | **Formatting could silently break tests** | n/a | full suite snapshotted before and after; any regression reverts the change | [`hygiene/comparison.json`](evidence/glom/hygiene/comparison.json) |
 | **No machine-readable structure** | none | symbol graph re-derived from a second parse and compared edge by edge | [`knowledge/graph_validation.json`](evidence/glom/knowledge/graph_validation.json) |
 
-One number deserves to be stated plainly rather than buried: glom has **94 residual
-lint violations**, and the pipeline fixed **zero** of them. `violations_before: 94`,
-`violations_after_fix: 94`. What it did instead was generate a `ruff.toml` whose rule
-selection the repository passes, moving those 94 into ten explicitly ignored rules
-(`F401` ×57, `E731` ×19, `E402` ×3, …). The repo is genuinely lint-clean *under a
-config that is committed and readable*, not lint-clean because the code changed.
-That is the right trade — rewriting 57 re-export `F401`s in a library whose
-`__init__.py` exists to re-export would break the public API to satisfy a linter —
-but "lint-clean" means "clean under a stated policy", and the policy is the artefact.
+There is one number here I would rather say plainly than let you find on your own:
+glom has **94 residual lint violations, and the pipeline fixed none of them**.
+`violations_before: 94`, `violations_after_fix: 94`. What it actually did was write a
+`ruff.toml` whose rule selection the repository already passes, which moves those 94
+into ten explicitly ignored rules — 57 `F401`s, 19 `E731`s, 3 `E402`s, and so on.
+
+I think that is the right call, but it is worth being clear about why. Fifty-seven of
+those `F401`s are re-exports in `__init__.py`, which is the entire job of that file;
+"fixing" them would break glom's public API to satisfy a linter. So the repo is
+genuinely lint-clean, but it is clean *under a policy* — and the policy is committed
+and readable rather than implied. If you read "lint-clean" as "the code changed until
+the linter went quiet", that is not what happened here.
 
 ### The ten tasks generated for glom
 
@@ -42,16 +45,20 @@ zero instructions failing the leak check.
 
 | # | Task | Source | Module | Difficulty |
 |---|---|---|---|---|
-| 1 | Make `PathAccessError` formatting robust for scope and non-path accesses | [PR #298](https://github.com/mahmoud/glom/pull/298) | `glom.core` | hard |
-| 2 | Add `--scalar` flag to CLI | [PR #280](https://github.com/mahmoud/glom/pull/280) | `glom.cli` | medium |
-| 3 | Make nested glom specifications and arguments evaluate consistently | [PR #196](https://github.com/mahmoud/glom/pull/196) | `glom.core` | hard |
-| 4 | Add TOML target support to the glom CLI | [PR #277](https://github.com/mahmoud/glom/pull/277) | `glom.cli` | hard |
-| 5 | Implement the grouping mode dispatcher | excision — `glom.grouping.GROUP` | `glom.grouping` | medium |
-| 6 | Implement matching precedence | excision — `glom.matching._precedence` | `glom.matching` | medium |
-| 7 | Implement `glom.core.Path.from_t` | excision — `glom.core.Path.from_t` | `glom.core` | medium |
-| 8 | Implement scope-path resolution for `_s_first_magic` | excision — `glom.core._s_first_magic` | `glom.core` | medium |
-| 9 | Expand and harden the glom command-line interface | [PR #262](https://github.com/mahmoud/glom/pull/262) | `glom.cli` | easy |
-| 10 | Better builtin roundtripping | [PR #117](https://github.com/mahmoud/glom/pull/117) | `glom.core` | hard |
+| 1 | Make `PathAccessError` formatting robust for scope and non-path accesses | history | `glom.core` | hard |
+| 2 | Add `--scalar` flag to CLI | history | `glom.cli` | medium |
+| 3 | Make nested glom specifications and arguments evaluate consistently | history | `glom.core` | hard |
+| 4 | Add TOML target support to the glom CLI | history | `glom.cli` | hard |
+| 5 | Implement the grouping mode dispatcher | excision | `glom.grouping` | medium |
+| 6 | Implement matching precedence | excision | `glom.matching` | medium |
+| 7 | Implement `glom.core.Path.from_t` | excision | `glom.core` | medium |
+| 8 | Implement scope-path resolution for `_s_first_magic` | excision | `glom.core` | medium |
+| 9 | Expand and harden the glom command-line interface | history | `glom.cli` | easy |
+| 10 | Better builtin roundtripping | history | `glom.core` | hard |
+
+Every task carries its full provenance in its own `task.json` — the commit SHA, the
+base SHA, and the upstream pull request it came from — so you can trace any of them
+back without that detail crowding the table here.
 
 Difficulty spread: 1 easy, 5 medium, 4 hard.
 
@@ -67,12 +74,12 @@ complete, but that task category does not exist in this codebase. See §6.
 
 ## 2. Design decisions and trade-offs
 
-**A model never decides what ships.** Every acceptance decision is a measured
-container run. Models write prose (`enrich`), phrase instructions (`emit`), and judge
-difficulty (`adjudicate`) — all three degrade gracefully to a complete, validated
-deliverable when no API key is configured. This is the single most important
-constraint in the design: a benchmark whose acceptance criteria are model opinions
-measures the judge, not the agent.
+**A model never decides what ships.** This is the constraint everything else was
+built around. Models write prose (`enrich`), phrase the task statements (`emit`), and
+judge difficulty (`adjudicate`) — and all three can be switched off, because none of
+them touch acceptance. Every acceptance decision is a container run someone can
+re-execute. The reasoning is simple enough: if a benchmark's pass/fail criteria are
+model opinions, then what you have measured is the judge, not the agent.
 
 **Validation only ever happens in a container.** There was a host-interpreter
 fallback; it was removed deliberately. A verdict reached without network isolation, a
@@ -85,12 +92,14 @@ Python straight back to the original implementation. The alternative — a paral
 multi-language pipeline — means two code paths to keep in agreement, and the Python
 one is the one with all the evidence behind it.
 
-**`unsupported` is a first-class result.** A tool that cannot run reports
-`unsupported` with a reason and `measured: false`, never a zero. This was a
-correction: earlier revisions hard-coded `runs_identical=True`, an "approximate" pin
-count of 10, and an unconditional `status: complete`. Those looked like success on a
-held-out repo while measuring nothing. A doctor may report ignorance; it may not
-report a success it did not measure.
+**`unsupported` is a first-class result.** When a tool cannot run, it says
+`unsupported` with a reason and `measured: false` — it never returns a zero. This one
+came out of fixing my own mistake. An earlier version hard-coded `runs_identical=True`,
+an "approximate" pin count of 10, and an unconditional `status: complete`. On a repo
+I had already run, those looked fine. On a held-out repo they would have reported
+success while measuring nothing at all, which is worse than crashing. So the rule now
+is that a stage may report ignorance, but it may not report a success it did not
+measure.
 
 **Tree-sitter over regex, for a specific reason.** The knowledge layer for
 non-Python languages parses with real grammars because excision needs a function
@@ -127,7 +136,8 @@ also the difference between a 50-minute cold run and a 16-minute warm one — `e
 
 ## 3. How task-candidate selection works
 
-Selection is a funnel, and every rejection is recorded with its reason.
+Selection is a funnel, and I wanted every rejection to be inspectable rather than
+just counted — so each one is recorded with the reason it was dropped.
 
 **History candidates — 86 considered, 70 kept.** Merged pull requests linked to
 commits that changed both source and tests. 16 dropped for `no_python_change`.

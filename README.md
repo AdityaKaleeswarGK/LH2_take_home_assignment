@@ -14,59 +14,65 @@ Every acceptance decision is a measured container run, recorded and re-runnable.
 
 ## Architecture
 
+The fifteen stages run in dependency order. The first three set up the environment,
+the next four build the knowledge layer, and the rest generate the tasks and decide
+which of them are good enough to ship.
+
 ```mermaid
-flowchart TB
-    subgraph detect["Project detection"]
-        direction LR
-        SRC["repo URL<br/>or local path"] --> ING["ingest<br/>clone · history · PRs"]
-        ING --> PROF["project_detector<br/>+ ci_parser"]
-        PROF --> LANG{"primary<br/>language"}
-    end
+flowchart TD
+    SRC([repo URL or path]) --> ING[ingest]
+    ING --> PROF{detect ecosystem}
 
-    subgraph p1["Pipeline 1 — Environment"]
-        direction LR
-        HYG["hygiene<br/>format · lint · verify · revert"]
-        DEP["deps<br/>hash-pinned lockfile"]
-        CON["container<br/>digest-pinned · 2 identical runs"]
-        HYG --> DEP --> CON
-    end
+    PROF --> HYG[hygiene]
+    HYG --> DEP[deps]
+    DEP --> GRA[graph]
+    GRA --> COV[coverage]
+    COV --> TGN[testgen]
+    TGN --> CON[container]
+    CON --> ENR[enrich]
+    ENR --> IDX[index]
+    IDX --> MIN[mine]
+    MIN --> VAL[validate]
+    VAL --> SEL[select]
+    SEL --> ADJ[adjudicate]
+    ADJ --> EMI[emit]
+    EMI --> BUN[bundle]
+    BUN --> OUT([output])
 
-    subgraph p2["Pipeline 2 — Knowledge layer"]
-        direction LR
-        GRA["graph<br/>symbols · imports · edges"]
-        COV["coverage<br/>per-test attribution"]
-        ENR["enrich · index<br/>cards · SQLite"]
-        GRA --> COV --> ENR
-    end
+    HYG -.- N1[format, lint, revert on regression]
+    DEP -.- N2[hash-pinned lockfile]
+    GRA -.- N3[symbols, imports, edges]
+    COV -.- N4[which test covers which symbol]
+    CON -.- N5[digest-pinned, two identical runs]
+    MIN -.- N6[history and excision candidates]
+    VAL -.- N7[eight gates, in a container]
+    SEL -.- N8[quotas and module diversity]
 
-    subgraph p3["Pipeline 3 — Task generation"]
-        direction LR
-        MIN["mine<br/>history + excision candidates"]
-        VAL["validate<br/>8 gates, in container"]
-        SEL["select<br/>quotas · diversity"]
-        EMI["adjudicate · emit · bundle"]
-        MIN --> VAL --> SEL --> EMI
-    end
+    classDef stage fill:#e8f0fe,stroke:#3b6fd4,color:#12243d
+    classDef gate fill:#fdefdc,stroke:#c47f2d,color:#3d2a12
+    classDef model fill:#f3ecfb,stroke:#8257b5,color:#2a1a3d
+    classDef io fill:#e6f7ed,stroke:#2f9e5f,color:#123d24
+    classDef note fill:#ffffff00,stroke:#ffffff00,color:#5b6b7c
 
-    LANG --> p1 --> p2 --> p3 --> OUT["output/<br/>tasks · tasks.json · repo_graph.json"]
-
-    subgraph disp["Language dispatch"]
-        direction TB
-        D1["hygiene → ruff · clippy · eslint · gofmt · clang-format"]
-        D2["deps → uv · cargo · npm/pnpm · go mod"]
-        D3["graph → ast (Python) · tree-sitter (others)"]
-        D4["validate → pytest · go test -json · cargo test"]
-    end
-
-    LANG -.-> disp
-
-    classDef stage fill:#eef4ff,stroke:#4573c4,stroke-width:1px,color:#12243d
-    classDef gate fill:#fff4e6,stroke:#c47f2d,stroke-width:1px,color:#3d2a12
-    classDef io fill:#eafaf1,stroke:#2f9e5f,stroke-width:1px,color:#123d24
-    class HYG,DEP,CON,GRA,COV,ENR,MIN,SEL,EMI,ING,PROF stage
+    class ING,HYG,DEP,GRA,COV,TGN,CON,IDX,MIN,SEL,EMI,BUN,PROF stage
     class VAL gate
+    class ENR,ADJ model
     class SRC,OUT io
+    class N1,N2,N3,N4,N5,N6,N7,N8 note
 ```
+
+Orange is the gate that decides what ships. Purple are the only two stages that call
+a model, and you can run without either of them — with no API key they degrade and
+you still get ten validated tasks.
+
+Which tool a stage reaches for depends on what the detector found:
+
+| Stage | Python | Go | Rust | TS / JS | C / C++ |
+|---|---|---|---|---|---|
+| hygiene | ruff | gofmt, go vet | cargo fmt, clippy | prettier, eslint | clang-format, clang-tidy |
+| deps | uv | go mod | cargo | npm / pnpm | — |
+| graph | `ast` | tree-sitter | tree-sitter | tree-sitter | tree-sitter |
+| validate | pytest | `go test -json` | libtest | — | — |
 
 Working state lives in `.stress_stack/` inside the target repository; the deliverable
 is written to `output/`.
