@@ -1,6 +1,6 @@
 # stress-stack
 
-Takes a Python repository — usually one without pinned dependencies, tests,
+Takes a  repository — usuallydependencies, tests,
 linting, or a container — and turns it into a reproducible environment, a
 machine-readable knowledge layer, and ten independently validated benchmark
 tasks for AI coding agents. Every task ships with the tree an agent starts from,
