@@ -48,9 +48,10 @@ def lock_dependencies(
     lang = prof.primary_language
 
     if lang == "python":
-        from stress_stack.dependencies import audit_dependencies
+        from stress_stack.graph import build_dependency_artifacts
 
-        report = audit_dependencies(str(root))
+        dep_art = build_dependency_artifacts(str(root))
+        report = dep_art.report
         total_pinned = len(report.runtime) + len(report.test)
         return LockResult(
             status="locked_hash_pinned",
