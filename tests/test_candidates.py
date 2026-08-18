@@ -232,3 +232,68 @@ def test_unmerged_pull_requests_are_never_considered(src_layout_repository: Path
 
     assert candidates == []
     assert funnel.considered == 0
+
+
+def test_an_unparseable_historical_test_file_is_counted_not_silently_zeroed(
+    src_layout_repository: Path,
+) -> None:
+    """History is parsed by the host interpreter; historical syntax may not fit.
+
+    The failure mode being pinned is silence, not the count. `added_test_functions`
+    carries the largest weight in ranking, so a file the host cannot parse
+    contributes zero and sends an otherwise strong pull request to the bottom of
+    the pool — indistinguishable from a change that genuinely added no tests.
+    """
+    write(
+        src_layout_repository / "tests" / "test_core.py",
+        "def test_core(:\n    this is not python\n",
+    )
+    run_git(src_layout_repository, "add", "-A")
+    run_git(src_layout_repository, "commit", "-m", "Test file the host cannot parse")
+    history_root = history_for(src_layout_repository, pr_number=9)
+
+    repository = GitRepository.discover(src_layout_repository)
+    candidates, _, thresholds = mine_history(
+        repository, build_graph(src_layout_repository), history_root
+    )
+
+    assert len(candidates) == 1, "an unparseable test file must not drop the candidate"
+    assert candidates[0].signals["unparsed_test_files"] == 1
+    assert candidates[0].signals["added_test_functions"] == 0
+    assert thresholds["test_files_unparsed"] == 1
+    assert thresholds["candidates_with_unparsed_tests"] == 1
+
+
+def test_a_parseable_history_reports_no_unparsed_files(
+    src_layout_repository: Path,
+) -> None:
+    history_root = history_for(src_layout_repository)
+    repository = GitRepository.discover(src_layout_repository)
+
+    candidates, _, thresholds = mine_history(
+        repository, build_graph(src_layout_repository), history_root
+    )
+
+    assert thresholds["test_files_unparsed"] == 0
+    assert all(c.signals["unparsed_test_files"] == 0 for c in candidates)
+
+
+def test_a_test_file_absent_at_the_base_is_not_a_parse_failure(
+    src_layout_repository: Path,
+) -> None:
+    """`git show` failing means the file did not exist yet — an answer, not an error."""
+    write(
+        src_layout_repository / "tests" / "test_added.py",
+        "def test_added():\n    assert True\n",
+    )
+    run_git(src_layout_repository, "add", "-A")
+    run_git(src_layout_repository, "commit", "-m", "Add a new test file")
+    history_root = history_for(src_layout_repository, pr_number=10)
+
+    repository = GitRepository.discover(src_layout_repository)
+    candidates, _, thresholds = mine_history(
+        repository, build_graph(src_layout_repository), history_root
+    )
+
+    assert thresholds["test_files_unparsed"] == 0
+    assert candidates[0].signals["added_test_functions"] == 1

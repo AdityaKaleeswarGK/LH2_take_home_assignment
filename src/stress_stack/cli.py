@@ -505,6 +505,13 @@ def _print_mining_result(report: dict) -> int:
     print(f"Repository: {report['repository_root']}")
     print(f"Coverage: {report['coverage_status']}")
     print(f"Churn distribution: {report['thresholds']['churn_distribution']}")
+    unparsed = report["thresholds"].get("test_files_unparsed") or 0
+    if unparsed:
+        affected = report["thresholds"].get("candidates_with_unparsed_tests") or 0
+        print(
+            f"Unparsed history: {unparsed} test file(s) across {affected} candidate(s) "
+            "could not be parsed by this interpreter; their added-test counts are floors"
+        )
     for name in ("history", "excision"):
         funnel = report[f"{name}_funnel"]
         print(

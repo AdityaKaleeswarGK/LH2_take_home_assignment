@@ -121,16 +121,30 @@ class BuiltTask:
 
 
 def collected_tests(source: str) -> dict[str, str]:
-    """pytest-collectable test functions, keyed by their dotted name in the module.
+    """pytest-collectable test functions, keyed by their dotted name in the module."""
+    return collected_tests_with_status(source)[0]
+
+
+def collected_tests_with_status(source: str) -> tuple[dict[str, str], str | None]:
+    """The tests, plus why there were none when the reason was a parse failure.
 
     Mirrors pytest's defaults — ``test_*`` functions, and ``test_*`` methods on
     ``Test*`` classes that define no ``__init__``. The value is the unparsed
     body, so "this test changed" is a comparison rather than a guess.
+
+    The status exists because history is parsed with the *host* interpreter
+    while the trees themselves are historical, so a file using syntax this
+    interpreter cannot read is not unusual. An empty dict alone cannot be told
+    apart from "this file has no tests", and the difference matters: the count
+    of added test functions is the largest single term in candidate ranking, so
+    a parse failure silently sends a good pull request to the bottom of the
+    pool. HEAD already records its syntax errors — see ``symbols.ParsedFile`` —
+    and this is the same accounting for history.
     """
     try:
         tree = ast.parse(source)
-    except SyntaxError:
-        return {}
+    except SyntaxError as exc:
+        return {}, f"{type(exc).__name__}: {exc}"
 
     found: dict[str, str] = {}
     for node in tree.body:
@@ -149,7 +163,7 @@ def collected_tests(source: str) -> dict[str, str]:
                     child, (ast.FunctionDef, ast.AsyncFunctionDef)
                 ) and child.name.startswith("test_"):
                     found[f"{node.name}.{child.name}"] = ast.unparse(child)
-    return found
+    return found, None
 
 
 def show(repository: GitRepository, sha: str, path: str) -> str:

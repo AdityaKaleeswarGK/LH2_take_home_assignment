@@ -311,7 +311,7 @@ def mine_history(
         changed_tests = [d for d in python_changes if d.path in tests or _looks_like_test(d.path)]
         changed_source = [d for d in python_changes if d not in changed_tests]
 
-        added, modified = _test_function_delta(
+        added, modified, unparsed = _test_function_delta(
             repository, base_sha, head_sha, [d.path for d in changed_tests]
         )
         staged.append(
@@ -324,6 +324,7 @@ def mine_history(
                 "changed_tests": changed_tests,
                 "added_tests": added,
                 "modified_tests": modified,
+                "unparsed_tests": unparsed,
                 "churn": sum(d.churn for d in python_changes),
             }
         )
@@ -335,6 +336,13 @@ def mine_history(
         funnel,
         {
             "churn_distribution": _distribution([item["churn"] for item in staged]),
+            # Not a drop reason — an unparseable test file still leaves a usable
+            # candidate — but it caps how much the ranking below can be trusted,
+            # so it is reported rather than absorbed.
+            "test_files_unparsed": sum(int(item["unparsed_tests"]) for item in staged),
+            "candidates_with_unparsed_tests": sum(
+                1 for item in staged if item["unparsed_tests"]
+            ),
             "note": (
                 "Churn is recorded for difficulty tiering and validation cost, "
                 "and is not used to reject a candidate."
@@ -345,8 +353,9 @@ def mine_history(
 
 def _test_function_delta(
     repository: GitRepository, base_sha: str, head_sha: str, paths: list[str]
-) -> tuple[int, int]:
-    """How many test functions the change added, and how many it rewrote.
+) -> tuple[int, int, int]:
+    """How many test functions the change added, how many it rewrote, and how
+    many files could not be parsed at all.
 
     The two are worth separating because they predict viability very
     differently. A test that did not exist before asserts behaviour that did not
@@ -357,23 +366,37 @@ def _test_function_delta(
 
     Counted, never gated: a rewritten test that genuinely tightens an assertion
     is a valid task, and only the fail-before run can tell the two apart.
+
+    The third number is the honesty term. History is parsed with the host
+    interpreter, so a historical file can simply fail to parse — and an
+    unparseable file yields no functions, which is indistinguishable from a
+    change that added none. Since ``added_test_functions`` carries the largest
+    weight in the ranking below, that silence demotes a pull request to the
+    bottom of the pool for a reason nothing records.
     """
-    added = modified = 0
+    added = modified = unparsed = 0
     for path in paths:
-        before = _test_functions_at(repository, base_sha, path)
-        after = _test_functions_at(repository, head_sha, path)
+        before, before_error = _test_functions_at(repository, base_sha, path)
+        after, after_error = _test_functions_at(repository, head_sha, path)
+        if before_error or after_error:
+            unparsed += 1
         added += len(set(after) - set(before))
         modified += sum(1 for name in set(after) & set(before) if after[name] != before[name])
-    return added, modified
+    return added, modified, unparsed
 
 
-def _test_functions_at(repository: GitRepository, sha: str, path: str) -> dict[str, str]:
-    from stress_stack.tasks import collected_tests
+def _test_functions_at(
+    repository: GitRepository, sha: str, path: str
+) -> tuple[dict[str, str], str | None]:
+    from stress_stack.tasks import collected_tests_with_status
 
     try:
-        return collected_tests(repository.run(["show", f"{sha}:{path}"], record=False))
+        source = repository.run(["show", f"{sha}:{path}"], record=False)
     except GitError:
-        return {}
+        # The file did not exist at this revision. That is an answer, not a
+        # failure, and must not be counted as one.
+        return {}, None
+    return collected_tests_with_status(source)
 
 
 def _looks_like_test(path: str) -> bool:
@@ -449,6 +472,10 @@ def _history_candidate(item: dict[str, Any], modules: ModuleResolver) -> Candida
             "test_files_changed": len(test_paths_changed),
             "added_test_functions": item["added_tests"],
             "modified_test_functions": item["modified_tests"],
+            # Non-zero means `added_test_functions` above is a floor, not a
+            # count, so this candidate's rank understates it by an unknown
+            # amount.
+            "unparsed_test_files": item["unparsed_tests"],
             "modules_touched": len(touched_modules),
             "body_length": len(body),
             "deltas": [d.to_dict() for d in item["deltas"]],
