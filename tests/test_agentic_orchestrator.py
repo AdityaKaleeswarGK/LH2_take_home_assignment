@@ -977,3 +977,32 @@ def test_a_missing_llvm_cov_is_reported_not_worked_around(tmp_path: Path, monkey
     assert result.status == "unavailable"
     assert "cargo_llvm_cov_not_installed" in result.reason
     assert "cargo install cargo-llvm-cov" in result.reason
+
+
+def test_go_images_can_run_the_race_detector() -> None:
+    """`go test -race` needs cgo, and many Go projects' CI runs it.
+
+    The detector prefers a project's own CI command over the default, so an
+    Alpine base — no C toolchain, cgo off — turned spf13/cast's declared command
+    into `-race requires cgo` and failed the container stage.
+    """
+    from stress_stack.container_doctor import synthesize_dockerfile
+
+    profile = _profile("go", base_image="golang:1.22-bookworm")
+    dockerfile = synthesize_dockerfile(profile, "golang:1.22-bookworm")
+
+    assert "alpine" not in dockerfile.lower()
+    assert "ENV CGO_ENABLED=1" in dockerfile
+
+
+def test_the_detected_go_base_is_not_alpine() -> None:
+    from stress_stack.project_detector import detect_project_profile
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        (root / "go.mod").write_text("module example.com/m\n\ngo 1.22\n", encoding="utf-8")
+        profile = detect_project_profile(root)
+
+    assert profile.primary_language == "go"
+    assert "alpine" not in profile.base_image

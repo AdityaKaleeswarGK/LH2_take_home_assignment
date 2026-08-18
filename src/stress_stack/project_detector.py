@@ -123,7 +123,11 @@ def detect_project_profile(repo_root: Path | str) -> ProjectProfile:
         toolchain = "go"
         is_monorepo = (root / "go.work").exists()
         default_test = "go test ./..."
-        base_image = "golang:1.22-alpine"
+        # Debian, not Alpine: Alpine ships no C toolchain, so cgo is off, and
+        # `go test -race` — which many Go projects' own CI runs, and which this
+        # detector will therefore prefer over the default command — refuses to
+        # start without it. spf13/cast failed exactly there.
+        base_image = "golang:1.22-bookworm"
 
     elif primary == "cpp":
         toolchain = "cmake"

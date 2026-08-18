@@ -148,7 +148,14 @@ def synthesize_dockerfile(profile: ProjectProfile, base_reference: str) -> str:
         if profile.pre_build_command:
             lines.append(f"RUN {profile.pre_build_command}")
     elif lang == "go":
-        lines += ["COPY . /work", "RUN if [ -f go.mod ]; then go mod download; fi"]
+        lines += [
+            # Stated rather than inherited: the race detector needs it, and a
+            # base image that quietly disables it turns a project's own test
+            # command into an error nobody wrote.
+            "ENV CGO_ENABLED=1",
+            "COPY . /work",
+            "RUN if [ -f go.mod ]; then go mod download; fi",
+        ]
     elif lang == "cpp":
         lines += [
             "RUN apt-get update && apt-get install -y --no-install-recommends "
