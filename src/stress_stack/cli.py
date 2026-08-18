@@ -33,6 +33,12 @@ _SOURCE_HELP = (
     "(default: current directory)"
 )
 
+# Four is a disk budget, not a CPU one. Each in-flight candidate holds `input/`,
+# `solution/`, `verifier/`, its evaluation tree and transiently `alternative/` —
+# five copies of the repository — while the container concurrency that actually
+# competes for CPU is bounded separately in `sandbox`.
+_DEFAULT_WORKERS = 4
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -99,6 +105,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     validate_parser.add_argument("--only", choices=("history", "excision"), default=None)
     validate_parser.add_argument(
+        "--workers", type=int, default=_DEFAULT_WORKERS,
+        help=f"Candidates validated concurrently (default: {_DEFAULT_WORKERS})",
+    )
+    validate_parser.add_argument(
         "--import-policy", choices=("strict", "measured"), default="strict",
         help="Whether a verifier that could not be collected before the change "
              "counts as failing (default: strict, it does not)",
@@ -111,6 +121,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--history-limit", type=int, default=30)
     run_parser.add_argument("--excision-limit", type=int, default=12)
     run_parser.add_argument("--repeats", type=int, default=2)
+    run_parser.add_argument(
+        "--workers", type=int, default=_DEFAULT_WORKERS,
+        help="Candidates validated concurrently. Bounded by disk rather than CPU: "
+             "each in-flight candidate holds five tree copies (default: "
+             f"{_DEFAULT_WORKERS})",
+    )
     run_parser.add_argument(
         "--output", default="output", help="Destination directory for the final bundle"
     )
@@ -169,11 +185,13 @@ def build_parser() -> argparse.ArgumentParser:
     orchestrate_parser.add_argument(
         "--workers",
         type=int,
-        default=4,
-        help="reserved; candidate validation is currently serial",
+        default=_DEFAULT_WORKERS,
+        help="Candidates validated concurrently (default: "
+             f"{_DEFAULT_WORKERS}); see `run --workers`",
     )
     orchestrate_parser.add_argument("--history-limit", type=int, default=30)
     orchestrate_parser.add_argument("--excision-limit", type=int, default=12)
+    orchestrate_parser.add_argument("--repeats", type=int, default=2)
     orchestrate_parser.add_argument("--output", default="output")
     commands_parser = subparsers.add_parser(
         "commands",
@@ -273,6 +291,7 @@ def _dispatch(parser: argparse.ArgumentParser, namespace: argparse.Namespace) ->
                     repeats=namespace.repeats,
                     only=namespace.only,
                     policy=namespace.import_policy,
+                    max_workers=namespace.workers,
                 )
             )
         elif namespace.command == "run":
@@ -283,6 +302,7 @@ def _dispatch(parser: argparse.ArgumentParser, namespace: argparse.Namespace) ->
                     history_limit=namespace.history_limit,
                     excision_limit=namespace.excision_limit,
                     repeats=namespace.repeats,
+                    workers=namespace.workers,
                     skip=tuple(namespace.skip),
                     output=namespace.output,
                 )
@@ -325,6 +345,7 @@ def _dispatch(parser: argparse.ArgumentParser, namespace: argparse.Namespace) ->
                 max_workers=namespace.workers,
                 history_limit=namespace.history_limit,
                 excision_limit=namespace.excision_limit,
+                repeats=namespace.repeats,
                 output_dir=namespace.output,
             )
             return _print_orchestrator(orch_res)

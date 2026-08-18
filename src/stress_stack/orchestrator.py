@@ -7,8 +7,6 @@ repository routes back to the original implementations unchanged.
 
 Known limitations, stated here rather than left for a reader to discover:
 
-* Candidate validation is still serial — ``max_workers`` is accepted and not
-  honoured.
 * Only the environment stages are ecosystem-aware. Mining, excision, coverage
   and validation still assume Python, so a non-Python repository gets a
   reproducible container and an honest hygiene/lock report, then produces no
@@ -61,16 +59,16 @@ def orchestrate_repository(
     max_workers: int = 4,
     history_limit: int = 30,
     excision_limit: int = 12,
+    repeats: int = 2,
     output_dir: str = "output",
 ) -> OrchestratorRunResult:
     """Run end-to-end benchmark generation with project-aware orchestration.
 
-    ``max_workers`` is accepted and not yet honoured: candidate validation runs
-    serially inside ``run_pipeline``. It stays in the signature because the
-    parallel pool is the next change here, and silently ignoring a caller's
-    concurrency request is worse than saying so.
+    ``max_workers`` bounds how many candidates the validate stage puts through
+    the gates at once. It is a disk budget rather than a CPU one — the container
+    concurrency that competes for cores is bounded separately in ``sandbox`` —
+    so raising it on a large repository costs working space, not throughput.
     """
-    del max_workers  # reserved; see docstring
     # Step 1: Ingest repository if remote URL or local path
     ingest_result = ingest(source_path, cwd=Path.cwd())
     root = Path(ingest_result.repository_root)
@@ -91,6 +89,8 @@ def orchestrate_repository(
         str(root),
         history_limit=history_limit,
         excision_limit=excision_limit,
+        repeats=repeats,
+        workers=max_workers,
         output=output_dir,
         profile=profile,
     )

@@ -41,6 +41,12 @@ class ValidationSummary:
     eligible: int = 0
     rejected: dict[str, list[str]] = field(default_factory=dict)
     seconds: float = 0.0
+    # Candidates that were already in flight when the pool hit its target. A
+    # serial run would never have reached them, so `attempted` is otherwise
+    # unexplainable against `stop_after`. Their results are kept rather than
+    # discarded: they are paid-for validated tasks, and selection consumes a
+    # surplus.
+    overrun: int = 0
 
     def reject(self, reason: str, task_id: str) -> None:
         self.rejected.setdefault(reason.split(":")[0], []).append(task_id)
@@ -49,6 +55,7 @@ class ValidationSummary:
         return {
             "attempted": self.attempted,
             "eligible": self.eligible,
+            "overrun": self.overrun,
             "seconds": round(self.seconds, 1),
             "rejected_counts": {k: len(v) for k, v in sorted(self.rejected.items())},
             "rejected": {k: sorted(v) for k, v in sorted(self.rejected.items())},
@@ -140,8 +147,25 @@ def validate_pool(
     stop_after: int | None = None,
     minimum_modules: int = 0,
     existing_modules: set[str] | None = None,
+    max_workers: int = 1,
 ) -> tuple[list[BuiltTask], ValidationSummary]:
-    """Validate down the ranked pool until enough survive, or the budget runs out."""
+    """Validate down the ranked pool until enough survive, or the budget runs out.
+
+    Candidates are validated concurrently but *consumed in ranked order*: the
+    consumer blocks on ``futures[cursor]`` rather than taking whichever finishes
+    first, so the pool decides nothing about which candidates survive. Only this
+    thread touches the summary, the module set or the reporter; a worker returns
+    a ``BuiltTask`` and nothing else.
+
+    A sliding window keeps exactly ``max_workers`` in flight, which bounds how
+    far past the stop point the pool can run. Those overrun candidates are
+    waited for rather than cancelled — a cancelled future's evaluation tree
+    would never be cleaned up, and letting them finish keeps the result set
+    identical from run to run, which a race between shutdown and completion
+    would not.
+    """
+    from concurrent.futures import Future, ThreadPoolExecutor
+
     from stress_stack.progress import reporter
 
     live = reporter()
@@ -149,36 +173,61 @@ def validate_pool(
     built: list[BuiltTask] = []
     started = time.monotonic()
     planned = candidates[:limit]
+    workers = max(1, min(max_workers, len(planned) or 1))
+    modules = set(existing_modules or ())
 
-    for candidate in planned:
-        summary.attempted += 1
-        live.step(
-            f"{candidate.candidate_id}  ({summary.eligible} eligible so far)",
-            summary.attempted,
-            len(planned),
-        )
-        result = build_and_validate(
+    def _validate(candidate: Candidate) -> BuiltTask:
+        return build_and_validate(
             repository, graph, candidate, tasks_root, work_root, runner,
             repeats=repeats, policy=policy,
         )
+
+    def _record(result: BuiltTask) -> None:
+        summary.attempted += 1
         built.append(result)
         if result.eligible:
             summary.eligible += 1
+            modules.update(result.candidate.modules)
+            if result.candidate.primary_module:
+                modules.add(result.candidate.primary_module)
         else:
             summary.reject(result.rejected or _first_failed_gate(result), result.task_id)
-        modules = set(existing_modules or ())
-        for task in built:
-            if not task.eligible:
-                continue
-            modules.update(task.candidate.modules)
-            if task.candidate.primary_module:
-                modules.add(task.candidate.primary_module)
-        if (
-            stop_after is not None
-            and summary.eligible >= stop_after
-            and len(modules) >= minimum_modules
-        ):
-            break
+
+    executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="validate")
+    futures: list[Future[BuiltTask]] = []
+    submitted = 0
+    cursor = 0
+    try:
+        while submitted < len(planned) and submitted < workers:
+            futures.append(executor.submit(_validate, planned[submitted]))
+            submitted += 1
+
+        while cursor < len(futures):
+            result = futures[cursor].result()
+            cursor += 1
+            _record(result)
+            live.step(
+                f"{result.task_id}  ({summary.eligible} eligible so far)",
+                summary.attempted,
+                len(planned),
+            )
+            if (
+                stop_after is not None
+                and summary.eligible >= stop_after
+                and len(modules) >= minimum_modules
+            ):
+                break
+            if submitted < len(planned):
+                futures.append(executor.submit(_validate, planned[submitted]))
+                submitted += 1
+
+        # Whatever was already in flight when the target was reached. Ranked
+        # order is preserved because these are the next entries in `futures`.
+        for future in futures[cursor:]:
+            summary.overrun += 1
+            _record(future.result())
+    finally:
+        executor.shutdown(wait=True)
 
     summary.seconds = time.monotonic() - started
     return built, summary

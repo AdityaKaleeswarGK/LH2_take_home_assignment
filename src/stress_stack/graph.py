@@ -833,6 +833,7 @@ def build_validation_artifacts(
     only: str | None = None,
     policy: str = "strict",
     surplus: int = 14,
+    max_workers: int = 1,
 ) -> dict[str, Any]:
     """Stage the ranked candidates and put each through every gate."""
     from stress_stack.candidates import EXCISION, HISTORY, load_candidates
@@ -897,6 +898,7 @@ def build_validation_artifacts(
             stop_after=source_targets[name],
             minimum_modules=4,
             existing_modules=eligible_modules,
+            max_workers=max_workers,
         )
         built.extend(results)
         summaries[name] = summary.to_dict()
@@ -911,6 +913,7 @@ def build_validation_artifacts(
     combined = ValidationSummary(
         attempted=sum(s["attempted"] for s in summaries.values()),
         eligible=sum(s["eligible"] for s in summaries.values()),
+        overrun=sum(s["overrun"] for s in summaries.values()),
         seconds=sum(s["seconds"] for s in summaries.values()),
     )
     for entry in summaries.values():
