@@ -729,10 +729,22 @@ def _deliberately_removed(
 def scope_files(
     graph: RepositoryGraph, changed: list[str], *, limit: int = 25
 ) -> list[str]:
-    """The files a solver plausibly has to read: what changed, plus what calls it."""
-    radius = blast_radius(graph, set(changed))
-    ordered = sorted(set(changed)) + [p for p in radius["impacted"] if p not in set(changed)]
-    return ordered[:limit]
+    """The files a solver plausibly has to read: what changed, plus what calls it.
+
+    ``blast_radius`` keys its answer by the *changed* file, because the question
+    it asks is "who references this". Iterating those keys therefore only ever
+    yielded the changed set back, and every task shipped with a scope listing
+    nothing a solver did not already know. The callers are in the entries.
+    """
+    changed_set = set(changed)
+    radius = blast_radius(graph, changed_set)
+    callers: list[str] = []
+    for entries in radius["impacted"].values():
+        for entry in entries:
+            path = entry.get("caller_path")
+            if path and path not in changed_set and path not in callers:
+                callers.append(path)
+    return (sorted(changed_set) + sorted(callers))[:limit]
 
 
 def _named(verdict: GateVerdict, name: str) -> GateVerdict:

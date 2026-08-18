@@ -267,3 +267,21 @@ def test_a_new_test_file_forces_a_remeasure(tmp_path: Path, monkeypatch) -> None
     graph_module.measure_coverage(root, build_graph(root), knowledge)
 
     assert len(runs) == 2
+
+
+def test_blast_radius_names_the_file_a_caller_lives_in(tmp_path: Path) -> None:
+    """`impacted` is keyed by the changed file, so the caller's file must be in the entry.
+
+    Without it the answer's subject was reachable and its object was not: every
+    task shipped a scope listing only what the solver already knew it had to
+    change.
+    """
+    sample_repository(tmp_path)
+    graph = build_graph(tmp_path)
+
+    radius = blast_radius(graph, {"pkg/core.py"})
+
+    assert set(radius["impacted"]) == {"pkg/core.py"}, "keyed by the changed file"
+    callers = {e["caller_path"] for entries in radius["impacted"].values() for e in entries}
+    assert callers, "a referenced file with no reachable caller is the bug"
+    assert "pkg/core.py" not in callers

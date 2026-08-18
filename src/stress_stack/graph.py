@@ -446,6 +446,11 @@ def blast_radius(
         impacted.setdefault(target_path, []).append(
             {
                 "caller": edge.source,
+                # The file the caller lives in. `impacted` is keyed by the
+                # *changed* file — it answers "who references this" — so without
+                # this the answer's subject was reachable and its object was not,
+                # and `scope_files` could never name a file outside the change.
+                "caller_path": source_path,
                 "kind": edge.kind,
                 "anchor": str(edge.anchor),
                 "expression": edge.expression,

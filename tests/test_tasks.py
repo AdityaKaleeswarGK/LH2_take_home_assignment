@@ -213,3 +213,45 @@ def test_the_evaluation_tree_is_rebuilt_when_a_target_file_was_missing(
 
     assert rebuilds == [evaluation_tree]
     assert built.verifier_files == ["tests/test_core.py"]
+
+
+def test_scope_reaches_past_the_files_that_changed(tmp_path: Path) -> None:
+    """"What calls it" is the half a solver cannot work out for itself.
+
+    scope_files iterated blast_radius's keys, which are the *changed* paths, so
+    the caller files were computed and then discarded. Every glom task shipped
+    with a scope of exactly the change: pr-117 listed 4 files where 9 are
+    reachable.
+    """
+    from stress_stack.graph import build_graph
+    from stress_stack.tasks import scope_files
+
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "pkg" / "core.py").write_text(
+        "def engine():\n    return 1\n", encoding="utf-8"
+    )
+    (tmp_path / "pkg" / "api.py").write_text(
+        "from pkg.core import engine\n\n\ndef run():\n    return engine()\n", encoding="utf-8"
+    )
+
+    scope = scope_files(build_graph(tmp_path), ["pkg/core.py"])
+
+    assert scope[0] == "pkg/core.py", "the change itself comes first"
+    assert "pkg/api.py" in scope, "the caller is what the solver has to read"
+
+
+def test_scope_never_repeats_the_changed_files(tmp_path: Path) -> None:
+    from stress_stack.graph import build_graph
+    from stress_stack.tasks import scope_files
+
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "pkg" / "core.py").write_text("def engine():\n    return 1\n", encoding="utf-8")
+    (tmp_path / "pkg" / "api.py").write_text(
+        "from pkg.core import engine\n\n\ndef run():\n    return engine()\n", encoding="utf-8"
+    )
+
+    scope = scope_files(build_graph(tmp_path), ["pkg/core.py", "pkg/api.py"])
+
+    assert scope == sorted({"pkg/core.py", "pkg/api.py"})
