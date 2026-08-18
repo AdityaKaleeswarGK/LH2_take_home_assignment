@@ -23,6 +23,7 @@ Two further properties matter:
 
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -137,12 +138,12 @@ def forget_source_roots() -> None:
 
 
 @lru_cache(maxsize=64)
-def _cached_source_roots(resolved_tree: str, mount: str) -> str:
+def _cached_source_roots(resolved_tree: str, mount: str | None) -> str:
     return _compute_source_roots(Path(resolved_tree), mount)
 
 
-def source_roots(tree: Path, *, mount: str = "/work") -> str:
-    """The PYTHONPATH under which the mounted tree's own packages win.
+def source_roots(tree: Path, *, mount: str | None = "/work") -> str:
+    """The PYTHONPATH under which a tree's own packages win.
 
     ``PYTHONPATH=/work`` assumes the packages sit directly under the repository
     root. Under a ``src/`` layout they do not, so ``/work`` contains no
@@ -155,6 +156,13 @@ def source_roots(tree: Path, *, mount: str = "/work") -> str:
     The roots are derived with the same ``package_root`` the graph uses to name
     modules, so a layout this tool can parse is a layout it can also run.
 
+    ``mount`` names where the tree appears to the process being launched. The
+    default is the container's read-only mount; passing ``None`` asks for host
+    absolute paths instead, which is what the coverage, hygiene and testgen
+    runs need. Both callers want the same answer to the same question, and
+    keeping two derivations meant the host ones measured the installed copy
+    while the container ones measured the source tree.
+
     Cached per resolved tree: a candidate runs eight times against at most four
     trees, and each call walks the whole tree. See ``forget_source_roots`` for
     the one case where a tree changes underneath the cache.
@@ -162,7 +170,7 @@ def source_roots(tree: Path, *, mount: str = "/work") -> str:
     return _cached_source_roots(str(tree.resolve()), mount)
 
 
-def _compute_source_roots(tree: Path, mount: str) -> str:
+def _compute_source_roots(tree: Path, mount: str | None) -> str:
     from stress_stack.symbols import discover_python_files, package_root
 
     directories: set[Path] = set()
@@ -181,12 +189,15 @@ def _compute_source_roots(tree: Path, mount: str) -> str:
                    for child in directory.iterdir()):
             continue
         try:
-            roots.add(f"{mount}/{directory.relative_to(tree).as_posix()}")
+            relative = directory.relative_to(tree)
         except ValueError:
             continue
-    # The mount stays last so a src-layout package outranks anything sitting at
-    # the repository root, while a flat layout still resolves.
-    return ":".join([*sorted(roots), mount])
+        roots.add(str(directory) if mount is None else f"{mount}/{relative.as_posix()}")
+    # The tree itself stays last so a src-layout package outranks anything
+    # sitting at the repository root, while a flat layout still resolves.
+    base = str(tree) if mount is None else mount
+    separator = os.pathsep if mount is None else ":"
+    return separator.join([*sorted(roots), base])
 
 
 @dataclass

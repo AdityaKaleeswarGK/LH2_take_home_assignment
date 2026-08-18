@@ -104,10 +104,18 @@ def environment_for(repository_root: Path, python: Path) -> dict[str, str]:
 
     Tests that shell out to an entry point (``subprocess.check_output(["glom", ...])``)
     fail with FileNotFoundError unless the environment's scripts directory is on PATH.
+
+    ``PYTHONPATH`` is derived by :func:`stress_stack.runner.source_roots` rather
+    than set to the repository root. Under a ``src/`` layout the root holds no
+    importable package, so the bare root left the installed copy winning — host
+    runs measured site-packages while container runs measured the source tree,
+    and ``compare_to_baseline`` then compared two different things.
     """
+    from stress_stack.runner import source_roots
+
     existing_path = os.environ.get("PATH", "")
     return {
-        "PYTHONPATH": str(repository_root),
+        "PYTHONPATH": source_roots(repository_root, mount=None),
         "PATH": f"{python.parent}{os.pathsep}{existing_path}" if existing_path else str(python.parent),
     }
 

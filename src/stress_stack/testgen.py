@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import ast
 import json
-import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -19,7 +18,6 @@ from stress_stack.coverage_map import CoverageMap, CoveredSymbol
 from stress_stack.graph import RepositoryGraph
 from stress_stack.openrouter import ModelError, OpenRouterClient
 from stress_stack.pytest_runner import _parse_report, environment_for, run_pytest
-from stress_stack.symbols import package_root
 from stress_stack.tooling import run
 
 TEST_SCHEMA: dict[str, Any] = {
@@ -416,21 +414,12 @@ def _prune_nonpassing(files: list[Path], outcomes: dict[str, str]) -> None:
             path.write_text(updated, encoding="utf-8")
 
 
-def _pythonpath(root: Path) -> str:
-    roots = {root}
-    for path in root.rglob("*.py"):
-        relative = path.relative_to(root)
-        if any(part in {".git", ".stress_stack", ".venv"} for part in relative.parts):
-            continue
-        roots.add(package_root(root, path))
-    return os.pathsep.join(str(path) for path in sorted(roots))
-
-
 def _run_selected(root: Path, python: Path, report: Path, files: list[str]) -> dict[str, Any]:
     report.parent.mkdir(parents=True, exist_ok=True)
     report.unlink(missing_ok=True)
+    # environment_for now derives PYTHONPATH with the same `source_roots` the
+    # container runs use, so the local override this used to need is gone.
     env = environment_for(root, python)
-    env["PYTHONPATH"] = _pythonpath(root)
     # Third-party pytest plugins may import the project package before test
     # collection (Click is a common transitive dependency). That leaves the
     # environment's installed copy in sys.modules and makes a source-tree

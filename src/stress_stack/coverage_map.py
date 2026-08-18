@@ -334,14 +334,33 @@ def collect(
     except json.JSONDecodeError as exc:
         return {}, "unavailable", f"coverage_parse_failed: {exc}"
 
+    return relativize(raw, repository_root)
+
+
+def relativize(
+    raw: dict[str, dict[str, list[str]]], repository_root: Path
+) -> tuple[dict[str, dict[int, list[str]]], str, str | None]:
+    """Keep only the measurements that land inside the repository.
+
+    A file measured outside the root is the installed copy in site-packages
+    rather than the source tree, and attributing it to a symbol in the graph
+    would be a lie. Dropping it is right; dropping *all* of it and still
+    reporting ``available`` is not — that is how a src-layout repository
+    produced an empty-but-successful coverage map, which then gave excision
+    mining nothing to rank and no reason why.
+    """
     relative: dict[str, dict[int, list[str]]] = {}
+    outside = 0
     root = repository_root.resolve()
     for measured, rows in raw.items():
         try:
             path = str(Path(measured).resolve().relative_to(root))
         except ValueError:
+            outside += 1
             continue
         relative[path] = {int(line): contexts for line, contexts in rows.items()}
+    if raw and not relative:
+        return {}, "unavailable", f"all_{outside}_measured_paths_outside_repository"
     return relative, "available", None
 
 

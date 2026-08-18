@@ -222,3 +222,45 @@ def test_tests_index_inverts_the_mapping(tmp_path: Path) -> None:
     assert "t.test_a::test_run" in index
     assert len(index["t.test_a::test_run"]) == 2
     assert index["t.test_b::test_h"] == ["pkg/mod.py::pkg.mod.helper"]
+
+
+def test_measurements_outside_the_repository_are_dropped(tmp_path: Path) -> None:
+    """The installed copy in site-packages is not the tree under analysis."""
+    inside = tmp_path / "pkg" / "core.py"
+    raw = {
+        str(inside): {"3": ["tests/test_core.py::test_a"]},
+        "/usr/lib/python3.12/site-packages/pkg/core.py": {"3": ["tests/test_core.py::test_a"]},
+    }
+
+    lines, status, reason = cm.relativize(raw, tmp_path)
+
+    assert status == "available"
+    assert reason is None
+    assert lines == {"pkg/core.py": {3: ["tests/test_core.py::test_a"]}}
+
+
+def test_coverage_measured_entirely_outside_the_repository_is_unavailable(
+    tmp_path: Path,
+) -> None:
+    """An empty map reported as available is worse than an honest failure.
+
+    A src-layout repository whose PYTHONPATH left the installed copy winning
+    produced exactly this: every measured path outside the root, everything
+    silently dropped, and a successful-looking coverage stage that gave excision
+    mining nothing to rank.
+    """
+    raw = {
+        "/usr/lib/python3.12/site-packages/pkg/core.py": {"3": ["t::a"]},
+        "/usr/lib/python3.12/site-packages/pkg/other.py": {"7": ["t::b"]},
+    }
+
+    lines, status, reason = cm.relativize(raw, tmp_path)
+
+    assert lines == {}
+    assert status == "unavailable"
+    assert reason == "all_2_measured_paths_outside_repository"
+
+
+def test_a_suite_that_measured_nothing_is_not_reported_as_misplaced(tmp_path: Path) -> None:
+    """No data at all is a different failure from data about the wrong code."""
+    assert cm.relativize({}, tmp_path) == ({}, "available", None)

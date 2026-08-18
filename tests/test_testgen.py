@@ -4,10 +4,10 @@ from pathlib import Path
 
 from stress_stack.coverage_map import CoverageMap, CoveredSymbol
 from stress_stack.graph import build_graph
+from stress_stack.runner import forget_source_roots, source_roots
 from stress_stack.testgen import (
     _mutate,
     _prune_nonpassing,
-    _pythonpath,
     _test_problem,
     uncovered_targets,
 )
@@ -119,11 +119,25 @@ def test_nonpassing_generated_functions_are_pruned_independently(tmp_path: Path)
 
 
 def test_pythonpath_discovers_src_layout_inside_metadata_workdir(tmp_path: Path) -> None:
+    """A mutant tree lives under `.stress_stack`, which the graph otherwise skips.
+
+    The skip list is applied to paths *relative to the root being walked*, so a
+    root that is itself inside `.stress_stack` is still discoverable. testgen
+    used to carry its own PYTHONPATH derivation to guarantee this; it now shares
+    `source_roots` with the container runs, and this is the property that must
+    survive the merge.
+    """
+    import os
+
+    forget_source_roots()
     root = tmp_path / ".stress_stack" / "work" / "mutant"
     package = root / "src" / "pkg"
     package.mkdir(parents=True)
     (package / "__init__.py").write_text("", encoding="utf-8")
 
-    entries = _pythonpath(root).split(__import__("os").pathsep)
+    entries = source_roots(root, mount=None).split(os.pathsep)
 
-    assert str(root / "src") in entries
+    resolved = root.resolve()
+    assert entries == [str(resolved / "src"), str(resolved)], (
+        "src must outrank the tree root, or the installed copy wins"
+    )

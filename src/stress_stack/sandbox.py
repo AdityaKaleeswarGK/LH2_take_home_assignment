@@ -167,7 +167,15 @@ def build_arguments(
     if policy.run_as_host_user and os.name != "nt":
         arguments.append(f"--user={os.getuid()}:{os.getgid()}")
 
-    merged = {**_DEFAULT_ENVIRONMENT, "PYTHONPATH": "/work", **(environment or {})}
+    # `None` means "no opinion", and gets the flat-layout default. An explicit
+    # mapping — including an empty one — means the caller has decided, and a
+    # PYTHONPATH it did not ask for must not be reinstated. LanguageRunner
+    # passes `{}` precisely to keep a Python variable out of a Go or Rust image.
+    merged = dict(_DEFAULT_ENVIRONMENT)
+    if environment is None:
+        merged["PYTHONPATH"] = "/work"
+    else:
+        merged.update(environment)
     for key, value in sorted(merged.items()):
         arguments.append(f"--env={key}={value}")
 

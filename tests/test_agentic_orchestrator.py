@@ -839,6 +839,37 @@ def test_compiled_languages_get_an_executable_tmpfs() -> None:
         assert any(a.endswith(":/work:ro") for a in arguments)
 
 
+def test_an_explicit_environment_suppresses_the_pythonpath_default() -> None:
+    """`{}` is a decision, not an absence.
+
+    LanguageRunner passes an empty mapping precisely to keep a Python variable
+    out of a Go or Rust image. Merging the default in afterwards made that
+    comment aspirational — harmless while those images have no interpreter, and
+    silently wrong the moment one does.
+    """
+    from stress_stack.sandbox import SandboxPolicy, build_arguments
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        common = {
+            "code_dir": root,
+            "evidence_dir": root,
+            "policy": SandboxPolicy(),
+        }
+        default = build_arguments("img", ["go", "test"], **common)
+        suppressed = build_arguments("img", ["go", "test"], environment={}, **common)
+        explicit = build_arguments(
+            "img", ["python", "-m", "pytest"],
+            environment={"PYTHONPATH": "/work/src:/work"}, **common,
+        )
+
+    assert "--env=PYTHONPATH=/work" in default
+    assert not any(a.startswith("--env=PYTHONPATH") for a in suppressed)
+    assert "--env=PYTHONPATH=/work/src:/work" in explicit
+    # Suppressing PYTHONPATH must not suppress the sanitised environment.
+    assert "--env=PYTHONHASHSEED=0" in suppressed
+
+
 def test_hygiene_never_formats_the_staged_task_trees() -> None:
     """An excision task's input/ is deliberately unimplemented, not a lint target."""
     from stress_stack.hygiene_dispatcher import _owned_sources
