@@ -252,8 +252,8 @@ def golden_solution_markdown(
         f"`input/`. {len(screen.get('ran_and_failed', []))} of them ran and failed "
         "for a behavioural reason — an assertion, or an exception raised from inside "
         "the repository — rather than an import or collection error.",
-        f"2. **Pass-after.** The same tests pass against `solution/`.",
-        f"3. **No collateral breakage.** Every test passing before the change still "
+        "2. **Pass-after.** The same tests pass against `solution/`.",
+        "3. **No collateral breakage.** Every test passing before the change still "
         "passes after it.",
         f"4. **Determinism.** The verdict was reproduced across "
         f"{detail.get('repeats', 'N')} fresh container runs with identical statuses "
