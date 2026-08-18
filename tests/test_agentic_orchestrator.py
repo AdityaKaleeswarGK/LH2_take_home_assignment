@@ -1062,3 +1062,27 @@ def test_a_disappearing_test_is_still_a_regression() -> None:
 
     regressed, _ = compare(before, after)
     assert regressed
+
+
+def test_two_container_runs_are_not_nondeterministic_from_scheduling() -> None:
+    """The determinism gate must answer about the code, not the goroutine order.
+
+    This is the same defect as the hygiene comparison, in a second copy of the
+    same helper: spf13/cast passed hygiene and then failed the container stage
+    for the identical reason one stage later.
+    """
+    from stress_stack.container_doctor import _normalize
+
+    first = "=== RUN   TestA\n=== PAUSE TestA\n=== CONT  TestB\n--- PASS: TestA (0.01s)\nPASS"
+    shuffled = "=== CONT  TestB\n--- PASS: TestA (0.02s)\n=== RUN   TestA\n=== PAUSE TestA\nPASS"
+
+    assert _normalize(first) == _normalize(shuffled)
+
+
+def test_a_container_run_that_starts_failing_is_still_caught() -> None:
+    from stress_stack.container_doctor import _normalize
+
+    passing = "--- PASS: TestA (0.01s)\n--- PASS: TestB (0.01s)\nPASS"
+    failing = "--- PASS: TestA (0.01s)\n--- FAIL: TestB (0.01s)\nFAIL"
+
+    assert _normalize(passing) != _normalize(failing)

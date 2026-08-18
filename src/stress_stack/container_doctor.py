@@ -172,9 +172,22 @@ def synthesize_dockerfile(profile: ProjectProfile, base_reference: str) -> str:
 
 
 def _normalize(text: str) -> str:
+    """Strip what differs between two runs of an unchanged image.
+
+    Order is one of those things, and it is the one that is easy to miss. A
+    suite using parallel tests emits its lines in scheduling order — Go's `-v`
+    interleaves `=== RUN` / `=== PAUSE` / `=== CONT` differently every time — so
+    an ordered comparison calls two identical runs nondeterministic. Measured on
+    spf13/cast, where hygiene hit the same thing one stage earlier.
+
+    Comparing the multiset still answers the question this stage exists to ask:
+    a test that flips, an assertion that moves, a line that appears or vanishes
+    all change it. Only pure reordering does not, and pure reordering is the
+    scheduler rather than the code.
+    """
     for pattern in _VOLATILE:
         text = pattern.sub("<volatile>", text)
-    return text.strip()
+    return "\n".join(sorted(text.strip().splitlines()))
 
 
 def _run_suite(image: str, name: str) -> dict[str, Any]:
