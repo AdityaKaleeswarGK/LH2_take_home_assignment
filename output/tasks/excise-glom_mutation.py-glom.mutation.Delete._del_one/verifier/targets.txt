@@ -1,0 +1,6 @@
+glom.test.test_error::test_all_public_errors
+glom.test.test_mutation::test_bad_delete_target
+glom.test.test_mutation::test_delete
+glom.test.test_mutation::test_sequence_delete
+glom.test.test_mutation::test_star_broadcast
+glom.test.test_mutation::test_unregistered_delete

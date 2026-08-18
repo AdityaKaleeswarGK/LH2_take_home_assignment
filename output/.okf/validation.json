@@ -1,8 +1,9 @@
 {
   "schema_version": "0.1.0",
   "summary": {
-    "attempted": 28,
-    "eligible": 14,
+    "attempted": 34,
+    "eligible": 17,
+    "overrun": 6,
     "rejected": {
       "collateral": [
         "pr-152",
@@ -11,6 +12,8 @@
       "no_test_changed_verdict": [
         "pr-235",
         "pr-255",
+        "pr-258",
+        "pr-263",
         "pr-275",
         "pr-279",
         "pr-285",
@@ -19,6 +22,7 @@
       "only_uncollectable_tests_changed_verdict": [
         "pr-100",
         "pr-112",
+        "pr-114",
         "pr-132",
         "pr-150",
         "pr-76",
@@ -27,10 +31,10 @@
     },
     "rejected_counts": {
       "collateral": 2,
-      "no_test_changed_verdict": 6,
-      "only_uncollectable_tests_changed_verdict": 6
+      "no_test_changed_verdict": 8,
+      "only_uncollectable_tests_changed_verdict": 7
     },
-    "seconds": 153.9
+    "seconds": 86.7
   },
   "tasks": [
     {
@@ -117,6 +121,11 @@
           "glom.test.test_mutation::test_delete": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [
             "glom.test.test_basic::test_abstract_iterable",
@@ -392,7 +401,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 149,
-          "seconds": 1.64,
+          "seconds": 2.1,
           "total": 168
         },
         {
@@ -408,7 +417,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 73,
-          "seconds": 1.2,
+          "seconds": 1.73,
           "total": 80
         },
         {
@@ -424,7 +433,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 123,
-          "seconds": 1.16,
+          "seconds": 1.75,
           "total": 125
         },
         {
@@ -438,7 +447,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.63,
+          "seconds": 1.02,
           "total": 1
         },
         {
@@ -452,7 +461,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.63,
+          "seconds": 0.95,
           "total": 1
         },
         {
@@ -466,7 +475,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 1,
-          "seconds": 0.63,
+          "seconds": 1.04,
           "total": 1
         },
         {
@@ -480,7 +489,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 1,
-          "seconds": 0.62,
+          "seconds": 0.92,
           "total": 1
         },
         {
@@ -494,7 +503,7 @@
           "infrastructure_failure": null,
           "name": "alternative",
           "passing": 1,
-          "seconds": 0.63,
+          "seconds": 0.68,
           "total": 1
         }
       ],
@@ -816,7 +825,8 @@
           "glom/test/test_path_and_t.py",
           "glom/test/test_scope_vars.py",
           "glom/test/test_target_types.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#152",
@@ -883,6 +893,11 @@
             "test_reregister_type"
           ]
         },
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -946,7 +961,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 200,
-          "seconds": 1.45,
+          "seconds": 1.83,
           "total": 200
         },
         {
@@ -960,7 +975,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 200,
-          "seconds": 1.35,
+          "seconds": 1.91,
           "total": 200
         }
       ],
@@ -1233,7 +1248,8 @@
           "glom/test/test_streaming.py",
           "glom/test/test_target_types.py",
           "glom/test/test_tutorial.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#285",
@@ -1303,6 +1319,11 @@
             "test_sky",
             "test_ternary"
           ]
+        },
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
         },
         "screen": {
           "absent_before": [
@@ -1409,7 +1430,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 137,
-          "seconds": 1.34,
+          "seconds": 1.88,
           "total": 149
         },
         {
@@ -1425,7 +1446,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 90,
-          "seconds": 1.19,
+          "seconds": 1.73,
           "total": 94
         }
       ],
@@ -1617,7 +1638,8 @@
           "glom/test/test_check.py",
           "glom/test/test_error.py",
           "glom/test/test_match.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#94",
@@ -1646,6 +1668,11 @@
           "glom.test.test_error::test_pae_scope_printable": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -1779,7 +1806,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 1.38,
+          "seconds": 1.87,
           "total": 202
         },
         {
@@ -1794,7 +1821,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 200,
-          "seconds": 1.62,
+          "seconds": 2.03,
           "total": 202
         },
         {
@@ -1808,7 +1835,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 200,
-          "seconds": 1.31,
+          "seconds": 1.94,
           "total": 200
         },
         {
@@ -1822,7 +1849,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.69,
+          "seconds": 1.01,
           "total": 2
         },
         {
@@ -1836,7 +1863,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.7,
+          "seconds": 0.98,
           "total": 2
         },
         {
@@ -1850,7 +1877,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 2,
-          "seconds": 0.61,
+          "seconds": 0.91,
           "total": 2
         },
         {
@@ -1864,7 +1891,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 2,
-          "seconds": 0.61,
+          "seconds": 0.91,
           "total": 2
         }
       ],
@@ -1922,7 +1949,8 @@
         "test_files_changed": 1,
         "test_paths": [
           "glom/test/test_error.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#298",
@@ -1951,6 +1979,11 @@
           "glom/test/test_path_and_t.py": [
             "test_path_star"
           ]
+        },
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
         },
         "screen": {
           "absent_before": [],
@@ -2007,7 +2040,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 175,
-          "seconds": 1.55,
+          "seconds": 2.2,
           "total": 194
         },
         {
@@ -2023,7 +2056,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 175,
-          "seconds": 1.49,
+          "seconds": 2.03,
           "total": 194
         }
       ],
@@ -2158,7 +2191,8 @@
         "test_paths": [
           "glom/test/test_error.py",
           "glom/test/test_path_and_t.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#255",
@@ -2203,6 +2237,11 @@
           "glom.test.test_scope_vars::test_s_scope_assign": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -2371,7 +2410,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 176,
-          "seconds": 1.5,
+          "seconds": 2.21,
           "total": 194
         },
         {
@@ -2387,7 +2426,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 170,
-          "seconds": 1.56,
+          "seconds": 2.17,
           "total": 194
         },
         {
@@ -2403,7 +2442,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 174,
-          "seconds": 1.59,
+          "seconds": 2.22,
           "total": 193
         },
         {
@@ -2418,7 +2457,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.87,
+          "seconds": 2.32,
           "total": 6
         },
         {
@@ -2433,7 +2472,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.88,
+          "seconds": 2.07,
           "total": 6
         },
         {
@@ -2447,7 +2486,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 6,
-          "seconds": 0.77,
+          "seconds": 2.34,
           "total": 6
         },
         {
@@ -2461,7 +2500,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 6,
-          "seconds": 0.77,
+          "seconds": 1.73,
           "total": 6
         },
         {
@@ -2475,7 +2514,7 @@
           "infrastructure_failure": null,
           "name": "alternative",
           "passing": 6,
-          "seconds": 0.75,
+          "seconds": 0.98,
           "total": 6
         }
       ],
@@ -2590,7 +2629,8 @@
           "glom/test/test_mutation.py",
           "glom/test/test_path_and_t.py",
           "glom/test/test_scope_vars.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#196",
@@ -2640,6 +2680,11 @@
             "test_sum_integers",
             "test_sum_seqs"
           ]
+        },
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
         },
         "screen": {
           "absent_before": [
@@ -2699,7 +2744,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 66,
-          "seconds": 0.8,
+          "seconds": 1.06,
           "total": 69
         },
         {
@@ -2716,7 +2761,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 72,
-          "seconds": 0.77,
+          "seconds": 1.13,
           "total": 76
         }
       ],
@@ -2807,7 +2852,8 @@
           "glom/test/test_mutable.py",
           "glom/test/test_mutation.py",
           "glom/test/test_reduction.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#76",
@@ -2832,6 +2878,11 @@
           "glom.test.test_cli::test_cli_scalar": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -2962,7 +3013,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 200,
-          "seconds": 1.3,
+          "seconds": 1.86,
           "total": 200
         },
         {
@@ -2977,7 +3028,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 199,
-          "seconds": 1.37,
+          "seconds": 1.91,
           "total": 200
         },
         {
@@ -2991,7 +3042,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 199,
-          "seconds": 1.28,
+          "seconds": 1.66,
           "total": 199
         },
         {
@@ -3019,7 +3070,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.62,
+          "seconds": 1.32,
           "total": 1
         },
         {
@@ -3033,7 +3084,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 1,
-          "seconds": 0.65,
+          "seconds": 0.8,
           "total": 1
         },
         {
@@ -3047,7 +3098,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 1,
-          "seconds": 0.6,
+          "seconds": 1.27,
           "total": 1
         }
       ],
@@ -3091,7 +3142,8 @@
         "test_files_changed": 1,
         "test_paths": [
           "glom/test/test_cli.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#280",
@@ -3134,6 +3186,11 @@
           "glom/test/test_target_types.py": [
             "test_types_bare"
           ]
+        },
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
         },
         "screen": {
           "absent_before": [
@@ -3198,7 +3255,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 122,
-          "seconds": 1.15,
+          "seconds": 1.62,
           "total": 124
         },
         {
@@ -3214,7 +3271,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 109,
-          "seconds": 1.12,
+          "seconds": 2.78,
           "total": 111
         }
       ],
@@ -3298,7 +3355,8 @@
           "glom/test/test_cli.py",
           "glom/test/test_error.py",
           "glom/test/test_target_types.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#112",
@@ -3317,6 +3375,11 @@
       "candidate_id": "pr-296",
       "detail": {
         "designated": {},
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -3358,7 +3421,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 200,
-          "seconds": 1.35,
+          "seconds": 2.47,
           "total": 200
         },
         {
@@ -3372,7 +3435,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 200,
-          "seconds": 1.28,
+          "seconds": 1.94,
           "total": 200
         }
       ],
@@ -3452,7 +3515,8 @@
         "test_paths": [
           "glom/test/conftest.py",
           "glom/test/test_error.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#296",
@@ -3469,6 +3533,11 @@
       "candidate_id": "pr-235",
       "detail": {
         "designated": {},
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -3512,7 +3581,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 175,
-          "seconds": 1.5,
+          "seconds": 2.8,
           "total": 194
         },
         {
@@ -3528,7 +3597,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 175,
-          "seconds": 1.51,
+          "seconds": 2.43,
           "total": 194
         }
       ],
@@ -3563,7 +3632,8 @@
           "glom/core.py"
         ],
         "test_files_changed": 0,
-        "test_paths": []
+        "test_paths": [],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#235",
@@ -3601,6 +3671,11 @@
           "glom.test.test_scope_vars::test_s_scope_assign": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -3766,7 +3841,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 146,
-          "seconds": 1.43,
+          "seconds": 2.6,
           "total": 164
         },
         {
@@ -3782,7 +3857,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 145,
-          "seconds": 1.57,
+          "seconds": 2.72,
           "total": 169
         },
         {
@@ -3798,7 +3873,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 145,
-          "seconds": 1.36,
+          "seconds": 2.99,
           "total": 163
         },
         {
@@ -3812,7 +3887,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.79,
+          "seconds": 1.19,
           "total": 5
         },
         {
@@ -3826,7 +3901,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.81,
+          "seconds": 1.07,
           "total": 5
         },
         {
@@ -3840,7 +3915,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 5,
-          "seconds": 0.65,
+          "seconds": 0.95,
           "total": 5
         },
         {
@@ -3854,7 +3929,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 5,
-          "seconds": 0.65,
+          "seconds": 0.95,
           "total": 5
         }
       ],
@@ -3945,7 +4020,8 @@
           "glom/test/test_match.py",
           "glom/test/test_mutation.py",
           "glom/test/test_scope_vars.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#174",
@@ -4013,6 +4089,11 @@
           "glom.test.test_streaming::test_filter": "assertion"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -4185,7 +4266,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 97,
-          "seconds": 0.9,
+          "seconds": 1.29,
           "total": 98
         },
         {
@@ -4201,7 +4282,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 88,
-          "seconds": 0.92,
+          "seconds": 1.41,
           "total": 98
         },
         {
@@ -4216,7 +4297,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 97,
-          "seconds": 0.89,
+          "seconds": 1.17,
           "total": 98
         },
         {
@@ -4230,7 +4311,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.75,
+          "seconds": 1.67,
           "total": 9
         },
         {
@@ -4244,7 +4325,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.77,
+          "seconds": 1.8,
           "total": 9
         },
         {
@@ -4258,7 +4339,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 9,
-          "seconds": 0.74,
+          "seconds": 1.62,
           "total": 9
         },
         {
@@ -4272,7 +4353,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 9,
-          "seconds": 0.7,
+          "seconds": 1.13,
           "total": 9
         }
       ],
@@ -4404,7 +4485,8 @@
           "glom/test/test_streaming.py",
           "glom/test/test_target_types.py",
           "glom/test/test_tutorial.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#117",
@@ -4448,6 +4530,11 @@
           "glom.test.test_cli::test_usage_errors": "assertion"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -4583,7 +4670,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 196,
-          "seconds": 1.31,
+          "seconds": 2.86,
           "total": 196
         },
         {
@@ -4599,7 +4686,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 194,
-          "seconds": 1.35,
+          "seconds": 1.89,
           "total": 196
         },
         {
@@ -4613,7 +4700,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 195,
-          "seconds": 1.27,
+          "seconds": 1.72,
           "total": 195
         },
         {
@@ -4628,7 +4715,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.63,
+          "seconds": 1.07,
           "total": 2
         },
         {
@@ -4643,7 +4730,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.66,
+          "seconds": 1.14,
           "total": 2
         },
         {
@@ -4657,7 +4744,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 2,
-          "seconds": 0.65,
+          "seconds": 0.99,
           "total": 2
         },
         {
@@ -4671,7 +4758,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 2,
-          "seconds": 0.63,
+          "seconds": 1.13,
           "total": 2
         }
       ],
@@ -4744,7 +4831,8 @@
         "test_files_changed": 1,
         "test_paths": [
           "glom/test/test_cli.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#277",
@@ -4780,6 +4868,11 @@
             "test_while",
             "test_windowed"
           ]
+        },
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
         },
         "screen": {
           "absent_before": [
@@ -4843,7 +4936,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 86,
-          "seconds": 0.83,
+          "seconds": 1.43,
           "total": 87
         },
         {
@@ -4859,7 +4952,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 73,
-          "seconds": 0.79,
+          "seconds": 1.69,
           "total": 75
         }
       ],
@@ -4940,7 +5033,8 @@
         "test_files_changed": 1,
         "test_paths": [
           "glom/test/test_streaming.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#100",
@@ -4964,6 +5058,11 @@
             "test_reduce",
             "test_sample"
           ]
+        },
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
         },
         "screen": {
           "absent_before": [
@@ -5024,7 +5123,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 109,
-          "seconds": 1.15,
+          "seconds": 2.09,
           "total": 110
         },
         {
@@ -5040,7 +5139,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 103,
-          "seconds": 1.22,
+          "seconds": 1.71,
           "total": 105
         }
       ],
@@ -5130,7 +5229,8 @@
         "test_files_changed": 1,
         "test_paths": [
           "glom/test/test_grouping.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#132",
@@ -5160,6 +5260,11 @@
             "test_a_forbidden",
             "test_s_magic"
           ]
+        },
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
         },
         "screen": {
           "absent_before": [
@@ -5254,7 +5359,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 142,
-          "seconds": 1.47,
+          "seconds": 2.38,
           "total": 156
         },
         {
@@ -5271,7 +5376,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 102,
-          "seconds": 1.48,
+          "seconds": 2.51,
           "total": 115
         }
       ],
@@ -5361,7 +5466,8 @@
           "glom/test/test_basic.py",
           "glom/test/test_let_vars.py",
           "glom/test/test_path_and_t.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#150",
@@ -5400,6 +5506,11 @@
           "glom.test.test_path_and_t::test_star_warning": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -5566,7 +5677,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 174,
-          "seconds": 1.88,
+          "seconds": 3.09,
           "total": 193
         },
         {
@@ -5582,7 +5693,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 169,
-          "seconds": 1.56,
+          "seconds": 2.58,
           "total": 193
         },
         {
@@ -5598,7 +5709,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 170,
-          "seconds": 1.49,
+          "seconds": 2.17,
           "total": 189
         },
         {
@@ -5612,7 +5723,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.75,
+          "seconds": 1.25,
           "total": 5
         },
         {
@@ -5626,7 +5737,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.74,
+          "seconds": 1.73,
           "total": 5
         },
         {
@@ -5640,7 +5751,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 5,
-          "seconds": 0.66,
+          "seconds": 1.06,
           "total": 5
         },
         {
@@ -5654,7 +5765,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 5,
-          "seconds": 0.67,
+          "seconds": 1.33,
           "total": 5
         },
         {
@@ -5668,7 +5779,7 @@
           "infrastructure_failure": null,
           "name": "alternative",
           "passing": 5,
-          "seconds": 0.7,
+          "seconds": 1.35,
           "total": 5
         }
       ],
@@ -5736,7 +5847,8 @@
           "glom/test/test_mutation.py",
           "glom/test/test_path_and_t.py",
           "glom/test/test_target_types.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#144",
@@ -5760,6 +5872,11 @@
       "candidate_id": "pr-279",
       "detail": {
         "designated": {},
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -5803,7 +5920,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 199,
-          "seconds": 1.3,
+          "seconds": 2.67,
           "total": 199
         },
         {
@@ -5817,7 +5934,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 199,
-          "seconds": 1.31,
+          "seconds": 2.29,
           "total": 199
         }
       ],
@@ -5888,7 +6005,8 @@
           "setup.py"
         ],
         "test_files_changed": 0,
-        "test_paths": []
+        "test_paths": [],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#279",
@@ -5925,6 +6043,11 @@
           "glom.test.test_match::test_nested_dict": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -6073,7 +6196,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 145,
-          "seconds": 1.46,
+          "seconds": 2.68,
           "total": 163
         },
         {
@@ -6089,7 +6212,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 143,
-          "seconds": 1.64,
+          "seconds": 2.14,
           "total": 163
         },
         {
@@ -6105,7 +6228,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 144,
-          "seconds": 1.44,
+          "seconds": 2.15,
           "total": 157
         },
         {
@@ -6120,7 +6243,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.67,
+          "seconds": 1.14,
           "total": 2
         },
         {
@@ -6135,7 +6258,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.67,
+          "seconds": 1.54,
           "total": 2
         },
         {
@@ -6149,7 +6272,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 2,
-          "seconds": 0.63,
+          "seconds": 1.28,
           "total": 2
         },
         {
@@ -6163,7 +6286,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 2,
-          "seconds": 0.65,
+          "seconds": 1.97,
           "total": 2
         }
       ],
@@ -6266,7 +6389,8 @@
           "glom/test/test_basic.py",
           "glom/test/test_error.py",
           "glom/test/test_match.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#170",
@@ -6313,6 +6437,11 @@
           "glom.test.test_streaming::test_all": "assertion"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -6508,7 +6637,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 195,
-          "seconds": 1.42,
+          "seconds": 2.09,
           "total": 195
         },
         {
@@ -6524,7 +6653,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 176,
-          "seconds": 1.56,
+          "seconds": 2.2,
           "total": 195
         },
         {
@@ -6540,7 +6669,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 176,
-          "seconds": 1.52,
+          "seconds": 2.45,
           "total": 194
         },
         {
@@ -6555,7 +6684,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.99,
+          "seconds": 1.95,
           "total": 19
         },
         {
@@ -6570,7 +6699,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.0,
+          "seconds": 1.85,
           "total": 19
         },
         {
@@ -6584,7 +6713,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 19,
-          "seconds": 0.76,
+          "seconds": 1.64,
           "total": 19
         },
         {
@@ -6598,7 +6727,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 19,
-          "seconds": 0.74,
+          "seconds": 1.53,
           "total": 19
         }
       ],
@@ -6677,7 +6806,8 @@
         "test_files_changed": 1,
         "test_paths": [
           "glom/test/test_error.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#271",
@@ -6744,6 +6874,11 @@
           "glom.test.test_path_and_t::test_path_t_roundtrip": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [
             "glom.test.test_basic::test_abstract_iterable",
@@ -6941,7 +7076,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 32,
-          "seconds": 0.68,
+          "seconds": 1.15,
           "total": 33
         },
         {
@@ -6958,7 +7093,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 6,
-          "seconds": 0.66,
+          "seconds": 1.03,
           "total": 11
         },
         {
@@ -6973,7 +7108,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 26,
-          "seconds": 0.63,
+          "seconds": 1.05,
           "total": 27
         },
         {
@@ -6988,7 +7123,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.56,
+          "seconds": 0.85,
           "total": 2
         },
         {
@@ -7003,7 +7138,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.61,
+          "seconds": 1.12,
           "total": 2
         },
         {
@@ -7017,7 +7152,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 2,
-          "seconds": 0.61,
+          "seconds": 1.67,
           "total": 2
         },
         {
@@ -7031,7 +7166,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 2,
-          "seconds": 0.56,
+          "seconds": 0.79,
           "total": 2
         },
         {
@@ -7045,7 +7180,7 @@
           "infrastructure_failure": null,
           "name": "alternative",
           "passing": 2,
-          "seconds": 0.57,
+          "seconds": 0.61,
           "total": 2
         }
       ],
@@ -7143,7 +7278,8 @@
           "glom/test/test_main.py",
           "glom/test/test_path_and_t.py",
           "glom/test/test_target_types.py"
-        ]
+        ],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#32",
@@ -7165,6 +7301,11 @@
       "candidate_id": "pr-275",
       "detail": {
         "designated": {},
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -7206,7 +7347,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 195,
-          "seconds": 1.27,
+          "seconds": 2.29,
           "total": 195
         },
         {
@@ -7220,7 +7361,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 195,
-          "seconds": 1.22,
+          "seconds": 2.27,
           "total": 195
         }
       ],
@@ -7255,7 +7396,8 @@
           "glom/core.py"
         ],
         "test_files_changed": 0,
-        "test_paths": []
+        "test_paths": [],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#275",
@@ -7273,6 +7415,11 @@
           "glom.test.test_cli::test_main_yaml_target": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -7405,7 +7552,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 176,
-          "seconds": 1.49,
+          "seconds": 2.78,
           "total": 194
         },
         {
@@ -7421,7 +7568,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 175,
-          "seconds": 1.51,
+          "seconds": 2.51,
           "total": 194
         },
         {
@@ -7437,7 +7584,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 175,
-          "seconds": 1.52,
+          "seconds": 1.98,
           "total": 194
         },
         {
@@ -7451,7 +7598,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.69,
+          "seconds": 0.97,
           "total": 1
         },
         {
@@ -7465,7 +7612,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.61,
+          "seconds": 0.95,
           "total": 1
         },
         {
@@ -7479,7 +7626,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 1,
-          "seconds": 0.62,
+          "seconds": 0.93,
           "total": 1
         },
         {
@@ -7493,7 +7640,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 1,
-          "seconds": 0.6,
+          "seconds": 0.95,
           "total": 1
         }
       ],
@@ -7535,7 +7682,8 @@
           "glom/cli.py"
         ],
         "test_files_changed": 0,
-        "test_paths": []
+        "test_paths": [],
+        "unparsed_test_files": 0
       },
       "source": "history",
       "subject": "PR#262",
@@ -7547,6 +7695,398 @@
       "verifier_files": [
         "glom/test/test_cli.py"
       ]
+    },
+    {
+      "all_gates_passed": false,
+      "candidate_id": "pr-263",
+      "detail": {
+        "designated": {},
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
+        "screen": {
+          "absent_before": [],
+          "collection_errors": [],
+          "failed_on_load": [],
+          "passing_both": 176,
+          "ran_and_failed": []
+        },
+        "transition": {
+          "base_sha": "34315014fe16b4c1e144a1acdf480699bf2303fb",
+          "base_tree": "a900a8d6059dcd1b2f5655df86a8f6bd6e02648e",
+          "head_sha": "1f883f0db898d6b15fcc0f293225dcccc16b2a57",
+          "head_tree": "f28818a7fcbc410ecff2f69fcf5abddfdea06d91",
+          "is_merge": false,
+          "linkage_method": "github_merge_sha",
+          "parent_index": 0
+        }
+      },
+      "eligible": false,
+      "failed_gates": [],
+      "files_in_scope": [
+        "setup.py"
+      ],
+      "gates": [],
+      "modules": [
+        "setup"
+      ],
+      "primary_module": "setup",
+      "reason_codes": [],
+      "rejected": "no_test_changed_verdict",
+      "runs": [
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 15,
+            "behavioral_exception": 3,
+            "passed": 176
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 18,
+          "infrastructure_failure": null,
+          "name": "after_full",
+          "passing": 176,
+          "seconds": 2.56,
+          "total": 194
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 15,
+            "behavioral_exception": 3,
+            "passed": 176
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 18,
+          "infrastructure_failure": null,
+          "name": "before_full",
+          "passing": 176,
+          "seconds": 2.44,
+          "total": 194
+        }
+      ],
+      "score": 0.1402,
+      "signals": {
+        "added_test_functions": 0,
+        "author": "kurtbrose",
+        "base_sha": "34315014fe16b4c1e144a1acdf480699bf2303fb",
+        "body_length": 26,
+        "changed_paths": [
+          "setup.py"
+        ],
+        "churn": 12,
+        "deltas": [
+          {
+            "additions": 10,
+            "binary": false,
+            "deletions": 2,
+            "path": "setup.py"
+          }
+        ],
+        "files_changed": 1,
+        "head_sha": "1f883f0db898d6b15fcc0f293225dcccc16b2a57",
+        "html_url": "https://github.com/mahmoud/glom/pull/263",
+        "merged_at": "2023-08-23T17:31:04Z",
+        "modified_test_functions": 0,
+        "modules_touched": 1,
+        "pr_number": 263,
+        "primary_path": "setup.py",
+        "source_files_changed": 1,
+        "source_paths": [
+          "setup.py"
+        ],
+        "test_files_changed": 0,
+        "test_paths": [],
+        "unparsed_test_files": 0
+      },
+      "source": "history",
+      "subject": "PR#263",
+      "targets": [],
+      "task_id": "pr-263",
+      "title": "imp -> importlib in setup.py",
+      "verifier_files": []
+    },
+    {
+      "all_gates_passed": false,
+      "candidate_id": "pr-114",
+      "detail": {
+        "designated": {
+          "glom/test/test_mutation.py": [
+            "test_bad_delete_target",
+            "test_delete",
+            "test_delete_ignore_missing",
+            "test_invalid_delete_op_target",
+            "test_sequence_delete",
+            "test_unregistered_delete"
+          ]
+        },
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
+        "screen": {
+          "absent_before": [
+            "glom.test.test_mutation::test_assign",
+            "glom.test.test_mutation::test_assign_missing_dict",
+            "glom.test.test_mutation::test_assign_missing_object",
+            "glom.test.test_mutation::test_assign_missing_signature",
+            "glom.test.test_mutation::test_assign_missing_unassignable",
+            "glom.test.test_mutation::test_assign_missing_with_extant_keys",
+            "glom.test.test_mutation::test_assign_spec_val",
+            "glom.test.test_mutation::test_bad_assign_target",
+            "glom.test.test_mutation::test_bad_delete_target",
+            "glom.test.test_mutation::test_delete",
+            "glom.test.test_mutation::test_delete_ignore_missing",
+            "glom.test.test_mutation::test_invalid_assign_op_target",
+            "glom.test.test_mutation::test_invalid_delete_op_target",
+            "glom.test.test_mutation::test_s_assign",
+            "glom.test.test_mutation::test_sequence_assign",
+            "glom.test.test_mutation::test_sequence_delete",
+            "glom.test.test_mutation::test_unregistered_assign",
+            "glom.test.test_mutation::test_unregistered_delete"
+          ],
+          "collection_errors": [
+            "glom.test.test_mutation"
+          ],
+          "failed_on_load": [],
+          "passing_both": 78,
+          "ran_and_failed": []
+        },
+        "transition": {
+          "base_sha": "518521cf7f1b874272bb700dcf4bc117d8092242",
+          "base_tree": "4129cf913b34012eca0cfbb5a6bb9bf42643f1c0",
+          "head_sha": "10e66192ac8f28cfa3d0b009c080aaed6dd67be1",
+          "head_tree": "1ec8d5e8ebb49801d74348daf29edd6213ac1fbd",
+          "is_merge": false,
+          "linkage_method": "github_merge_sha",
+          "parent_index": 0
+        }
+      },
+      "eligible": false,
+      "failed_gates": [],
+      "files_in_scope": [
+        "glom/__init__.py",
+        "glom/mutation.py"
+      ],
+      "gates": [],
+      "modules": [
+        "glom",
+        "glom.mutation"
+      ],
+      "primary_module": "glom.mutation",
+      "reason_codes": [],
+      "rejected": "only_uncollectable_tests_changed_verdict",
+      "runs": [
+        {
+          "backend": "docker",
+          "class_counts": {
+            "behavioral_exception": 1,
+            "passed": 96
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 1,
+          "infrastructure_failure": null,
+          "name": "after_full",
+          "passing": 96,
+          "seconds": 1.13,
+          "total": 97
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "behavioral_exception": 1,
+            "infrastructure": 1,
+            "passed": 78
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 2,
+          "infrastructure_failure": null,
+          "name": "before_full",
+          "passing": 78,
+          "seconds": 1.25,
+          "total": 80
+        }
+      ],
+      "score": 0.1401,
+      "signals": {
+        "added_test_functions": 6,
+        "author": "twang817",
+        "base_sha": "518521cf7f1b874272bb700dcf4bc117d8092242",
+        "body_length": 370,
+        "changed_paths": [
+          "glom/__init__.py",
+          "glom/mutation.py",
+          "glom/test/test_mutation.py"
+        ],
+        "churn": 183,
+        "deltas": [
+          {
+            "additions": 1,
+            "binary": false,
+            "deletions": 1,
+            "path": "glom/__init__.py"
+          },
+          {
+            "additions": 91,
+            "binary": false,
+            "deletions": 0,
+            "path": "glom/mutation.py"
+          },
+          {
+            "additions": 89,
+            "binary": false,
+            "deletions": 1,
+            "path": "glom/test/test_mutation.py"
+          }
+        ],
+        "files_changed": 3,
+        "head_sha": "10e66192ac8f28cfa3d0b009c080aaed6dd67be1",
+        "html_url": "https://github.com/mahmoud/glom/pull/114",
+        "merged_at": "2019-11-02T19:58:12Z",
+        "modified_test_functions": 0,
+        "modules_touched": 2,
+        "pr_number": 114,
+        "primary_path": "glom/mutation.py",
+        "source_files_changed": 2,
+        "source_paths": [
+          "glom/__init__.py",
+          "glom/mutation.py"
+        ],
+        "test_files_changed": 1,
+        "test_paths": [
+          "glom/test/test_mutation.py"
+        ],
+        "unparsed_test_files": 0
+      },
+      "source": "history",
+      "subject": "PR#114",
+      "targets": [],
+      "task_id": "pr-114",
+      "title": "Delete mutation",
+      "verifier_files": [
+        "glom/test/test_mutation.py"
+      ]
+    },
+    {
+      "all_gates_passed": false,
+      "candidate_id": "pr-258",
+      "detail": {
+        "designated": {},
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
+        "screen": {
+          "absent_before": [],
+          "collection_errors": [],
+          "failed_on_load": [],
+          "passing_both": 175,
+          "ran_and_failed": []
+        },
+        "transition": {
+          "base_sha": "e34304301c1986e985a8e08052eaba516103012f",
+          "base_tree": "754187194b62256c816236824a25d154bf5c7c5e",
+          "head_sha": "f3b407186ab0e6d091a0e3b557f2205557b09563",
+          "head_tree": "58dc7e1caef54bcda40a86d34899cff9751a38ed",
+          "is_merge": false,
+          "linkage_method": "github_merge_sha",
+          "parent_index": 0
+        }
+      },
+      "eligible": false,
+      "failed_gates": [],
+      "files_in_scope": [
+        "glom/matching.py"
+      ],
+      "gates": [],
+      "modules": [
+        "glom.matching"
+      ],
+      "primary_module": "glom.matching",
+      "reason_codes": [],
+      "rejected": "no_test_changed_verdict",
+      "runs": [
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 15,
+            "behavioral_exception": 4,
+            "passed": 175
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 19,
+          "infrastructure_failure": null,
+          "name": "after_full",
+          "passing": 175,
+          "seconds": 2.37,
+          "total": 194
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 15,
+            "behavioral_exception": 4,
+            "passed": 175
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 19,
+          "infrastructure_failure": null,
+          "name": "before_full",
+          "passing": 175,
+          "seconds": 1.55,
+          "total": 194
+        }
+      ],
+      "score": 0.1349,
+      "signals": {
+        "added_test_functions": 0,
+        "author": "hynek",
+        "base_sha": "e34304301c1986e985a8e08052eaba516103012f",
+        "body_length": 103,
+        "changed_paths": [
+          "glom/matching.py"
+        ],
+        "churn": 2,
+        "deltas": [
+          {
+            "additions": 1,
+            "binary": false,
+            "deletions": 1,
+            "path": "glom/matching.py"
+          }
+        ],
+        "files_changed": 1,
+        "head_sha": "f3b407186ab0e6d091a0e3b557f2205557b09563",
+        "html_url": "https://github.com/mahmoud/glom/pull/258",
+        "merged_at": "2023-03-31T01:28:40Z",
+        "modified_test_functions": 0,
+        "modules_touched": 1,
+        "pr_number": 258,
+        "primary_path": "glom/matching.py",
+        "source_files_changed": 1,
+        "source_paths": [
+          "glom/matching.py"
+        ],
+        "test_files_changed": 0,
+        "test_paths": [],
+        "unparsed_test_files": 0
+      },
+      "source": "history",
+      "subject": "PR#258",
+      "targets": [],
+      "task_id": "pr-258",
+      "title": "Fix invalid escape sequence '\\ ' warning",
+      "verifier_files": []
     },
     {
       "all_gates_passed": true,
@@ -7585,6 +8125,11 @@
           "glom.test.test_grouping::test_sample": "assertion"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -7739,7 +8284,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 1.37,
+          "seconds": 2.03,
           "total": 202
         },
         {
@@ -7755,7 +8300,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 196,
-          "seconds": 1.36,
+          "seconds": 2.13,
           "total": 202
         },
         {
@@ -7771,7 +8316,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 196,
-          "seconds": 1.34,
+          "seconds": 2.1,
           "total": 202
         },
         {
@@ -7786,7 +8331,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.69,
+          "seconds": 1.12,
           "total": 6
         },
         {
@@ -7801,7 +8346,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.68,
+          "seconds": 2.41,
           "total": 6
         },
         {
@@ -7815,7 +8360,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 6,
-          "seconds": 0.64,
+          "seconds": 1.38,
           "total": 6
         },
         {
@@ -7829,7 +8374,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 6,
-          "seconds": 0.66,
+          "seconds": 2.14,
           "total": 6
         }
       ],
@@ -7847,7 +8392,7 @@
           "glom/test/test_grouping.py::test_limit",
           "glom/test/test_grouping.py::test_sample"
         ],
-        "focus_score": 0.9107,
+        "focus_score": 0.9114,
         "has_docstring": true,
         "kind": "function",
         "path": "glom/grouping.py",
@@ -7902,6 +8447,11 @@
           "glom.test.test_path_and_t::test_from_t_identity": "assertion"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -8049,7 +8599,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 1.46,
+          "seconds": 2.09,
           "total": 202
         },
         {
@@ -8065,7 +8615,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 199,
-          "seconds": 1.35,
+          "seconds": 2.12,
           "total": 202
         },
         {
@@ -8081,7 +8631,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 199,
-          "seconds": 1.38,
+          "seconds": 2.29,
           "total": 202
         },
         {
@@ -8096,7 +8646,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.76,
+          "seconds": 2.08,
           "total": 3
         },
         {
@@ -8111,7 +8661,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.72,
+          "seconds": 2.54,
           "total": 3
         },
         {
@@ -8125,7 +8675,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 3,
-          "seconds": 0.69,
+          "seconds": 2.15,
           "total": 3
         },
         {
@@ -8139,11 +8689,11 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 3,
-          "seconds": 0.66,
+          "seconds": 2.35,
           "total": 3
         }
       ],
-      "score": 0.8956,
+      "score": 0.895,
       "signals": {
         "body_lines": 8,
         "coverage_ratio": 0.75,
@@ -8154,7 +8704,7 @@
           "glom/test/test_mutation.py::test_s_assign",
           "glom/test/test_path_and_t.py::test_from_t_identity"
         ],
-        "focus_score": 0.8405,
+        "focus_score": 0.8407,
         "has_docstring": true,
         "kind": "method",
         "path": "glom/core.py",
@@ -8223,6 +8773,11 @@
           "glom.test.test_scope_vars::test_vars": "assertion"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -8388,7 +8943,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 1.55,
+          "seconds": 2.03,
           "total": 202
         },
         {
@@ -8404,7 +8959,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 193,
-          "seconds": 1.5,
+          "seconds": 2.31,
           "total": 202
         },
         {
@@ -8420,7 +8975,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 193,
-          "seconds": 1.49,
+          "seconds": 2.4,
           "total": 202
         },
         {
@@ -8435,7 +8990,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.84,
+          "seconds": 2.48,
           "total": 9
         },
         {
@@ -8450,7 +9005,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.81,
+          "seconds": 2.61,
           "total": 9
         },
         {
@@ -8464,7 +9019,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 9,
-          "seconds": 0.71,
+          "seconds": 2.51,
           "total": 9
         },
         {
@@ -8478,11 +9033,11 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 9,
-          "seconds": 0.68,
+          "seconds": 2.4,
           "total": 9
         }
       ],
-      "score": 0.8687,
+      "score": 0.87,
       "signals": {
         "body_lines": 13,
         "coverage_ratio": 0.615,
@@ -8500,7 +9055,7 @@
           "glom/test/test_scope_vars.py::test_vars",
           "glom/test/test_snippets.py::test_snippet[358-glom({}, (A.t, T.update({1: 1}), S.t))\\n]"
         ],
-        "focus_score": 0.8224,
+        "focus_score": 0.8239,
         "has_docstring": true,
         "kind": "function",
         "path": "glom/core.py",
@@ -8567,6 +9122,11 @@
           "glom.test.test_match::test_sample": "behavioral_exception"
         },
         "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
         "screen": {
           "absent_before": [],
           "collection_errors": [],
@@ -8714,7 +9274,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 1.34,
+          "seconds": 2.18,
           "total": 202
         },
         {
@@ -8729,7 +9289,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 199,
-          "seconds": 1.33,
+          "seconds": 2.09,
           "total": 202
         },
         {
@@ -8744,7 +9304,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 199,
-          "seconds": 1.33,
+          "seconds": 2.2,
           "total": 202
         },
         {
@@ -8758,7 +9318,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.67,
+          "seconds": 1.24,
           "total": 3
         },
         {
@@ -8772,7 +9332,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.69,
+          "seconds": 2.78,
           "total": 3
         },
         {
@@ -8786,7 +9346,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 3,
-          "seconds": 0.64,
+          "seconds": 1.49,
           "total": 3
         },
         {
@@ -8800,11 +9360,11 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 3,
-          "seconds": 0.63,
+          "seconds": 2.47,
           "total": 3
         }
       ],
-      "score": 0.8666,
+      "score": 0.8679,
       "signals": {
         "body_lines": 18,
         "coverage_ratio": 0.611,
@@ -8822,7 +9382,7 @@
           "glom/test/test_match.py::test_sample",
           "glom/test/test_snippets.py::test_snippet[323-glom(json.loads(data),\\n    Ref('json',\\n        Match(Switch({\\n            dict: {Ref('json'): Ref('json')},\\n            list: [Ref('json')],\\n            type(u''): Auto(str),\\n            object: T}))\\n        )\\n    )\\n]"
         ],
-        "focus_score": 0.821,
+        "focus_score": 0.8225,
         "has_docstring": true,
         "kind": "function",
         "path": "glom/matching.py",
@@ -8841,6 +9401,1343 @@
       "verifier_files": [
         "glom/test/test_match.py",
         "glom/test/test_snippets.py"
+      ]
+    },
+    {
+      "all_gates_passed": true,
+      "candidate_id": "excise-glom_core.py-glom.core.TargetRegistry._register_fuzzy_type",
+      "detail": {
+        "designated": {
+          "glom/test/test_reduction.py": [
+            "test_fold_bad_iter"
+          ],
+          "glom/test/test_streaming.py": [
+            "test_faulty_iterate"
+          ],
+          "glom/test/test_target_types.py": [
+            "test_default_scope_register",
+            "test_duck_register",
+            "test_faulty_iterate",
+            "test_faulty_op_registration",
+            "test_invalid_register",
+            "test_iter_set",
+            "test_iter_str",
+            "test_reregister_type",
+            "test_types_bare",
+            "test_types_leave_one_out"
+          ]
+        },
+        "excision": {
+          "body_line_count": 21,
+          "decorators": [],
+          "first_body_line": 2075,
+          "has_docstring": true,
+          "is_async": false,
+          "is_generator": false,
+          "last_body_line": 2095,
+          "path": "glom/core.py",
+          "qualified_name": "_register_fuzzy_type",
+          "strategy": "neutral"
+        },
+        "failure_classes": {
+          "glom.test.test_basic::test_initial_integration": "behavioral_exception",
+          "glom.test.test_basic::test_pipe": "behavioral_exception",
+          "glom.test.test_basic::test_ref": "behavioral_exception",
+          "glom.test.test_basic::test_scope": "behavioral_exception",
+          "glom.test.test_basic::test_skip": "behavioral_exception",
+          "glom.test.test_basic::test_stop": "behavioral_exception",
+          "glom.test.test_cli::test_main_python_full_spec_python_target": "assertion",
+          "glom.test.test_error::test_all_public_errors": "behavioral_exception",
+          "glom.test.test_error::test_glom_error_double_stack": "assertion",
+          "glom.test.test_error::test_glom_error_stack": "assertion",
+          "glom.test.test_error::test_partially_failing_branch": "assertion",
+          "glom.test.test_grouping::test_agg": "behavioral_exception",
+          "glom.test.test_grouping::test_bucketing": "behavioral_exception",
+          "glom.test.test_grouping::test_corner_cases": "behavioral_exception",
+          "glom.test.test_match::test_clamp": "behavioral_exception",
+          "glom.test.test_match::test_examples": "behavioral_exception",
+          "glom.test.test_mutation::test_assign": "behavioral_exception",
+          "glom.test.test_mutation::test_assign_missing_object": "behavioral_exception",
+          "glom.test.test_mutation::test_assign_missing_unassignable": "behavioral_exception",
+          "glom.test.test_mutation::test_bad_assign_target": "behavioral_exception",
+          "glom.test.test_mutation::test_bad_delete_target": "behavioral_exception",
+          "glom.test.test_mutation::test_delete": "behavioral_exception",
+          "glom.test.test_path_and_t::test_path_star": "behavioral_exception",
+          "glom.test.test_path_and_t::test_star_broadcast": "behavioral_exception",
+          "glom.test.test_reduction::test_flatten_func": "behavioral_exception",
+          "glom.test.test_reduction::test_fold": "behavioral_exception",
+          "glom.test.test_scope_vars::test_let": "behavioral_exception",
+          "glom.test.test_scope_vars::test_s_scope_assign": "behavioral_exception",
+          "glom.test.test_scope_vars::test_vars": "behavioral_exception",
+          "glom.test.test_snippets::test_snippet[252-glom(range(10), [(M < 7) | Val(7)])\\n# [0, 1, 2, 3, 4, 5, 6, 7, 7, 7]\\n]": "behavioral_exception",
+          "glom.test.test_snippets::test_snippet[262-glom(range(10), [(M < 7) | Val(SKIP)])\\n# [0, 1, 2, 3, 4, 5, 6]\\n]": "behavioral_exception",
+          "glom.test.test_streaming::test_all": "behavioral_exception",
+          "glom.test.test_streaming::test_filter": "behavioral_exception",
+          "glom.test.test_streaming::test_first": "behavioral_exception",
+          "glom.test.test_streaming::test_iter": "behavioral_exception",
+          "glom.test.test_streaming::test_iter_composition": "behavioral_exception",
+          "glom.test.test_streaming::test_slice": "behavioral_exception",
+          "glom.test.test_streaming::test_while": "behavioral_exception",
+          "glom.test.test_streaming::test_windowed": "behavioral_exception",
+          "glom.test.test_target_types::test_duck_register": "behavioral_exception",
+          "glom.test.test_target_types::test_faulty_op_registration": "assertion",
+          "glom.test.test_target_types::test_iter_set": "behavioral_exception",
+          "glom.test.test_target_types::test_types_leave_one_out": "behavioral_exception"
+        },
+        "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
+        "screen": {
+          "absent_before": [],
+          "collection_errors": [],
+          "failed_on_load": [],
+          "passing_both": 159,
+          "ran_and_failed": [
+            "glom.test.test_basic::test_initial_integration",
+            "glom.test.test_basic::test_pipe",
+            "glom.test.test_basic::test_ref",
+            "glom.test.test_basic::test_scope",
+            "glom.test.test_basic::test_skip",
+            "glom.test.test_basic::test_stop",
+            "glom.test.test_cli::test_main_python_full_spec_python_target",
+            "glom.test.test_error::test_all_public_errors",
+            "glom.test.test_error::test_glom_error_double_stack",
+            "glom.test.test_error::test_glom_error_stack",
+            "glom.test.test_error::test_partially_failing_branch",
+            "glom.test.test_grouping::test_agg",
+            "glom.test.test_grouping::test_bucketing",
+            "glom.test.test_grouping::test_corner_cases",
+            "glom.test.test_match::test_clamp",
+            "glom.test.test_match::test_examples",
+            "glom.test.test_mutation::test_assign",
+            "glom.test.test_mutation::test_assign_missing_object",
+            "glom.test.test_mutation::test_assign_missing_unassignable",
+            "glom.test.test_mutation::test_bad_assign_target",
+            "glom.test.test_mutation::test_bad_delete_target",
+            "glom.test.test_mutation::test_delete",
+            "glom.test.test_path_and_t::test_path_star",
+            "glom.test.test_path_and_t::test_star_broadcast",
+            "glom.test.test_reduction::test_flatten_func",
+            "glom.test.test_reduction::test_fold",
+            "glom.test.test_scope_vars::test_let",
+            "glom.test.test_scope_vars::test_s_scope_assign",
+            "glom.test.test_scope_vars::test_vars",
+            "glom.test.test_snippets::test_snippet[252-glom(range(10), [(M < 7) | Val(7)])\\n# [0, 1, 2, 3, 4, 5, 6, 7, 7, 7]\\n]",
+            "glom.test.test_snippets::test_snippet[262-glom(range(10), [(M < 7) | Val(SKIP)])\\n# [0, 1, 2, 3, 4, 5, 6]\\n]",
+            "glom.test.test_streaming::test_all",
+            "glom.test.test_streaming::test_filter",
+            "glom.test.test_streaming::test_first",
+            "glom.test.test_streaming::test_iter",
+            "glom.test.test_streaming::test_iter_composition",
+            "glom.test.test_streaming::test_slice",
+            "glom.test.test_streaming::test_while",
+            "glom.test.test_streaming::test_windowed",
+            "glom.test.test_target_types::test_duck_register",
+            "glom.test.test_target_types::test_faulty_op_registration",
+            "glom.test.test_target_types::test_iter_set",
+            "glom.test.test_target_types::test_types_leave_one_out"
+          ]
+        },
+        "transition": {
+          "base_sha": "30b477ab65560914a38f331614947d0894701044",
+          "base_tree": "ab050b7afac4ff43e7059d9cd1d3e87ff8bf7c19",
+          "head_sha": "30b477ab65560914a38f331614947d0894701044",
+          "head_tree": "ab050b7afac4ff43e7059d9cd1d3e87ff8bf7c19",
+          "is_merge": false,
+          "linkage_method": "excision",
+          "parent_index": 0
+        }
+      },
+      "eligible": true,
+      "failed_gates": [],
+      "files_in_scope": [
+        "glom/core.py"
+      ],
+      "gates": [
+        {
+          "detail": {
+            "targets": {
+              "glom.test.test_basic::test_initial_integration": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_basic::test_pipe": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_basic::test_ref": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_basic::test_scope": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_basic::test_skip": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_basic::test_stop": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_cli::test_main_python_full_spec_python_target": "AssertionError: assert 1 == 0",
+              "glom.test.test_error::test_all_public_errors": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_error::test_glom_error_double_stack": "assert 'Traceback (m...e \\'val\\'\")\\n' == \"Traceback (m...at ('val'))\\n\"",
+              "glom.test.test_error::test_glom_error_stack": "assert \"Traceback (m... ('value'))\\n\" == 'Traceback (m...\\'value\\'\")\\n'",
+              "glom.test.test_error::test_partially_failing_branch": "assert \"Traceback (m... (at ('c'))\\n\" == 'Traceback (m...ute \\'c\\'\")\\n'",
+              "glom.test.test_grouping::test_agg": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_grouping::test_bucketing": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_grouping::test_corner_cases": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_match::test_clamp": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_match::test_examples": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_assign": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_assign_missing_object": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_assign_missing_unassignable": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_bad_assign_target": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_bad_delete_target": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_delete": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_path_and_t::test_path_star": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_path_and_t::test_star_broadcast": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_reduction::test_flatten_func": "glom.reduction.FoldError: error raised while processing, details below.",
+              "glom.test.test_reduction::test_fold": "glom.reduction.FoldError: error raised while processing, details below.",
+              "glom.test.test_scope_vars::test_let": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_scope_vars::test_s_scope_assign": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_scope_vars::test_vars": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_snippets::test_snippet[252-glom(range(10), [(M < 7) | Val(7)])\\n# [0, 1, 2, 3, 4, 5, 6, 7, 7, 7]\\n]": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_snippets::test_snippet[262-glom(range(10), [(M < 7) | Val(SKIP)])\\n# [0, 1, 2, 3, 4, 5, 6]\\n]": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_streaming::test_all": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_streaming::test_filter": "glom.core.UnregisteredTarget: target type 'count' not registered for 'iterate', expected one of registered types: (OrderedDict, _AbstractIterable, dict, list, tuple)",
+              "glom.test.test_streaming::test_first": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_streaming::test_iter": "glom.core.UnregisteredTarget: target type 'count' not registered for 'iterate', expected one of registered types: (OrderedDict, _AbstractIterable, dict, list, tuple)",
+              "glom.test.test_streaming::test_iter_composition": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_streaming::test_slice": "glom.core.UnregisteredTarget: target type 'count' not registered for 'iterate', expected one of registered types: (OrderedDict, _AbstractIterable, dict, list, tuple)",
+              "glom.test.test_streaming::test_while": "glom.core.UnregisteredTarget: target type 'count' not registered for 'iterate', expected one of registered types: (OrderedDict, _AbstractIterable, dict, list, tuple)",
+              "glom.test.test_streaming::test_windowed": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_target_types::test_duck_register": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_target_types::test_faulty_op_registration": "AssertionError: assert OrderedDict()",
+              "glom.test.test_target_types::test_iter_set": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_target_types::test_types_leave_one_out": "glom.core.UnregisteredTarget: target type 'A' not registered for 'get', expected one of registered types: (B, C, D, E, F, object)"
+            }
+          },
+          "gate": "fail_before",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "targets": [
+              "glom.test.test_basic::test_initial_integration",
+              "glom.test.test_basic::test_pipe",
+              "glom.test.test_basic::test_ref",
+              "glom.test.test_basic::test_scope",
+              "glom.test.test_basic::test_skip",
+              "glom.test.test_basic::test_stop",
+              "glom.test.test_cli::test_main_python_full_spec_python_target",
+              "glom.test.test_error::test_all_public_errors",
+              "glom.test.test_error::test_glom_error_double_stack",
+              "glom.test.test_error::test_glom_error_stack",
+              "glom.test.test_error::test_partially_failing_branch",
+              "glom.test.test_grouping::test_agg",
+              "glom.test.test_grouping::test_bucketing",
+              "glom.test.test_grouping::test_corner_cases",
+              "glom.test.test_match::test_clamp",
+              "glom.test.test_match::test_examples",
+              "glom.test.test_mutation::test_assign",
+              "glom.test.test_mutation::test_assign_missing_object",
+              "glom.test.test_mutation::test_assign_missing_unassignable",
+              "glom.test.test_mutation::test_bad_assign_target",
+              "glom.test.test_mutation::test_bad_delete_target",
+              "glom.test.test_mutation::test_delete",
+              "glom.test.test_path_and_t::test_path_star",
+              "glom.test.test_path_and_t::test_star_broadcast",
+              "glom.test.test_reduction::test_flatten_func",
+              "glom.test.test_reduction::test_fold",
+              "glom.test.test_scope_vars::test_let",
+              "glom.test.test_scope_vars::test_s_scope_assign",
+              "glom.test.test_scope_vars::test_vars",
+              "glom.test.test_snippets::test_snippet[252-glom(range(10), [(M < 7) | Val(7)])\\n# [0, 1, 2, 3, 4, 5, 6, 7, 7, 7]\\n]",
+              "glom.test.test_snippets::test_snippet[262-glom(range(10), [(M < 7) | Val(SKIP)])\\n# [0, 1, 2, 3, 4, 5, 6]\\n]",
+              "glom.test.test_streaming::test_all",
+              "glom.test.test_streaming::test_filter",
+              "glom.test.test_streaming::test_first",
+              "glom.test.test_streaming::test_iter",
+              "glom.test.test_streaming::test_iter_composition",
+              "glom.test.test_streaming::test_slice",
+              "glom.test.test_streaming::test_while",
+              "glom.test.test_streaming::test_windowed",
+              "glom.test.test_target_types::test_duck_register",
+              "glom.test.test_target_types::test_faulty_op_registration",
+              "glom.test.test_target_types::test_iter_set",
+              "glom.test.test_target_types::test_types_leave_one_out"
+            ]
+          },
+          "gate": "pass_after",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "after_passing": 202,
+            "baseline_passing": 159,
+            "deliberately_removed": []
+          },
+          "gate": "collateral",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "repeats": 2
+          },
+          "gate": "determinism_before",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "repeats": 2
+          },
+          "gate": "determinism_after",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "files_checked": 12
+          },
+          "gate": "verifier_integrity",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "clean": true,
+            "leaked_paths": [],
+            "stale_bytecode": [],
+            "stray_patches": []
+          },
+          "gate": "solver_bundle",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "coupling": {
+              "exact_representation": [
+                "glom/test/test_basic.py:75",
+                "glom/test/test_basic.py:172",
+                "glom/test/test_basic.py:173",
+                "glom/test/test_basic.py:193",
+                "glom/test/test_basic.py:234",
+                "glom/test/test_basic.py:247",
+                "glom/test/test_basic.py:261",
+                "glom/test/test_basic.py:268",
+                "glom/test/test_basic.py:276",
+                "glom/test/test_basic.py:282"
+              ],
+              "findings": 90,
+              "patched_internals": [],
+              "private_references": [],
+              "type_identity": []
+            },
+            "coupling_findings": 90,
+            "mutation": {
+              "files_changed": [],
+              "renames": {}
+            },
+            "portable": true,
+            "status": "no_internals_to_rename"
+          },
+          "gate": "alternative_implementation",
+          "passed": true,
+          "reason_code": null
+        }
+      ],
+      "modules": [
+        "glom.core"
+      ],
+      "primary_module": "glom.core",
+      "reason_codes": [],
+      "rejected": null,
+      "runs": [
+        {
+          "backend": "docker",
+          "class_counts": {
+            "passed": 202
+          },
+          "detail": "",
+          "exit_code": 0,
+          "failing": 0,
+          "infrastructure_failure": null,
+          "name": "after_full",
+          "passing": 202,
+          "seconds": 2.78,
+          "total": 202
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 5,
+            "behavioral_exception": 38,
+            "passed": 159
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 43,
+          "infrastructure_failure": null,
+          "name": "before_full",
+          "passing": 159,
+          "seconds": 3.2,
+          "total": 202
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 5,
+            "behavioral_exception": 38,
+            "passed": 159
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 43,
+          "infrastructure_failure": null,
+          "name": "baseline_full",
+          "passing": 159,
+          "seconds": 3.59,
+          "total": 202
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 5,
+            "behavioral_exception": 38
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 43,
+          "infrastructure_failure": null,
+          "name": "before_targets_1",
+          "passing": 0,
+          "seconds": 3.29,
+          "total": 43
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 5,
+            "behavioral_exception": 38
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 43,
+          "infrastructure_failure": null,
+          "name": "before_targets_2",
+          "passing": 0,
+          "seconds": 2.02,
+          "total": 43
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "passed": 43
+          },
+          "detail": "",
+          "exit_code": 0,
+          "failing": 0,
+          "infrastructure_failure": null,
+          "name": "after_targets_1",
+          "passing": 43,
+          "seconds": 1.71,
+          "total": 43
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "passed": 43
+          },
+          "detail": "",
+          "exit_code": 0,
+          "failing": 0,
+          "infrastructure_failure": null,
+          "name": "after_targets_2",
+          "passing": 43,
+          "seconds": 1.44,
+          "total": 43
+        }
+      ],
+      "score": 0.8655,
+      "signals": {
+        "body_lines": 33,
+        "coverage_ratio": 0.636,
+        "covered_lines": 21,
+        "covering_test_count": 12,
+        "covering_tests": [
+          "glom/test/test_reduction.py::test_fold_bad_iter",
+          "glom/test/test_streaming.py::test_faulty_iterate",
+          "glom/test/test_target_types.py::test_default_scope_register",
+          "glom/test/test_target_types.py::test_duck_register",
+          "glom/test/test_target_types.py::test_faulty_iterate",
+          "glom/test/test_target_types.py::test_faulty_op_registration",
+          "glom/test/test_target_types.py::test_invalid_register",
+          "glom/test/test_target_types.py::test_iter_set",
+          "glom/test/test_target_types.py::test_iter_str",
+          "glom/test/test_target_types.py::test_reregister_type",
+          "glom/test/test_target_types.py::test_types_bare",
+          "glom/test/test_target_types.py::test_types_leave_one_out"
+        ],
+        "focus_score": 0.8209,
+        "has_docstring": true,
+        "kind": "method",
+        "path": "glom/core.py",
+        "qualified_name": "glom.core.TargetRegistry._register_fuzzy_type",
+        "symbol_id": "glom/core.py::glom.core.TargetRegistry._register_fuzzy_type"
+      },
+      "source": "excision",
+      "subject": "glom/core.py::glom.core.TargetRegistry._register_fuzzy_type",
+      "targets": [
+        "glom.test.test_basic::test_initial_integration",
+        "glom.test.test_basic::test_pipe",
+        "glom.test.test_basic::test_ref",
+        "glom.test.test_basic::test_scope",
+        "glom.test.test_basic::test_skip",
+        "glom.test.test_basic::test_stop",
+        "glom.test.test_cli::test_main_python_full_spec_python_target",
+        "glom.test.test_error::test_all_public_errors",
+        "glom.test.test_error::test_glom_error_double_stack",
+        "glom.test.test_error::test_glom_error_stack",
+        "glom.test.test_error::test_partially_failing_branch",
+        "glom.test.test_grouping::test_agg",
+        "glom.test.test_grouping::test_bucketing",
+        "glom.test.test_grouping::test_corner_cases",
+        "glom.test.test_match::test_clamp",
+        "glom.test.test_match::test_examples",
+        "glom.test.test_mutation::test_assign",
+        "glom.test.test_mutation::test_assign_missing_object",
+        "glom.test.test_mutation::test_assign_missing_unassignable",
+        "glom.test.test_mutation::test_bad_assign_target",
+        "glom.test.test_mutation::test_bad_delete_target",
+        "glom.test.test_mutation::test_delete",
+        "glom.test.test_path_and_t::test_path_star",
+        "glom.test.test_path_and_t::test_star_broadcast",
+        "glom.test.test_reduction::test_flatten_func",
+        "glom.test.test_reduction::test_fold",
+        "glom.test.test_scope_vars::test_let",
+        "glom.test.test_scope_vars::test_s_scope_assign",
+        "glom.test.test_scope_vars::test_vars",
+        "glom.test.test_snippets::test_snippet[252-glom(range(10), [(M < 7) | Val(7)])\\n# [0, 1, 2, 3, 4, 5, 6, 7, 7, 7]\\n]",
+        "glom.test.test_snippets::test_snippet[262-glom(range(10), [(M < 7) | Val(SKIP)])\\n# [0, 1, 2, 3, 4, 5, 6]\\n]",
+        "glom.test.test_streaming::test_all",
+        "glom.test.test_streaming::test_filter",
+        "glom.test.test_streaming::test_first",
+        "glom.test.test_streaming::test_iter",
+        "glom.test.test_streaming::test_iter_composition",
+        "glom.test.test_streaming::test_slice",
+        "glom.test.test_streaming::test_while",
+        "glom.test.test_streaming::test_windowed",
+        "glom.test.test_target_types::test_duck_register",
+        "glom.test.test_target_types::test_faulty_op_registration",
+        "glom.test.test_target_types::test_iter_set",
+        "glom.test.test_target_types::test_types_leave_one_out"
+      ],
+      "task_id": "excise-glom_core.py-glom.core.TargetRegistry._register_fuzzy_type",
+      "title": "Reimplement glom.core.TargetRegistry._register_fuzzy_type",
+      "verifier_files": [
+        "glom/test/test_basic.py",
+        "glom/test/test_cli.py",
+        "glom/test/test_error.py",
+        "glom/test/test_grouping.py",
+        "glom/test/test_match.py",
+        "glom/test/test_mutation.py",
+        "glom/test/test_path_and_t.py",
+        "glom/test/test_reduction.py",
+        "glom/test/test_scope_vars.py",
+        "glom/test/test_snippets.py",
+        "glom/test/test_streaming.py",
+        "glom/test/test_target_types.py"
+      ]
+    },
+    {
+      "all_gates_passed": true,
+      "candidate_id": "excise-glom_core.py-glom.core.TargetRegistry.register_op",
+      "detail": {
+        "designated": {
+          "glom/test/test_mutation.py": [
+            "test_unregistered_assign",
+            "test_unregistered_delete"
+          ],
+          "glom/test/test_reduction.py": [
+            "test_fold_bad_iter"
+          ],
+          "glom/test/test_streaming.py": [
+            "test_faulty_iterate"
+          ],
+          "glom/test/test_target_types.py": [
+            "test_duck_register",
+            "test_exact_register",
+            "test_faulty_iterate",
+            "test_faulty_op_registration",
+            "test_invalid_register",
+            "test_iter_set",
+            "test_iter_str",
+            "test_reregister_type",
+            "test_types_bare",
+            "test_types_leave_one_out"
+          ]
+        },
+        "excision": {
+          "body_line_count": 33,
+          "decorators": [],
+          "first_body_line": 2144,
+          "has_docstring": true,
+          "is_async": false,
+          "is_generator": false,
+          "last_body_line": 2176,
+          "path": "glom/core.py",
+          "qualified_name": "register_op",
+          "strategy": "neutral"
+        },
+        "failure_classes": {
+          "glom.test.test_basic::test_initial_integration": "behavioral_exception",
+          "glom.test.test_basic::test_pipe": "behavioral_exception",
+          "glom.test.test_basic::test_ref": "behavioral_exception",
+          "glom.test.test_error::test_all_public_errors": "behavioral_exception",
+          "glom.test.test_error::test_glom_error_double_stack": "assertion",
+          "glom.test.test_error::test_glom_error_stack": "assertion",
+          "glom.test.test_error::test_partially_failing_branch": "assertion",
+          "glom.test.test_grouping::test_corner_cases": "behavioral_exception",
+          "glom.test.test_mutation::test_assign": "behavioral_exception",
+          "glom.test.test_mutation::test_assign_missing_dict": "behavioral_exception",
+          "glom.test.test_mutation::test_assign_missing_object": "behavioral_exception",
+          "glom.test.test_mutation::test_assign_missing_unassignable": "behavioral_exception",
+          "glom.test.test_mutation::test_assign_missing_with_extant_keys": "behavioral_exception",
+          "glom.test.test_mutation::test_assign_spec_val": "behavioral_exception",
+          "glom.test.test_mutation::test_bad_assign_target": "behavioral_exception",
+          "glom.test.test_mutation::test_bad_delete_target": "behavioral_exception",
+          "glom.test.test_mutation::test_delete": "behavioral_exception",
+          "glom.test.test_mutation::test_delete_ignore_missing": "behavioral_exception",
+          "glom.test.test_mutation::test_sequence_assign": "behavioral_exception",
+          "glom.test.test_mutation::test_sequence_delete": "behavioral_exception",
+          "glom.test.test_mutation::test_star_broadcast": "behavioral_exception",
+          "glom.test.test_path_and_t::test_path_star": "behavioral_exception",
+          "glom.test.test_path_and_t::test_star_broadcast": "behavioral_exception",
+          "glom.test.test_scope_vars::test_let": "behavioral_exception",
+          "glom.test.test_scope_vars::test_s_scope_assign": "behavioral_exception",
+          "glom.test.test_scope_vars::test_vars": "behavioral_exception",
+          "glom.test.test_target_types::test_duck_register": "behavioral_exception",
+          "glom.test.test_target_types::test_faulty_op_registration": "behavioral_exception",
+          "glom.test.test_target_types::test_types_bare": "assertion"
+        },
+        "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
+        "screen": {
+          "absent_before": [],
+          "collection_errors": [],
+          "failed_on_load": [],
+          "passing_both": 173,
+          "ran_and_failed": [
+            "glom.test.test_basic::test_initial_integration",
+            "glom.test.test_basic::test_pipe",
+            "glom.test.test_basic::test_ref",
+            "glom.test.test_error::test_all_public_errors",
+            "glom.test.test_error::test_glom_error_double_stack",
+            "glom.test.test_error::test_glom_error_stack",
+            "glom.test.test_error::test_partially_failing_branch",
+            "glom.test.test_grouping::test_corner_cases",
+            "glom.test.test_mutation::test_assign",
+            "glom.test.test_mutation::test_assign_missing_dict",
+            "glom.test.test_mutation::test_assign_missing_object",
+            "glom.test.test_mutation::test_assign_missing_unassignable",
+            "glom.test.test_mutation::test_assign_missing_with_extant_keys",
+            "glom.test.test_mutation::test_assign_spec_val",
+            "glom.test.test_mutation::test_bad_assign_target",
+            "glom.test.test_mutation::test_bad_delete_target",
+            "glom.test.test_mutation::test_delete",
+            "glom.test.test_mutation::test_delete_ignore_missing",
+            "glom.test.test_mutation::test_sequence_assign",
+            "glom.test.test_mutation::test_sequence_delete",
+            "glom.test.test_mutation::test_star_broadcast",
+            "glom.test.test_path_and_t::test_path_star",
+            "glom.test.test_path_and_t::test_star_broadcast",
+            "glom.test.test_scope_vars::test_let",
+            "glom.test.test_scope_vars::test_s_scope_assign",
+            "glom.test.test_scope_vars::test_vars",
+            "glom.test.test_target_types::test_duck_register",
+            "glom.test.test_target_types::test_faulty_op_registration",
+            "glom.test.test_target_types::test_types_bare"
+          ]
+        },
+        "transition": {
+          "base_sha": "30b477ab65560914a38f331614947d0894701044",
+          "base_tree": "ab050b7afac4ff43e7059d9cd1d3e87ff8bf7c19",
+          "head_sha": "30b477ab65560914a38f331614947d0894701044",
+          "head_tree": "ab050b7afac4ff43e7059d9cd1d3e87ff8bf7c19",
+          "is_merge": false,
+          "linkage_method": "excision",
+          "parent_index": 0
+        }
+      },
+      "eligible": true,
+      "failed_gates": [],
+      "files_in_scope": [
+        "glom/core.py"
+      ],
+      "gates": [
+        {
+          "detail": {
+            "targets": {
+              "glom.test.test_basic::test_initial_integration": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_basic::test_pipe": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_basic::test_ref": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_error::test_all_public_errors": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_error::test_glom_error_double_stack": "assert 'Traceback (m...e \\'val\\'\")\\n' == \"Traceback (m...at ('val'))\\n\"",
+              "glom.test.test_error::test_glom_error_stack": "assert \"Traceback (m... ('value'))\\n\" == 'Traceback (m...\\'value\\'\")\\n'",
+              "glom.test.test_error::test_partially_failing_branch": "assert \"Traceback (m... (at ('c'))\\n\" == 'Traceback (m...ute \\'c\\'\")\\n'",
+              "glom.test.test_grouping::test_corner_cases": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_assign": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_assign_missing_dict": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_assign_missing_object": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_assign_missing_unassignable": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_assign_missing_with_extant_keys": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_assign_spec_val": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_bad_assign_target": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_bad_delete_target": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_delete": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_delete_ignore_missing": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_sequence_assign": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_sequence_delete": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_mutation::test_star_broadcast": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_path_and_t::test_path_star": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_path_and_t::test_star_broadcast": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_scope_vars::test_let": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_scope_vars::test_s_scope_assign": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_scope_vars::test_vars": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_target_types::test_duck_register": "glom.core.UnregisteredTarget: error raised while processing, details below.",
+              "glom.test.test_target_types::test_faulty_op_registration": "Failed: DID NOT RAISE TypeError",
+              "glom.test.test_target_types::test_types_bare": "assert \"target type 'list' not registered for 'iterate', expected one of registered types: (dict)\" in \"error raised while processing, details below.\\n Target-spec trace (most recent last):\\n - Target:"
+            }
+          },
+          "gate": "fail_before",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "targets": [
+              "glom.test.test_basic::test_initial_integration",
+              "glom.test.test_basic::test_pipe",
+              "glom.test.test_basic::test_ref",
+              "glom.test.test_error::test_all_public_errors",
+              "glom.test.test_error::test_glom_error_double_stack",
+              "glom.test.test_error::test_glom_error_stack",
+              "glom.test.test_error::test_partially_failing_branch",
+              "glom.test.test_grouping::test_corner_cases",
+              "glom.test.test_mutation::test_assign",
+              "glom.test.test_mutation::test_assign_missing_dict",
+              "glom.test.test_mutation::test_assign_missing_object",
+              "glom.test.test_mutation::test_assign_missing_unassignable",
+              "glom.test.test_mutation::test_assign_missing_with_extant_keys",
+              "glom.test.test_mutation::test_assign_spec_val",
+              "glom.test.test_mutation::test_bad_assign_target",
+              "glom.test.test_mutation::test_bad_delete_target",
+              "glom.test.test_mutation::test_delete",
+              "glom.test.test_mutation::test_delete_ignore_missing",
+              "glom.test.test_mutation::test_sequence_assign",
+              "glom.test.test_mutation::test_sequence_delete",
+              "glom.test.test_mutation::test_star_broadcast",
+              "glom.test.test_path_and_t::test_path_star",
+              "glom.test.test_path_and_t::test_star_broadcast",
+              "glom.test.test_scope_vars::test_let",
+              "glom.test.test_scope_vars::test_s_scope_assign",
+              "glom.test.test_scope_vars::test_vars",
+              "glom.test.test_target_types::test_duck_register",
+              "glom.test.test_target_types::test_faulty_op_registration",
+              "glom.test.test_target_types::test_types_bare"
+            ]
+          },
+          "gate": "pass_after",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "after_passing": 202,
+            "baseline_passing": 173,
+            "deliberately_removed": []
+          },
+          "gate": "collateral",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "repeats": 2
+          },
+          "gate": "determinism_before",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "repeats": 2
+          },
+          "gate": "determinism_after",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "files_checked": 9
+          },
+          "gate": "verifier_integrity",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "clean": true,
+            "leaked_paths": [],
+            "stale_bytecode": [],
+            "stray_patches": []
+          },
+          "gate": "solver_bundle",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "coupling": {
+              "exact_representation": [
+                "glom/test/test_basic.py:75",
+                "glom/test/test_basic.py:172",
+                "glom/test/test_basic.py:173",
+                "glom/test/test_basic.py:193",
+                "glom/test/test_basic.py:234",
+                "glom/test/test_basic.py:247",
+                "glom/test/test_basic.py:261",
+                "glom/test/test_basic.py:268",
+                "glom/test/test_basic.py:276",
+                "glom/test/test_basic.py:282"
+              ],
+              "findings": 75,
+              "patched_internals": [],
+              "private_references": [],
+              "type_identity": []
+            },
+            "coupling_findings": 75,
+            "mutation": {
+              "files_changed": [],
+              "renames": {}
+            },
+            "portable": true,
+            "status": "no_internals_to_rename"
+          },
+          "gate": "alternative_implementation",
+          "passed": true,
+          "reason_code": null
+        }
+      ],
+      "modules": [
+        "glom.core"
+      ],
+      "primary_module": "glom.core",
+      "reason_codes": [],
+      "rejected": null,
+      "runs": [
+        {
+          "backend": "docker",
+          "class_counts": {
+            "passed": 202
+          },
+          "detail": "",
+          "exit_code": 0,
+          "failing": 0,
+          "infrastructure_failure": null,
+          "name": "after_full",
+          "passing": 202,
+          "seconds": 1.96,
+          "total": 202
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 4,
+            "behavioral_exception": 25,
+            "passed": 173
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 29,
+          "infrastructure_failure": null,
+          "name": "before_full",
+          "passing": 173,
+          "seconds": 2.66,
+          "total": 202
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 4,
+            "behavioral_exception": 25,
+            "passed": 173
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 29,
+          "infrastructure_failure": null,
+          "name": "baseline_full",
+          "passing": 173,
+          "seconds": 3.12,
+          "total": 202
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 4,
+            "behavioral_exception": 25
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 29,
+          "infrastructure_failure": null,
+          "name": "before_targets_1",
+          "passing": 0,
+          "seconds": 2.63,
+          "total": 29
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 4,
+            "behavioral_exception": 25
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 29,
+          "infrastructure_failure": null,
+          "name": "before_targets_2",
+          "passing": 0,
+          "seconds": 1.92,
+          "total": 29
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "passed": 29
+          },
+          "detail": "",
+          "exit_code": 0,
+          "failing": 0,
+          "infrastructure_failure": null,
+          "name": "after_targets_1",
+          "passing": 29,
+          "seconds": 2.0,
+          "total": 29
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "passed": 29
+          },
+          "detail": "",
+          "exit_code": 0,
+          "failing": 0,
+          "infrastructure_failure": null,
+          "name": "after_targets_2",
+          "passing": 29,
+          "seconds": 1.33,
+          "total": 29
+        }
+      ],
+      "score": 0.847,
+      "signals": {
+        "body_lines": 46,
+        "coverage_ratio": 0.63,
+        "covered_lines": 29,
+        "covering_test_count": 14,
+        "covering_tests": [
+          "glom/test/test_mutation.py::test_unregistered_assign",
+          "glom/test/test_mutation.py::test_unregistered_delete",
+          "glom/test/test_reduction.py::test_fold_bad_iter",
+          "glom/test/test_streaming.py::test_faulty_iterate",
+          "glom/test/test_target_types.py::test_duck_register",
+          "glom/test/test_target_types.py::test_exact_register",
+          "glom/test/test_target_types.py::test_faulty_iterate",
+          "glom/test/test_target_types.py::test_faulty_op_registration",
+          "glom/test/test_target_types.py::test_invalid_register",
+          "glom/test/test_target_types.py::test_iter_set",
+          "glom/test/test_target_types.py::test_iter_str",
+          "glom/test/test_target_types.py::test_reregister_type",
+          "glom/test/test_target_types.py::test_types_bare",
+          "glom/test/test_target_types.py::test_types_leave_one_out"
+        ],
+        "focus_score": 0.8084,
+        "has_docstring": true,
+        "kind": "method",
+        "path": "glom/core.py",
+        "qualified_name": "glom.core.TargetRegistry.register_op",
+        "symbol_id": "glom/core.py::glom.core.TargetRegistry.register_op"
+      },
+      "source": "excision",
+      "subject": "glom/core.py::glom.core.TargetRegistry.register_op",
+      "targets": [
+        "glom.test.test_basic::test_initial_integration",
+        "glom.test.test_basic::test_pipe",
+        "glom.test.test_basic::test_ref",
+        "glom.test.test_error::test_all_public_errors",
+        "glom.test.test_error::test_glom_error_double_stack",
+        "glom.test.test_error::test_glom_error_stack",
+        "glom.test.test_error::test_partially_failing_branch",
+        "glom.test.test_grouping::test_corner_cases",
+        "glom.test.test_mutation::test_assign",
+        "glom.test.test_mutation::test_assign_missing_dict",
+        "glom.test.test_mutation::test_assign_missing_object",
+        "glom.test.test_mutation::test_assign_missing_unassignable",
+        "glom.test.test_mutation::test_assign_missing_with_extant_keys",
+        "glom.test.test_mutation::test_assign_spec_val",
+        "glom.test.test_mutation::test_bad_assign_target",
+        "glom.test.test_mutation::test_bad_delete_target",
+        "glom.test.test_mutation::test_delete",
+        "glom.test.test_mutation::test_delete_ignore_missing",
+        "glom.test.test_mutation::test_sequence_assign",
+        "glom.test.test_mutation::test_sequence_delete",
+        "glom.test.test_mutation::test_star_broadcast",
+        "glom.test.test_path_and_t::test_path_star",
+        "glom.test.test_path_and_t::test_star_broadcast",
+        "glom.test.test_scope_vars::test_let",
+        "glom.test.test_scope_vars::test_s_scope_assign",
+        "glom.test.test_scope_vars::test_vars",
+        "glom.test.test_target_types::test_duck_register",
+        "glom.test.test_target_types::test_faulty_op_registration",
+        "glom.test.test_target_types::test_types_bare"
+      ],
+      "task_id": "excise-glom_core.py-glom.core.TargetRegistry.register_op",
+      "title": "Reimplement glom.core.TargetRegistry.register_op",
+      "verifier_files": [
+        "glom/test/test_basic.py",
+        "glom/test/test_error.py",
+        "glom/test/test_grouping.py",
+        "glom/test/test_mutation.py",
+        "glom/test/test_path_and_t.py",
+        "glom/test/test_reduction.py",
+        "glom/test/test_scope_vars.py",
+        "glom/test/test_streaming.py",
+        "glom/test/test_target_types.py"
+      ]
+    },
+    {
+      "all_gates_passed": true,
+      "candidate_id": "excise-glom_mutation.py-glom.mutation.Delete._del_one",
+      "detail": {
+        "designated": {
+          "glom/test/test_error.py": [
+            "test_all_public_errors"
+          ],
+          "glom/test/test_mutation.py": [
+            "test_bad_delete_target",
+            "test_delete",
+            "test_delete_ignore_missing",
+            "test_sequence_delete",
+            "test_star_broadcast",
+            "test_unregistered_delete"
+          ]
+        },
+        "excision": {
+          "body_line_count": 19,
+          "decorators": [],
+          "first_body_line": 292,
+          "has_docstring": false,
+          "is_async": false,
+          "is_generator": false,
+          "last_body_line": 310,
+          "path": "glom/mutation.py",
+          "qualified_name": "_del_one",
+          "strategy": "neutral"
+        },
+        "failure_classes": {
+          "glom.test.test_error::test_all_public_errors": "behavioral_exception",
+          "glom.test.test_mutation::test_bad_delete_target": "assertion",
+          "glom.test.test_mutation::test_delete": "assertion",
+          "glom.test.test_mutation::test_sequence_delete": "assertion",
+          "glom.test.test_mutation::test_star_broadcast": "assertion",
+          "glom.test.test_mutation::test_unregistered_delete": "behavioral_exception"
+        },
+        "repeats": 2,
+        "runtime": {
+          "image": "stress-stack/glom:verify",
+          "reason": "tree_matches_head_runtime",
+          "status": "head_image"
+        },
+        "screen": {
+          "absent_before": [],
+          "collection_errors": [],
+          "failed_on_load": [],
+          "passing_both": 196,
+          "ran_and_failed": [
+            "glom.test.test_error::test_all_public_errors",
+            "glom.test.test_mutation::test_bad_delete_target",
+            "glom.test.test_mutation::test_delete",
+            "glom.test.test_mutation::test_sequence_delete",
+            "glom.test.test_mutation::test_star_broadcast",
+            "glom.test.test_mutation::test_unregistered_delete"
+          ]
+        },
+        "transition": {
+          "base_sha": "30b477ab65560914a38f331614947d0894701044",
+          "base_tree": "ab050b7afac4ff43e7059d9cd1d3e87ff8bf7c19",
+          "head_sha": "30b477ab65560914a38f331614947d0894701044",
+          "head_tree": "ab050b7afac4ff43e7059d9cd1d3e87ff8bf7c19",
+          "is_merge": false,
+          "linkage_method": "excision",
+          "parent_index": 0
+        }
+      },
+      "eligible": true,
+      "failed_gates": [],
+      "files_in_scope": [
+        "glom/mutation.py"
+      ],
+      "gates": [
+        {
+          "detail": {
+            "targets": {
+              "glom.test.test_error::test_all_public_errors": "Failed: DID NOT RAISE PathDeleteError",
+              "glom.test.test_mutation::test_bad_delete_target": "AssertionError: assert not True",
+              "glom.test.test_mutation::test_delete": "AssertionError: assert {'a': 1} == {}",
+              "glom.test.test_mutation::test_sequence_delete": "assert [0, 1, 2] == [0, 2]",
+              "glom.test.test_mutation::test_star_broadcast": "AssertionError: assert 'd' not in {'c': 1, 'd': 'a'}",
+              "glom.test.test_mutation::test_unregistered_delete": "Failed: DID NOT RAISE UnregisteredTarget"
+            }
+          },
+          "gate": "fail_before",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "targets": [
+              "glom.test.test_error::test_all_public_errors",
+              "glom.test.test_mutation::test_bad_delete_target",
+              "glom.test.test_mutation::test_delete",
+              "glom.test.test_mutation::test_sequence_delete",
+              "glom.test.test_mutation::test_star_broadcast",
+              "glom.test.test_mutation::test_unregistered_delete"
+            ]
+          },
+          "gate": "pass_after",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "after_passing": 202,
+            "baseline_passing": 196,
+            "deliberately_removed": []
+          },
+          "gate": "collateral",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "repeats": 2
+          },
+          "gate": "determinism_before",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "repeats": 2
+          },
+          "gate": "determinism_after",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "files_checked": 2
+          },
+          "gate": "verifier_integrity",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "clean": true,
+            "leaked_paths": [],
+            "stale_bytecode": [],
+            "stray_patches": []
+          },
+          "gate": "solver_bundle",
+          "passed": true,
+          "reason_code": null
+        },
+        {
+          "detail": {
+            "coupling": {
+              "exact_representation": [
+                "glom/test/test_mutation.py:33",
+                "glom/test/test_mutation.py:35",
+                "glom/test/test_mutation.py:36",
+                "glom/test/test_mutation.py:239"
+              ],
+              "findings": 4,
+              "patched_internals": [],
+              "private_references": [],
+              "type_identity": []
+            },
+            "coupling_findings": 4,
+            "mutation": {
+              "files_changed": [],
+              "renames": {}
+            },
+            "portable": true,
+            "status": "no_internals_to_rename"
+          },
+          "gate": "alternative_implementation",
+          "passed": true,
+          "reason_code": null
+        }
+      ],
+      "modules": [
+        "glom.mutation"
+      ],
+      "primary_module": "glom.mutation",
+      "reason_codes": [],
+      "rejected": null,
+      "runs": [
+        {
+          "backend": "docker",
+          "class_counts": {
+            "passed": 202
+          },
+          "detail": "",
+          "exit_code": 0,
+          "failing": 0,
+          "infrastructure_failure": null,
+          "name": "after_full",
+          "passing": 202,
+          "seconds": 1.92,
+          "total": 202
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 4,
+            "behavioral_exception": 2,
+            "passed": 196
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 6,
+          "infrastructure_failure": null,
+          "name": "before_full",
+          "passing": 196,
+          "seconds": 1.79,
+          "total": 202
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 4,
+            "behavioral_exception": 2,
+            "passed": 196
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 6,
+          "infrastructure_failure": null,
+          "name": "baseline_full",
+          "passing": 196,
+          "seconds": 1.9,
+          "total": 202
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 4,
+            "behavioral_exception": 2
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 6,
+          "infrastructure_failure": null,
+          "name": "before_targets_1",
+          "passing": 0,
+          "seconds": 1.09,
+          "total": 6
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "assertion": 4,
+            "behavioral_exception": 2
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 6,
+          "infrastructure_failure": null,
+          "name": "before_targets_2",
+          "passing": 0,
+          "seconds": 1.25,
+          "total": 6
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "passed": 6
+          },
+          "detail": "",
+          "exit_code": 0,
+          "failing": 0,
+          "infrastructure_failure": null,
+          "name": "after_targets_1",
+          "passing": 6,
+          "seconds": 1.04,
+          "total": 6
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "passed": 6
+          },
+          "detail": "",
+          "exit_code": 0,
+          "failing": 0,
+          "infrastructure_failure": null,
+          "name": "after_targets_2",
+          "passing": 6,
+          "seconds": 1.16,
+          "total": 6
+        }
+      ],
+      "score": 0.8443,
+      "signals": {
+        "body_lines": 20,
+        "coverage_ratio": 0.95,
+        "covered_lines": 19,
+        "covering_test_count": 7,
+        "covering_tests": [
+          "glom/test/test_error.py::test_all_public_errors",
+          "glom/test/test_mutation.py::test_bad_delete_target",
+          "glom/test/test_mutation.py::test_delete",
+          "glom/test/test_mutation.py::test_delete_ignore_missing",
+          "glom/test/test_mutation.py::test_sequence_delete",
+          "glom/test/test_mutation.py::test_star_broadcast",
+          "glom/test/test_mutation.py::test_unregistered_delete"
+        ],
+        "focus_score": 0.8066,
+        "has_docstring": false,
+        "kind": "method",
+        "path": "glom/mutation.py",
+        "qualified_name": "glom.mutation.Delete._del_one",
+        "symbol_id": "glom/mutation.py::glom.mutation.Delete._del_one"
+      },
+      "source": "excision",
+      "subject": "glom/mutation.py::glom.mutation.Delete._del_one",
+      "targets": [
+        "glom.test.test_error::test_all_public_errors",
+        "glom.test.test_mutation::test_bad_delete_target",
+        "glom.test.test_mutation::test_delete",
+        "glom.test.test_mutation::test_sequence_delete",
+        "glom.test.test_mutation::test_star_broadcast",
+        "glom.test.test_mutation::test_unregistered_delete"
+      ],
+      "task_id": "excise-glom_mutation.py-glom.mutation.Delete._del_one",
+      "title": "Reimplement glom.mutation.Delete._del_one",
+      "verifier_files": [
+        "glom/test/test_error.py",
+        "glom/test/test_mutation.py"
       ]
     }
   ]

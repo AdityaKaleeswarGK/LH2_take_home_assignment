@@ -2,8 +2,7 @@
   "difficulty": {
     "agrees_with_measurement": false,
     "criteria": [
-      "coordinated_multi_file_change",
-      "cross_module_reasoning"
+      "local_and_self_describing"
     ],
     "dominant_factors": [
       "misleading_similarity",
@@ -11,9 +10,8 @@
     ],
     "exploration": {
       "refused": [],
-      "tool_calls": 8,
+      "tool_calls": 5,
       "tools_used": [
-        "callers_of",
         "grep",
         "read_file"
       ]
@@ -25,12 +23,12 @@
       "misleading_similarity": 0.0,
       "scale": 43.0
     },
-    "justification": "The feature requires coordinated changes between CLI format parsing and setup dependency configuration, with user-facing validation and error behavior constrained by tests; a change in one module is incomplete without the other.",
+    "justification": "CLI parsing and TOML loading must be paired with the matching dependency metadata in setup; changing either module alone produces an incomplete feature, making this a coordinated cross-module edit.",
     "measured_justification": "This task requires coordinated edits across 2 source files; and it spans 2 modules, so the change cannot be reasoned about locally.",
     "measured_tier": "medium",
     "score": 0.3969,
     "tercile_cuts": [
-      0.2155,
+      0.2188,
       0.3969
     ],
     "tier": "hard",
@@ -132,7 +130,7 @@
     }
   ],
   "generation": {
-    "cache_key": "69b6ad76bbb8b166d8d8c0de305e5e93f65297a4cd8fca66f6395e396cf7bf93",
+    "cache_key": "ec5ee2045cdc162fd03ac80dc41d34079092ce0dab41f71fa65213dc669c7353",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -140,20 +138,20 @@
       "copied_spans": [],
       "private_names_leaked": [],
       "public_names_mentioned": [
-        "missing"
+        "toml"
       ]
     },
-    "model": "openai/gpt-5.6-luna"
+    "model": "google/gemini-3.7-flash"
   },
   "id": "pr-277",
-  "instruction": "Extend the glom command-line interface so TOML is a supported target-data format alongside JSON, YAML, and Python. A user must be able to select TOML through the CLI’s existing format and input mechanisms, including target data supplied as an argument, loaded from a file, or read from standard input. TOML documents must be parsed into the native mapping/list/scalar structures expected by glom, then passed through the requested spec or transformation with the same output and error behavior as other target formats. Existing JSON, YAML, and Python workflows must remain compatible. Invalid or incomplete command-line usage—including missing required inputs, unsupported format selections, or invalid option combinations—must produce a nonzero CLI result with a clear usage-oriented error rather than an unhandled traceback; malformed TOML must likewise fail cleanly and identify the input problem.",
+  "instruction": "Extend the glom command-line interface (`glom.cli`) to support reading and querying TOML-formatted input data.\n\nRequired behaviors:\n- Support a `--toml` input format flag alongside existing format options (such as `--yaml`, `--json`, and `--python`).\n- When the `--toml` flag is provided, glom should parse input data (provided via arguments, files, or standard input) as TOML before applying the glom spec/query.\n- Ensure proper CLI argument validation and error handling: passing conflicting format flags (or invalid flag combinations) must trigger appropriate usage errors consistent with existing format flags.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
     "copied_spans": [],
     "private_names_leaked": [],
     "public_names_mentioned": [
-      "missing"
+      "toml"
     ]
   },
   "modules": [
@@ -178,7 +176,7 @@
     "url": "https://github.com/mahmoud/glom/pull/277"
   },
   "source": "history",
-  "title": "Add TOML target support to the glom CLI",
+  "title": "Add TOML format support to the glom CLI",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_cli::test_main_toml_target": "behavioral_exception",

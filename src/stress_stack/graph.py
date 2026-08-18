@@ -892,6 +892,8 @@ def build_validation_artifacts(
     from stress_stack.runtime_matrix import (
         HeadRuntime,
         RuntimeImages,
+        era_count,
+        plan_eras,
         supported_languages as supported_runtime_languages,
     )
     from stress_stack.validate import validate_pool, write_validation
@@ -927,7 +929,13 @@ def build_validation_artifacts(
     # not of HEAD. A resolver that has nothing to say about a tree returns the
     # HEAD image, so an ecosystem without one behaves exactly as it did before.
     runtime = None
+    eras: dict[str, Any] = {}
     if language in supported_runtime_languages():
+        # Planned before anything is staged: one `git describe` per distinct
+        # base commit tells us how many environments this pool needs, which is
+        # what makes an image ceiling a measurement instead of a guess.
+        planned = [c for name in (HISTORY, EXCISION) for c in pool.get(name, [])]
+        eras = plan_eras(repository, planned)
         runtime = RuntimeImages(
             repository_name=repository.root.name,
             head=HeadRuntime(
@@ -936,6 +944,7 @@ def build_validation_artifacts(
                 toolchain_version=_head_toolchain(metadata_root, language),
             ),
             stamp_path=metadata_root / "container" / "runtime_images.json",
+            expected_eras=max(1, era_count(eras)),
         )
 
     graph = build_graph(repository.root)
@@ -969,6 +978,7 @@ def build_validation_artifacts(
             existing_modules=eligible_modules,
             max_workers=max_workers,
             runtime=runtime,
+            eras=eras,
         )
         built.extend(results)
         summaries[name] = summary.to_dict()

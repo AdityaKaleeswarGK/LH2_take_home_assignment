@@ -1,9 +1,0 @@
-glom.test.test_match::test_nested_dict
-glom.test.test_path_and_t::test_s_magic
-glom.test.test_path_and_t::test_t_subspec
-glom.test.test_scope_vars::test_globals
-glom.test.test_scope_vars::test_let
-glom.test.test_scope_vars::test_max_skip
-glom.test.test_scope_vars::test_s_scope_assign
-glom.test.test_scope_vars::test_scoped_vars
-glom.test.test_scope_vars::test_vars

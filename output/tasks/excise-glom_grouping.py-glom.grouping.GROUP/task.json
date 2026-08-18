@@ -2,10 +2,7 @@
   "difficulty": {
     "agrees_with_measurement": true,
     "criteria": [
-      "cross_module_reasoning",
-      "business_logic_knowledge",
-      "coordinated_multi_file_change",
-      "non_local_cause"
+      "cross_module_reasoning"
     ],
     "dominant_factors": [
       "misleading_similarity",
@@ -13,7 +10,7 @@
     ],
     "exploration": {
       "refused": [],
-      "tool_calls": 10,
+      "tool_calls": 7,
       "tools_used": [
         "grep",
         "read_file"
@@ -26,12 +23,12 @@
       "misleading_similarity": 0.0,
       "scale": 68.0
     },
-    "justification": "GROUP’s behavior is not fully specified locally: it must align with core’s recursive spec dispatch and reduction protocols while handling nested grouping, limits, and sentinel control flow. Understanding neighboring code and tests is required, but no coordinated edit is needed.",
+    "justification": "GROUP has to implement recursive bucketing, list accumulation, and aggregation protocols whose correct scope and accumulator behavior is defined by neighboring grouping and reduction code.",
     "measured_justification": "This task touches 62 lines with 6 tests that must end up passing.",
     "measured_tier": "medium",
     "score": 0.2531,
     "tercile_cuts": [
-      0.2155,
+      0.2188,
       0.3969
     ],
     "tier": "medium",
@@ -149,7 +146,7 @@
     }
   ],
   "generation": {
-    "cache_key": "6b451f435e4b33808053a686f0ab017cba6058476915b1c47f88170d8ed5ad28",
+    "cache_key": "925a35964b74ae905f78249097d7834550a337bf0a2503e6570ab5e6fe2328fd",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -158,10 +155,10 @@
       "private_names_leaked": [],
       "public_names_mentioned": []
     },
-    "model": "openai/gpt-5.6-luna"
+    "model": "google/gemini-3.7-flash"
   },
   "id": "excise-glom_grouping.py-glom.grouping.GROUP",
-  "instruction": "Implement only the missing body of `glom.grouping.GROUP`, preserving its existing signature and documentation. The function must provide the documented group-mode dispatcher behavior: partition the target collection into buckets, produce the documented structured group result, and evaluate nested grouping and aggregation specifications correctly. Support all documented aggregation operations, including averages, limits, sampling, and minimum/maximum selection, as well as the current-mode group sentinel. Preserve the repository’s established behavior for empty inputs, scalar or otherwise unusual targets, nested specs, and all invalid public inputs: valid calls must return the expected grouped values, while invalid calls must raise the documented error types and messages. No other functions, APIs, or files should be changed.",
+  "instruction": "Implement the `glom.grouping.GROUP` function to handle data grouping, partitioning, hierarchical bucketing, and aggregation over iterable target data in `glom`.\n\nThe `GROUP(target, spec, scope)` function acts as the grouping dispatcher and should support:\n- Grouping iterable targets into nested/hierarchical buckets according to grouping specifications.\n- Applying aggregate functions and accumulators (such as `First`, `Avg`, `Max`, `Min`, `Sample`, etc.) over grouped elements.\n- Respecting grouping parameters such as limits, ordering, bucketing rules, and nested sub-specs.\n- Raising appropriate errors on invalid targets or grouping specs in accordance with `glom` grouping conventions.\n- Functioning correctly as the group-mode handler within `glom`'s evaluation scope.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
@@ -190,7 +187,7 @@
     "symbol_id": "glom/grouping.py::glom.grouping.GROUP"
   },
   "source": "excision",
-  "title": "Implement grouping mode dispatch",
+  "title": "Implement grouping dispatcher `GROUP` in `glom.grouping`",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_error::test_all_public_errors": "behavioral_exception",

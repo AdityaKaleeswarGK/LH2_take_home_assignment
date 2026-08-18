@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="9" time="0.198" timestamp="2026-08-17T15:08:04.839665+00:00" hostname="1488a16d06e1"><testcase classname="glom.test.test_basic" name="test_invoke" time="0.001"><failure message="AssertionError: assert 'Invoke(&lt;buil...en&gt;).specs(T)' == 'Invoke(len).specs(T)'&#10;  &#10;  - Invoke(len).specs(T)&#10;  + Invoke(&lt;built-in function len&gt;).specs(T)">glom/test/test_basic.py:236: in test_invoke
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="9" time="0.456" timestamp="2026-08-18T07:11:34.931916+00:00" hostname="12ee879a643a"><testcase classname="glom.test.test_basic" name="test_invoke" time="0.001"><failure message="AssertionError: assert 'Invoke(&lt;buil...en&gt;).specs(T)' == 'Invoke(len).specs(T)'&#10;  &#10;  - Invoke(len).specs(T)&#10;  + Invoke(&lt;built-in function len&gt;).specs(T)">glom/test/test_basic.py:236: in test_invoke
     assert repr(Invoke(len).specs(T)) == 'Invoke(len).specs(T)'
 E   AssertionError: assert 'Invoke(&lt;buil...en&gt;).specs(T)' == 'Invoke(len).specs(T)'
 E     
@@ -25,22 +25,22 @@ E     ?                        ++++++++    ++</failure></testcase><testcase clas
 E   AssertionError: assert 'T[&lt;built-in function len&gt;]' == 'T[len]'
 E     
 E     - T[len]
-E     + T[&lt;built-in function len&gt;]</failure></testcase><testcase classname="glom.test.test_reduction" name="test_flatten" time="0.000"><failure message="assert &quot;Flatten(T, i...lass 'list'&gt;)&quot; == 'Flatten()'&#10;  &#10;  - Flatten()&#10;  + Flatten(T, init=&lt;class 'list'&gt;)">glom/test/test_reduction.py:89: in test_flatten
+E     + T[&lt;built-in function len&gt;]</failure></testcase><testcase classname="glom.test.test_reduction" name="test_flatten" time="0.001"><failure message="assert &quot;Flatten(T, i...lass 'list'&gt;)&quot; == 'Flatten()'&#10;  &#10;  - Flatten()&#10;  + Flatten(T, init=&lt;class 'list'&gt;)">glom/test/test_reduction.py:89: in test_flatten
     assert repr(Flatten()) == 'Flatten()'
 E   assert "Flatten(T, i...lass 'list'&gt;)" == 'Flatten()'
 E     
 E     - Flatten()
-E     + Flatten(T, init=&lt;class 'list'&gt;)</failure></testcase><testcase classname="glom.test.test_reduction" name="test_fold" time="0.000"><failure message="AssertionError: assert 'Fold(T, init...nction iadd&gt;)' == 'Fold(T, init=int)'&#10;  &#10;  - Fold(T, init=int)&#10;  + Fold(T, init=&lt;class 'int'&gt;, op=&lt;built-in function iadd&gt;)">glom/test/test_reduction.py:54: in test_fold
+E     + Flatten(T, init=&lt;class 'list'&gt;)</failure></testcase><testcase classname="glom.test.test_reduction" name="test_fold" time="0.004"><failure message="AssertionError: assert 'Fold(T, init...nction iadd&gt;)' == 'Fold(T, init=int)'&#10;  &#10;  - Fold(T, init=int)&#10;  + Fold(T, init=&lt;class 'int'&gt;, op=&lt;built-in function iadd&gt;)">glom/test/test_reduction.py:54: in test_fold
     assert repr(Fold(T, int)) == 'Fold(T, init=int)'
 E   AssertionError: assert 'Fold(T, init...nction iadd&gt;)' == 'Fold(T, init=int)'
 E     
 E     - Fold(T, init=int)
-E     + Fold(T, init=&lt;class 'int'&gt;, op=&lt;built-in function iadd&gt;)</failure></testcase><testcase classname="glom.test.test_reduction" name="test_sum_integers" time="0.000"><failure message="assert &quot;Sum(T, init=&lt;class 'int'&gt;)&quot; == 'Sum()'&#10;  &#10;  - Sum()&#10;  + Sum(T, init=&lt;class 'int'&gt;)">glom/test/test_reduction.py:27: in test_sum_integers
+E     + Fold(T, init=&lt;class 'int'&gt;, op=&lt;built-in function iadd&gt;)</failure></testcase><testcase classname="glom.test.test_reduction" name="test_sum_integers" time="0.001"><failure message="assert &quot;Sum(T, init=&lt;class 'int'&gt;)&quot; == 'Sum()'&#10;  &#10;  - Sum()&#10;  + Sum(T, init=&lt;class 'int'&gt;)">glom/test/test_reduction.py:27: in test_sum_integers
     assert repr(Sum()) == 'Sum()'
 E   assert "Sum(T, init=&lt;class 'int'&gt;)" == 'Sum()'
 E     
 E     - Sum()
-E     + Sum(T, init=&lt;class 'int'&gt;)</failure></testcase><testcase classname="glom.test.test_streaming" name="test_filter" time="0.000"><failure message="assert &quot;Iter(&lt;class ...unction sum&gt;)&quot; == 'Iter(list).filter(sum)'&#10;  &#10;  - Iter(list).filter(sum)&#10;  + Iter(&lt;class 'list'&gt;).filter(&lt;built-in function sum&gt;)">glom/test/test_streaming.py:55: in test_filter
+E     + Sum(T, init=&lt;class 'int'&gt;)</failure></testcase><testcase classname="glom.test.test_streaming" name="test_filter" time="0.001"><failure message="assert &quot;Iter(&lt;class ...unction sum&gt;)&quot; == 'Iter(list).filter(sum)'&#10;  &#10;  - Iter(list).filter(sum)&#10;  + Iter(&lt;class 'list'&gt;).filter(&lt;built-in function sum&gt;)">glom/test/test_streaming.py:55: in test_filter
     assert repr(Iter(list).filter(sum)) == 'Iter(list).filter(sum)'
 E   assert "Iter(&lt;class ...unction sum&gt;)" == 'Iter(list).filter(sum)'
 E     

@@ -57,6 +57,11 @@ RUNNER_DEPENDENCIES = frozenset(
     {"pluggy", "iniconfig", "packaging", "exceptiongroup", "tomli", "pytest", "_pytest"}
 )
 
+# Not a budget. Past this the resolution is wrong rather than merely
+# expensive: a repository whose every commit resolves differently has no
+# eras at all, and building sixty-five images would not fix that.
+_SAFETY_CEILING = 64
+
 # Top-level import names whose distribution is not the same string.
 _DISTRIBUTION_OF = {"_pytest": "pytest"}
 
@@ -64,6 +69,59 @@ _SAFE_REQUIREMENT = re.compile(r"^[A-Za-z0-9._\-]+(\[[A-Za-z0-9,._\-]+\])?[<>=!~
 _SAFE_PACKAGE = re.compile(r"^[a-z0-9][a-z0-9+.\-]*$")
 _SETUP_NAME_RE = re.compile(r"""\bname\s*=\s*['"]([^'"]+)['"]""")
 _SETUP_VERSION_RE = re.compile(r"""\bversion\s*=\s*['"]([0-9][^'"]*)['"]""")
+
+
+@dataclass(frozen=True, slots=True)
+class Era:
+    """A set of commits that can share one environment.
+
+    Keyed by the nearest release tag reachable from the tree, because that is
+    the boundary the environment actually turns on: within a release window a
+    project declares the same dependencies and the same toolchain, and — for a
+    repository that is itself a dependency of the test runner — publishes the
+    same version. Excision candidates come from HEAD and share its era.
+
+    The key doubles as the version hint, since ``git describe`` answers both
+    questions at once.
+    """
+
+    key: str
+    version_hint: str | None = None
+
+
+def plan_eras(repository: Any, candidates: list[Any]) -> dict[str, Era]:
+    """Group the ranked pool into eras *before* anything is staged.
+
+    One `git describe` per distinct base commit — no containers, no trees
+    materialised, no resolution. Doing this up front is what removes the image
+    budget: the number of environments a pool needs is a fact about the pool,
+    and lazily resolving one candidate at a time meant nothing could know it
+    until it was too late to plan for.
+    """
+    described: dict[str, str] = {}
+    eras: dict[str, Era] = {}
+    for candidate in candidates:
+        revision = str((candidate.signals or {}).get("base_sha") or "")
+        if not revision:
+            # Excision candidates are cut from HEAD, which is the era the
+            # container stage already built and proved.
+            eras[candidate.candidate_id] = Era(key="HEAD")
+            continue
+        if revision not in described:
+            try:
+                tag = repository.run(
+                    ["describe", "--tags", "--abbrev=0", revision], record=False
+                ).strip()
+            except Exception:  # noqa: BLE001 — an undescribable commit is its own era
+                tag = ""
+            described[revision] = tag.lstrip("v") or revision[:12]
+        key = described[revision]
+        eras[candidate.candidate_id] = Era(key=key, version_hint=key or None)
+    return eras
+
+
+def era_count(eras: dict[str, Era]) -> int:
+    return len({era.key for era in eras.values()})
 
 
 @dataclass(frozen=True, slots=True)
@@ -495,30 +553,44 @@ def render_dockerfile(spec: RuntimeSpec, base_image: str) -> str:
 class RuntimeImages:
     """Builds and reuses one image per distinct runtime, under a budget.
 
-    The budget is less a performance guard than a blast radius: a repository
-    whose every commit resolves differently is telling us the resolution is
-    wrong. Exhausting it falls back to the HEAD image and records that it did,
-    so a degraded verdict is never silent.
+    There is no budget to choose. ``expected_eras`` comes from ``plan_eras``,
+    which counts what the ranked pool actually needs before anything is staged,
+    so the ceiling is a measurement rather than a policy. Two guesses were made
+    here before that — four, then twelve — and the first sent fourteen pluggy
+    candidates back to an image that could not run them.
 
-    Twelve rather than a handful, because a self-hosting repository needs one
-    image per *release* in the mined window and that is the case the mechanism
-    exists for: pluggy's pool wanted eleven distinct pins, and a budget of four
-    sent fourteen candidates back to the image that cannot run them. The images
-    are cheap by construction — same base layer, only the install layer differs
-    — so the ceiling should sit above the realistic need rather than below it.
+    ``_SAFETY_CEILING`` is what remains, and it is not a number about
+    environments: it is the point past which the resolution is telling us it is
+    wrong, because a repository whose every commit resolves differently has no
+    eras at all. Reaching it falls back to the HEAD image and records that it
+    did, so a degraded verdict is never silent.
     """
 
     repository_name: str
     head: HeadRuntime
     stamp_path: Path | None = None
-    budget: int = 12
+    expected_eras: int = 1
     built: dict[str, str] = field(default_factory=dict)
     records: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Resolution is per era, not per candidate: every candidate in a release
+    # window reads the same manifests and reaches the same answer.
+    by_era: dict[str, tuple[str, dict[str, Any]]] = field(default_factory=dict)
 
     def runtime_for(
-        self, tree: Path, *, version_hint: str | None = None
+        self, tree: Path, *, era: Era | None = None, version_hint: str | None = None
     ) -> tuple[str, dict[str, Any]]:
-        """The image this tree should be judged in, and why."""
+        """The image this tree should be judged in, and why.
+
+        Answered once per era. Every candidate in a release window reads the
+        same manifests and reaches the same answer, so resolving per candidate
+        re-walked the tree and re-read the same files for each one.
+        """
+        if era is not None:
+            cached = self.by_era.get(era.key)
+            if cached is not None:
+                image, record = cached
+                return image, {**record, "era": era.key, "reused": True}
+            version_hint = version_hint or era.version_hint
         try:
             spec = resolve_runtime(
                 tree, self.head.language, self.head, version_hint=version_hint
@@ -536,7 +608,7 @@ class RuntimeImages:
             # image. Saying so is the difference between a known limitation and
             # sixteen candidates failing for no recorded reason.
             shadowed = shadowed_distributions(tree) if self.head.language == "python" else ()
-            return self.head.image, {
+            record = {
                 "status": "head_image",
                 "reason": (
                     "shadowed_but_version_unknown" if shadowed else "tree_matches_head_runtime"
@@ -544,14 +616,18 @@ class RuntimeImages:
                 "image": self.head.image,
                 **({"shadowed": list(shadowed)} if shadowed else {}),
             }
+            if era is not None:
+                record["era"] = era.key
+                self.by_era[era.key] = (self.head.image, record)
+            return self.head.image, record
 
         tag = spec.tag(self.repository_name)
         if tag in self.built:
             return self.built[tag], {**self.records[tag], "reused": True}
-        if len(self.built) >= self.budget:
+        if len(self.built) >= max(1, min(self.expected_eras, _SAFETY_CEILING)):
             return self.head.image, {
                 "status": "fallback",
-                "reason": "image_budget_exhausted",
+                "reason": "era_ceiling_reached",
                 "image": self.head.image,
                 "spec": spec.to_dict(),
             }
@@ -559,6 +635,9 @@ class RuntimeImages:
         image, record = self._build(spec, tag)
         self.built[tag] = image
         self.records[tag] = record
+        if era is not None:
+            record = {**record, "era": era.key}
+            self.by_era[era.key] = (image, record)
         self._persist()
         return image, record
 
@@ -612,7 +691,7 @@ class RuntimeImages:
                     "language": self.head.language,
                     "toolchain_version": self.head.toolchain_version,
                 },
-                "budget": self.budget,
+                "expected_eras": self.expected_eras,
                 "images": {tag: self.records[tag] for tag in sorted(self.records)},
             },
         )
@@ -622,7 +701,7 @@ class RuntimeImages:
             "head_image": self.head.image,
             "language": self.head.language,
             "head_toolchain": self.head.toolchain_version,
-            "budget": self.budget,
+            "expected_eras": self.expected_eras,
             "built": sorted(self.built),
             "images": {tag: self.records[tag] for tag in sorted(self.records)},
         }

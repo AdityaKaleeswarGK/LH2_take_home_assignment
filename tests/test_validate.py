@@ -50,7 +50,7 @@ def install_stub(monkeypatch: pytest.MonkeyPatch, decide, *, record: list[str] |
 
     def fake(
         repository, graph, candidate, tasks_root, work_root, runner,
-        *, repeats, policy, runtime=None,
+        *, repeats, policy, runtime=None, era=None,
     ):
         if record is not None:
             record.append(candidate.candidate_id)

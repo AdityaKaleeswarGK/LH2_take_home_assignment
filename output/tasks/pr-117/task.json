@@ -2,9 +2,7 @@
   "difficulty": {
     "agrees_with_measurement": true,
     "criteria": [
-      "cross_module_reasoning",
-      "coordinated_multi_file_change",
-      "non_local_cause"
+      "coordinated_multi_file_change"
     ],
     "dominant_factors": [
       "coordinated_change",
@@ -12,7 +10,7 @@
     ],
     "exploration": {
       "refused": [],
-      "tool_calls": 17,
+      "tool_calls": 8,
       "tools_used": [
         "grep",
         "read_file"
@@ -25,12 +23,12 @@
       "misleading_similarity": 0.0,
       "scale": 248.0
     },
-    "justification": "Builtin representation and invocation semantics span core, mutation, reduction, and streaming. Compatibility depends on interactions with Path/T composition, Check defaults, reduction initialization, and streaming SKIP behavior across modules.",
+    "justification": "Builtin roundtripping requires coordinated representation changes across core, mutation, reduction, and streaming, with parallel specifier implementations that must remain consistent across the suite.",
     "measured_justification": "This task requires coordinated edits across 4 source files; and it spans 4 modules, so the change cannot be reasoned about locally.",
     "measured_tier": "hard",
     "score": 0.8293,
     "tercile_cuts": [
-      0.2155,
+      0.2188,
       0.3969
     ],
     "tier": "hard",
@@ -159,7 +157,7 @@
     }
   ],
   "generation": {
-    "cache_key": "a830f9554678eb4fedf03b18e194e08d56ee76539ff734b27075d5991c017083",
+    "cache_key": "3b34edae40e08a9e25d7a41e28eedef55c95a205bd7037c254334e973ba60f3f",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -168,10 +166,10 @@
       "private_names_leaked": [],
       "public_names_mentioned": []
     },
-    "model": "openai/gpt-5.6-luna"
+    "model": "google/gemini-3.7-flash"
   },
   "id": "pr-117",
-  "instruction": "Ensure glom.core can consistently evaluate and report callable-based specifications on all supported Python versions, including built-in functions, ordinary functions, bound methods, partials, and callable objects. Callable invocation must correctly resolve positional and keyword arguments from glom specifications, preserve the expected target and scope behavior, and support zero-argument and multi-argument callables.\n\nThe completed behavior must support the existing invoke, check, test, assign, path/T round-trip, flatten, fold, sum, and filter workflows. Checks and predicates must return their documented values, apply defaults or raise the documented glom errors when validation fails, and retain useful formatted context identifying the failing operation and path. Assignments must create or update nested destinations addressed by dot-delimited paths without corrupting existing data. Path conversion to and from T expressions must preserve equivalent paths, including paths that require non-attribute access. Flattening, folding, summing integer values, and filtering must work when their callable arguments are built-ins as well as user-defined callables.\n\nDo not make behavior depend on callable repr formats or introspection APIs that differ between Python implementations or versions. Existing public APIs and normal error types must remain compatible, and invalid paths, failed predicates, unsupported argument shapes, and callable exceptions must produce the library’s established error behavior rather than being silently ignored.",
+  "instruction": "Enhance representation and string formatting of callables across glom specifier types (such as Invoke, Call, T, Path, Check, Assign, Flatten, Fold, and Filter) so that builtins and other callables produce consistent, cross-platform repr strings.\n\nEnsure that all declarative spec primitives continue to correctly access, extract, transform, and reshape deeply nested target objects, supporting:\n- Target-relative expressions and method/function calls via Invoke, Call, and T.\n- Accurate representations during inspection and roundtripping of Spec, Path, and T expressions.\n- Proper error propagation, fallback handling, and filtering/folding semantics across collections and nested data structures.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
@@ -203,7 +201,7 @@
     "url": "https://github.com/mahmoud/glom/pull/117"
   },
   "source": "history",
-  "title": "Make callable-based glom specs reliable across platforms",
+  "title": "Improve callable representations and roundtripping across glom specifiers",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_basic::test_invoke": "assertion",

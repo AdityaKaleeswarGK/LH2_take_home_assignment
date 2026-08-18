@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="6" time="0.069" timestamp="2026-08-17T15:09:10.113724+00:00" hostname="a67b2b88f7e5"><testcase classname="glom.test.test_error" name="test_all_public_errors" time="0.002"><failure message="Failed: DID NOT RAISE BadSpec">glom/test/test_error.py:490: in test_all_public_errors
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="6" time="0.096" timestamp="2026-08-18T07:12:14.637746+00:00" hostname="5ffc3ea8fe8a"><testcase classname="glom.test.test_error" name="test_all_public_errors" time="0.004"><failure message="Failed: DID NOT RAISE BadSpec">glom/test/test_error.py:490: in test_all_public_errors
     _test_exc(glom.BadSpec, range(5), glom.grouping.Group([{T: T}]))
 glom/test/test_error.py:481: in _test_exc
     with pytest.raises(exc_type) as exc_info:

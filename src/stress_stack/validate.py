@@ -23,7 +23,7 @@ from stress_stack.excision import NEUTRAL, EXPLICIT
 from stress_stack.git_repository import GitRepository
 from stress_stack.graph import RepositoryGraph
 from stress_stack.runner import Runner
-from stress_stack.runtime_matrix import RuntimeImages
+from stress_stack.runtime_matrix import Era, RuntimeImages
 from stress_stack.tasks import (
     STRICT,
     BuiltTask,
@@ -78,6 +78,7 @@ def build_and_validate(
     repeats: int,
     policy: str = STRICT,
     runtime: RuntimeImages | None = None,
+    era: Era | None = None,
 ) -> BuiltTask:
     """Stage one candidate and put it through every gate.
 
@@ -120,7 +121,7 @@ def build_and_validate(
     built.verifier_files = _files_in(task_root / "verifier")
     built.files_in_scope = scope_files(graph, changed)
 
-    runner = _resolve_runner(built, runner, runtime, repository)
+    runner = _resolve_runner(built, runner, runtime, repository, era)
 
     evaluation_tree = work_root / task_id
     build_evaluation_tree(task_root, evaluation_tree)
@@ -158,6 +159,7 @@ def validate_pool(
     existing_modules: set[str] | None = None,
     max_workers: int = 1,
     runtime: RuntimeImages | None = None,
+    eras: dict[str, Era] | None = None,
 ) -> tuple[list[BuiltTask], ValidationSummary]:
     """Validate down the ranked pool until enough survive, or the budget runs out.
 
@@ -190,6 +192,7 @@ def validate_pool(
         return build_and_validate(
             repository, graph, candidate, tasks_root, work_root, runner,
             repeats=repeats, policy=policy, runtime=runtime,
+            era=(eras or {}).get(candidate.candidate_id),
         )
 
     def _record(result: BuiltTask) -> None:
@@ -315,6 +318,7 @@ def _resolve_runner(
     default: Runner,
     runtime: RuntimeImages | None,
     repository: GitRepository | None = None,
+    era: Era | None = None,
 ) -> Runner:
     """Pick the environment this candidate is judged in, and record the choice.
 
@@ -327,7 +331,9 @@ def _resolve_runner(
     from stress_stack.runner import select_runner
 
     image, provenance = runtime.runtime_for(
-        built.task_root / "input", version_hint=_version_hint(built, repository)
+        built.task_root / "input",
+        era=era,
+        version_hint=None if era else _version_hint(built, repository),
     )
     built.detail["runtime"] = provenance
     if image == getattr(default, "image", None):

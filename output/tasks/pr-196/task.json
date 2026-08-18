@@ -2,9 +2,8 @@
   "difficulty": {
     "agrees_with_measurement": true,
     "criteria": [
-      "cross_module_reasoning",
       "coordinated_multi_file_change",
-      "non_local_cause"
+      "cross_module_reasoning"
     ],
     "dominant_factors": [
       "coordinated_change",
@@ -12,7 +11,7 @@
     ],
     "exploration": {
       "refused": [],
-      "tool_calls": 20,
+      "tool_calls": 8,
       "tools_used": [
         "grep",
         "read_file"
@@ -25,12 +24,12 @@
       "misleading_similarity": 0.0,
       "scale": 233.0
     },
-    "justification": "Behavior is coordinated across core’s MODE propagation and recursive scope handling plus matching, mutation, and reprlib compatibility code. Changes can affect Match defaults, Switch chaining, Assign evaluation, and T/S subspec behavior outside the edited site.",
+    "justification": "Mode and argument semantics must be changed consistently across core, matching, mutation, and related representation code; updating one dispatcher or spec handler without its counterparts leaves cross-module behavior inconsistent.",
     "measured_justification": "This task requires coordinated edits across 4 source files; and it spans 4 modules, so the change cannot be reasoned about locally.",
     "measured_tier": "hard",
     "score": 0.8195,
     "tercile_cuts": [
-      0.2155,
+      0.2188,
       0.3969
     ],
     "tier": "hard",
@@ -157,29 +156,25 @@
     }
   ],
   "generation": {
-    "cache_key": "8ce0e0c4f4e8f35bab9ddb042433ccdf2993c57c801296d78990f06564812e61",
+    "cache_key": "cde4d9ad81ad2b5979891cc5cc8c8cdd1cd38256d8ff24cb728d92fb031e6786",
     "cached": false,
     "fell_back": null,
     "leak_check": {
       "clean": true,
       "copied_spans": [],
       "private_names_leaked": [],
-      "public_names_mentioned": [
-        "defaults"
-      ]
+      "public_names_mentioned": []
     },
-    "model": "openai/gpt-5.6-luna"
+    "model": "google/gemini-3.7-flash"
   },
   "id": "pr-196",
-  "instruction": "Make nested glom specifications behave consistently wherever an operator accepts a child specification. Child specs must be evaluated against the current target and scope, including when they are nested inside Spec wrappers or other composite specifications, rather than being returned as literal values. Preserve an explicit way to request literal values, and do not reinterpret structural arguments such as path strings, mapping keys, match predicates, or switch case labels as specs.\n\nThis behavior must cover recursive Spec composition, Match fallbacks, Switch selectors/cases/fallbacks, Assign values, subspecs embedded in T expressions, and values assigned through S scope variables. Match and Switch defaults must be evaluated as child specs when supplied, while omitting a default must retain their normal no-match behavior. Assign must evaluate a spec-valued assignment before storing it, and S assignments must evaluate their right-hand side in the current scope so later specifications can read the assigned variable. The same rules must hold through multiple levels of nesting and for combinations with dot-delimited paths, callable invocations, T expressions, and other existing glom features.\n\nThe completed behavior is observable through the existing tests named “spec and recursion”, “match default”, “switch”, “assign spec val”, “t subspec”, and “s scope assign”: each must pass without special-casing only one nesting depth or one operator, and existing literal-value and error behavior must remain compatible.",
+  "instruction": "Ensure that glom spec primitives (including `Spec`, `T`, `S`, `Match`, `Switch`, `Assign`, `Coalesce`, `Call`, and `Invoke`) treat `default`, `val`, and subspec arguments consistently by evaluating them as valid glom specs rather than treating them strictly as constants or requiring special-cased wrapper types.\\n\\nSpecifically:\\n- When a primitive accepts a `default` value (such as in `Match`, `Coalesce`, or path lookups), if a fallback is triggered, the default argument should be interpreted and evaluated as a spec against the target and scope, rather than returned as an uninterpreted raw constant.\\n- `Assign` should support specs for both its target path and assigned value (`val`), evaluating the `val` spec against the current target before assignment to target objects or scope (`S`).\\n- `T` (Target) subspecs and expressions should seamlessly support nested specs, callable sub-expressions, and recursive `Spec` evaluation without requiring manual unwrapping.\\n- `Switch` and `Match` should evaluate case targets, results, and fallback/default handlers as specs against the matched target.\\n- Nested and recursive spec resolution should maintain consistent scope and target propagation across all standard spec primitives.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
     "copied_spans": [],
     "private_names_leaked": [],
-    "public_names_mentioned": [
-      "defaults"
-    ]
+    "public_names_mentioned": []
   },
   "modules": [
     "glom.core",
@@ -205,7 +200,7 @@
     "url": "https://github.com/mahmoud/glom/pull/196"
   },
   "source": "history",
-  "title": "Unify nested spec evaluation across glom operators",
+  "title": "Standardize spec evaluation for default and value arguments across glom spec primitives",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_basic::test_spec_and_recursion": "behavioral_exception",

@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="9" time="0.202" timestamp="2026-08-17T15:08:06.341619+00:00" hostname="12feeff207ec"><testcase classname="glom.test.test_basic" name="test_invoke" time="0.001"><failure message="AssertionError: assert 'Invoke(&lt;buil...en&gt;).specs(T)' == 'Invoke(len).specs(T)'&#10;  &#10;  - Invoke(len).specs(T)&#10;  + Invoke(&lt;built-in function len&gt;).specs(T)">glom/test/test_basic.py:236: in test_invoke
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="9" time="0.338" timestamp="2026-08-18T07:11:36.889495+00:00" hostname="10cf02b19404"><testcase classname="glom.test.test_basic" name="test_invoke" time="0.001"><failure message="AssertionError: assert 'Invoke(&lt;buil...en&gt;).specs(T)' == 'Invoke(len).specs(T)'&#10;  &#10;  - Invoke(len).specs(T)&#10;  + Invoke(&lt;built-in function len&gt;).specs(T)">glom/test/test_basic.py:236: in test_invoke
     assert repr(Invoke(len).specs(T)) == 'Invoke(len).specs(T)'
 E   AssertionError: assert 'Invoke(&lt;buil...en&gt;).specs(T)' == 'Invoke(len).specs(T)'
 E     
 E     - Invoke(len).specs(T)
-E     + Invoke(&lt;built-in function len&gt;).specs(T)</failure></testcase><testcase classname="glom.test.test_check" name="test_check_basic" time="0.000"><failure message="assert &quot;Check(instan...lass 'dict'&gt;)&quot; == 'Check(instance_of=dict)'&#10;  &#10;  - Check(instance_of=dict)&#10;  + Check(instance_of=&lt;class 'dict'&gt;)&#10;  ?                   ++++++++    ++">glom/test/test_check.py:27: in test_check_basic
+E     + Invoke(&lt;built-in function len&gt;).specs(T)</failure></testcase><testcase classname="glom.test.test_check" name="test_check_basic" time="0.001"><failure message="assert &quot;Check(instan...lass 'dict'&gt;)&quot; == 'Check(instance_of=dict)'&#10;  &#10;  - Check(instance_of=dict)&#10;  + Check(instance_of=&lt;class 'dict'&gt;)&#10;  ?                   ++++++++    ++">glom/test/test_check.py:27: in test_check_basic
     assert repr(Check(instance_of=dict)) == 'Check(instance_of=dict)'
 E   assert "Check(instan...lass 'dict'&gt;)" == 'Check(instance_of=dict)'
 E     

@@ -294,13 +294,13 @@ def test_the_tag_is_stable_for_the_same_runtime() -> None:
 # --------------------------------------------------------------------------
 
 
-def make_images(monkeypatch, *, budget: int, ok: bool = True) -> RuntimeImages:
+def make_images(monkeypatch, *, eras: int = 12, ok: bool = True) -> RuntimeImages:
     monkeypatch.setattr(rm, "run", lambda *a, **k: _FakeResult(ok))
     monkeypatch.setattr(
         "stress_stack.container.pin_image_by_digest",
         lambda tag: (f"{tag}@sha256:deadbeef", "digest_pinned"),
     )
-    return RuntimeImages(repository_name="repo", head=HEAD_PY, budget=budget)
+    return RuntimeImages(repository_name="repo", head=HEAD_PY, expected_eras=eras)
 
 
 class _FakeResult:
@@ -311,7 +311,7 @@ class _FakeResult:
 
 
 def test_a_shadowing_tree_gets_its_own_image(tmp_path: Path, monkeypatch) -> None:
-    images = make_images(monkeypatch, budget=4)
+    images = make_images(monkeypatch)
     tree = pluggy_tree(tmp_path, version="0.6.0", src_layout=False)
 
     image, record = images.runtime_for(tree)
@@ -322,7 +322,7 @@ def test_a_shadowing_tree_gets_its_own_image(tmp_path: Path, monkeypatch) -> Non
 
 
 def test_an_identical_runtime_is_built_once(tmp_path: Path, monkeypatch) -> None:
-    images = make_images(monkeypatch, budget=4)
+    images = make_images(monkeypatch)
     for index in range(3):
         tree = pluggy_tree(tmp_path / f"c{index}", version="0.6.0", src_layout=False)
         forget_source_roots()
@@ -331,10 +331,10 @@ def test_an_identical_runtime_is_built_once(tmp_path: Path, monkeypatch) -> None
     assert len(images.built) == 1
 
 
-def test_the_budget_falls_back_rather_than_building_forever(
+def test_the_era_ceiling_falls_back_rather_than_building_forever(
     tmp_path: Path, monkeypatch
 ) -> None:
-    images = make_images(monkeypatch, budget=1)
+    images = make_images(monkeypatch, eras=1)
     statuses = []
     for index, version in enumerate(("0.6.0", "0.7.0", "0.8.0")):
         tree = pluggy_tree(tmp_path / f"c{index}", version=version, src_layout=False)
@@ -342,13 +342,13 @@ def test_the_budget_falls_back_rather_than_building_forever(
         statuses.append(images.runtime_for(tree)[1])
 
     assert statuses[0]["status"] == "per_candidate_image"
-    assert [s["reason"] for s in statuses[1:]] == ["image_budget_exhausted"] * 2
+    assert [s["reason"] for s in statuses[1:]] == ["era_ceiling_reached"] * 2
     assert all(s["image"] == HEAD_PY.image for s in statuses[1:])
 
 
 def test_a_failed_build_degrades_visibly(tmp_path: Path, monkeypatch) -> None:
     """Falling back is acceptable; falling back silently is not."""
-    images = make_images(monkeypatch, budget=4, ok=False)
+    images = make_images(monkeypatch, ok=False)
     tree = pluggy_tree(tmp_path, version="0.6.0", src_layout=False)
 
     image, record = images.runtime_for(tree)
@@ -359,7 +359,7 @@ def test_a_failed_build_degrades_visibly(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_a_resolver_crash_never_ends_the_run(tmp_path: Path, monkeypatch) -> None:
-    images = make_images(monkeypatch, budget=4)
+    images = make_images(monkeypatch)
     monkeypatch.setitem(
         rm._RESOLVERS,
         "python",
@@ -429,7 +429,7 @@ def test_an_unpinnable_shadow_says_so_rather_than_looking_ordinary(
     tmp_path: Path, monkeypatch
 ) -> None:
     """Both end up on the HEAD image; only one of them is a known limitation."""
-    images = make_images(monkeypatch, budget=4)
+    images = make_images(monkeypatch)
     write(tmp_path / "src" / "pluggy" / "__init__.py", "")
     write(tmp_path / "pyproject.toml", '[project]\nname = "pluggy"\ndynamic = ["version"]\n')
 
@@ -442,9 +442,123 @@ def test_an_unpinnable_shadow_says_so_rather_than_looking_ordinary(
 def test_an_image_built_only_for_the_interpreter_is_not_called_a_shadow_fix(
     tmp_path: Path, monkeypatch
 ) -> None:
-    images = make_images(monkeypatch, budget=4)
+    images = make_images(monkeypatch)
     write(tmp_path / "pyproject.toml", '[project]\nname = "app"\nrequires-python = "<3.10"\n')
 
     _, record = images.runtime_for(tmp_path)
 
     assert record["reason"] == "tree_wants_another_toolchain"
+
+
+# --------------------------------------------------------------------------
+# Eras: how many environments does this pool need, known before staging
+# --------------------------------------------------------------------------
+
+
+class _FakeCandidate:
+    def __init__(self, candidate_id: str, base_sha: str | None) -> None:
+        self.candidate_id = candidate_id
+        self.signals = {"base_sha": base_sha} if base_sha else {}
+
+
+class _FakeRepository:
+    """Answers `git describe` from a table, and records what it was asked."""
+
+    def __init__(self, tags: dict[str, str]) -> None:
+        self.tags = tags
+        self.asked: list[str] = []
+
+    def run(self, arguments, record=True):
+        revision = arguments[-1]
+        self.asked.append(revision)
+        if revision not in self.tags:
+            raise RuntimeError("no tag reachable")
+        return self.tags[revision] + "\n"
+
+
+def test_candidates_in_one_release_window_share_an_era() -> None:
+    from stress_stack.runtime_matrix import era_count, plan_eras
+
+    repository = _FakeRepository({"a": "1.5.0", "b": "1.5.0", "c": "1.6.0"})
+    candidates = [
+        _FakeCandidate("pr-1", "a"),
+        _FakeCandidate("pr-2", "b"),
+        _FakeCandidate("pr-3", "c"),
+    ]
+
+    eras = plan_eras(repository, candidates)
+
+    assert eras["pr-1"].key == eras["pr-2"].key == "1.5.0"
+    assert eras["pr-3"].key == "1.6.0"
+    assert era_count(eras) == 2
+
+
+def test_describe_is_asked_once_per_distinct_commit() -> None:
+    """Planning is cheap by construction — one git call per base, not per candidate."""
+    from stress_stack.runtime_matrix import plan_eras
+
+    repository = _FakeRepository({"a": "1.5.0"})
+    plan_eras(repository, [_FakeCandidate(f"pr-{i}", "a") for i in range(20)])
+
+    assert repository.asked == ["a"]
+
+
+def test_excision_candidates_belong_to_heads_era() -> None:
+    """They are cut from HEAD, which the container stage already built and proved."""
+    from stress_stack.runtime_matrix import era_count, plan_eras
+
+    repository = _FakeRepository({})
+    eras = plan_eras(repository, [_FakeCandidate("excise-a", None), _FakeCandidate("excise-b", None)])
+
+    assert {e.key for e in eras.values()} == {"HEAD"}
+    assert era_count(eras) == 1
+    assert repository.asked == []
+
+
+def test_an_undescribable_commit_is_its_own_era_not_a_crash() -> None:
+    """A repository with no tags at all still plans, one era per base commit."""
+    from stress_stack.runtime_matrix import era_count, plan_eras
+
+    repository = _FakeRepository({})
+    eras = plan_eras(
+        repository,
+        [_FakeCandidate("pr-1", "aaaaaaaaaaaaaaaa"), _FakeCandidate("pr-2", "bbbbbbbbbbbbbbbb")],
+    )
+
+    assert era_count(eras) == 2
+    assert eras["pr-1"].key == "aaaaaaaaaaaa"
+
+
+def test_a_v_prefixed_tag_is_normalised() -> None:
+    from stress_stack.runtime_matrix import plan_eras
+
+    repository = _FakeRepository({"a": "v2.1.0"})
+    eras = plan_eras(repository, [_FakeCandidate("pr-1", "a")])
+
+    assert eras["pr-1"].key == "2.1.0"
+    assert eras["pr-1"].version_hint == "2.1.0"
+
+
+def test_an_era_is_resolved_once_and_reused(tmp_path: Path, monkeypatch) -> None:
+    """Every candidate in a window reads the same manifests to the same answer."""
+    from stress_stack.runtime_matrix import Era
+
+    images = make_images(monkeypatch)
+    era = Era(key="0.6.0", version_hint="0.6.0")
+    resolutions: list[Path] = []
+    original = rm.resolve_runtime
+    monkeypatch.setattr(
+        rm,
+        "resolve_runtime",
+        lambda tree, lang, head, **k: (resolutions.append(tree), original(tree, lang, head, **k))[1],
+    )
+
+    for index in range(4):
+        tree = pluggy_tree(tmp_path / f"c{index}", version="0.6.0", src_layout=False)
+        forget_source_roots()
+        image, record = images.runtime_for(tree, era=era)
+
+    assert len(resolutions) == 1, "resolved once per era, not once per candidate"
+    assert record["era"] == "0.6.0"
+    assert record["reused"] is True
+    assert len(images.built) == 1

@@ -18481,14 +18481,40 @@
       "anchor": {
         "column": 8,
         "end_column": 22,
-        "end_line": 16,
-        "line": 16,
+        "end_line": 18,
+        "line": 18,
         "path": "tests/stress_stack_generated/test_generated_2.py"
       },
       "expression": "console_main",
       "kind": "calls",
-      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_evaluates_spec_and_target",
+      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_glom_error",
       "target": "glom/cli.py::glom.cli.console_main"
+    },
+    {
+      "anchor": {
+        "column": 8,
+        "end_column": 22,
+        "end_line": 9,
+        "line": 9,
+        "path": "tests/stress_stack_generated/test_generated_2.py"
+      },
+      "expression": "console_main",
+      "kind": "calls",
+      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_success",
+      "target": "glom/cli.py::glom.cli.console_main"
+    },
+    {
+      "anchor": {
+        "column": 18,
+        "end_column": 60,
+        "end_line": 17,
+        "line": 17,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "Contact",
+      "kind": "calls",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_after_save",
+      "target": "glom/tutorial.py::glom.tutorial.Contact"
     },
     {
       "anchor": {
@@ -26761,15 +26787,54 @@
     {
       "anchor": {
         "column": 0,
-        "end_column": 47,
-        "end_line": 19,
-        "line": 8,
+        "end_column": 44,
+        "end_line": 21,
+        "line": 15,
         "path": "tests/stress_stack_generated/test_generated_2.py"
       },
-      "expression": "test_console_main_evaluates_spec_and_target",
+      "expression": "test_console_main_glom_error",
       "kind": "contains",
       "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2",
-      "target": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_evaluates_spec_and_target"
+      "target": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_glom_error"
+    },
+    {
+      "anchor": {
+        "column": 0,
+        "end_column": 31,
+        "end_line": 12,
+        "line": 6,
+        "path": "tests/stress_stack_generated/test_generated_2.py"
+      },
+      "expression": "test_console_main_success",
+      "kind": "contains",
+      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2",
+      "target": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_success"
+    },
+    {
+      "anchor": {
+        "column": 0,
+        "end_column": 67,
+        "end_line": 22,
+        "line": 14,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "test_contact_manager_all_after_save",
+      "kind": "contains",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3",
+      "target": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_after_save"
+    },
+    {
+      "anchor": {
+        "column": 0,
+        "end_column": 33,
+        "end_line": 11,
+        "line": 4,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "test_contact_manager_all_returns_contacts",
+      "kind": "contains",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3",
+      "target": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_returns_contacts"
     },
     {
       "anchor": {
@@ -30454,14 +30519,27 @@
       "anchor": {
         "column": 0,
         "end_column": 33,
-        "end_line": 5,
-        "line": 5,
+        "end_line": 3,
+        "line": 3,
         "path": "tests/stress_stack_generated/test_generated_2.py"
       },
       "expression": "from glom.cli import console_main",
       "kind": "imports",
       "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2",
       "target": "glom/cli.py::glom.cli"
+    },
+    {
+      "anchor": {
+        "column": 0,
+        "end_column": 33,
+        "end_line": 1,
+        "line": 1,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "from glom.tutorial import Contact",
+      "kind": "imports",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3",
+      "target": "glom/tutorial.py::glom.tutorial"
     },
     {
       "anchor": {
@@ -84326,46 +84404,90 @@
         {
           "anchor": {
             "column": 4,
-            "end_column": 5,
-            "end_line": 13,
-            "line": 9,
+            "end_column": 64,
+            "end_line": 7,
+            "line": 7,
             "path": "tests/stress_stack_generated/test_generated_2.py"
           },
           "expression": "monkeypatch.setattr",
-          "scope": "test_generated_2.test_console_main_evaluates_spec_and_target"
+          "scope": "test_generated_2.test_console_main_success"
         },
         {
           "anchor": {
             "column": 9,
             "end_column": 34,
-            "end_line": 15,
-            "line": 15,
+            "end_line": 8,
+            "line": 8,
             "path": "tests/stress_stack_generated/test_generated_2.py"
           },
           "expression": "pytest.raises",
-          "scope": "test_generated_2.test_console_main_evaluates_spec_and_target"
+          "scope": "test_generated_2.test_console_main_success"
         },
         {
           "anchor": {
             "column": 8,
             "end_column": 22,
+            "end_line": 9,
+            "line": 9,
+            "path": "tests/stress_stack_generated/test_generated_2.py"
+          },
+          "expression": "console_main",
+          "scope": "test_generated_2.test_console_main_success"
+        },
+        {
+          "anchor": {
+            "column": 15,
+            "end_column": 34,
+            "end_line": 11,
+            "line": 11,
+            "path": "tests/stress_stack_generated/test_generated_2.py"
+          },
+          "expression": "capsys.readouterr",
+          "scope": "test_generated_2.test_console_main_success"
+        },
+        {
+          "anchor": {
+            "column": 4,
+            "end_column": 74,
             "end_line": 16,
             "line": 16,
             "path": "tests/stress_stack_generated/test_generated_2.py"
           },
-          "expression": "console_main",
-          "scope": "test_generated_2.test_console_main_evaluates_spec_and_target"
+          "expression": "monkeypatch.setattr",
+          "scope": "test_generated_2.test_console_main_glom_error"
         },
         {
           "anchor": {
-            "column": 11,
-            "end_column": 30,
-            "end_line": 19,
-            "line": 19,
+            "column": 9,
+            "end_column": 34,
+            "end_line": 17,
+            "line": 17,
+            "path": "tests/stress_stack_generated/test_generated_2.py"
+          },
+          "expression": "pytest.raises",
+          "scope": "test_generated_2.test_console_main_glom_error"
+        },
+        {
+          "anchor": {
+            "column": 8,
+            "end_column": 22,
+            "end_line": 18,
+            "line": 18,
+            "path": "tests/stress_stack_generated/test_generated_2.py"
+          },
+          "expression": "console_main",
+          "scope": "test_generated_2.test_console_main_glom_error"
+        },
+        {
+          "anchor": {
+            "column": 15,
+            "end_column": 34,
+            "end_line": 20,
+            "line": 20,
             "path": "tests/stress_stack_generated/test_generated_2.py"
           },
           "expression": "capsys.readouterr",
-          "scope": "test_generated_2.test_console_main_evaluates_spec_and_target"
+          "scope": "test_generated_2.test_console_main_glom_error"
         }
       ],
       "imports": [
@@ -84390,8 +84512,8 @@
           "anchor": {
             "column": 0,
             "end_column": 13,
-            "end_line": 3,
-            "line": 3,
+            "end_line": 2,
+            "line": 2,
             "path": "tests/stress_stack_generated/test_generated_2.py"
           },
           "bound_name": "pytest",
@@ -84406,8 +84528,8 @@
           "anchor": {
             "column": 0,
             "end_column": 33,
-            "end_line": 5,
-            "line": 5,
+            "end_line": 3,
+            "line": 3,
             "path": "tests/stress_stack_generated/test_generated_2.py"
           },
           "bound_name": "console_main",
@@ -84421,7 +84543,7 @@
       "is_test": true,
       "module": "test_generated_2",
       "path": "tests/stress_stack_generated/test_generated_2.py",
-      "source_sha256": "4dbc077cadccbb55f4d2d212d3563af80821fd7ffd37caeb7c06d8ca75ccc0d7",
+      "source_sha256": "6b453c59a111e2787547aeb38f1f0639119d5120fe72560206e7092e7deed47b",
       "symbols": [
         {
           "anchor": {
@@ -84446,22 +84568,274 @@
         {
           "anchor": {
             "column": 0,
-            "end_column": 47,
-            "end_line": 19,
-            "line": 8,
+            "end_column": 31,
+            "end_line": 12,
+            "line": 6,
             "path": "tests/stress_stack_generated/test_generated_2.py"
           },
           "bases": [],
           "decorators": [],
           "docstring": null,
-          "id": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_evaluates_spec_and_target",
+          "id": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_success",
           "is_public": true,
           "is_test": true,
           "kind": "function",
-          "name": "test_console_main_evaluates_spec_and_target",
+          "name": "test_console_main_success",
           "parent": "tests/stress_stack_generated/test_generated_2.py::test_generated_2",
-          "qualified_name": "test_generated_2.test_console_main_evaluates_spec_and_target",
-          "signature": "(capsys, monkeypatch)"
+          "qualified_name": "test_generated_2.test_console_main_success",
+          "signature": "(monkeypatch, capsys)"
+        },
+        {
+          "anchor": {
+            "column": 0,
+            "end_column": 44,
+            "end_line": 21,
+            "line": 15,
+            "path": "tests/stress_stack_generated/test_generated_2.py"
+          },
+          "bases": [],
+          "decorators": [],
+          "docstring": null,
+          "id": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_glom_error",
+          "is_public": true,
+          "is_test": true,
+          "kind": "function",
+          "name": "test_console_main_glom_error",
+          "parent": "tests/stress_stack_generated/test_generated_2.py::test_generated_2",
+          "qualified_name": "test_generated_2.test_console_main_glom_error",
+          "signature": "(monkeypatch, capsys)"
+        }
+      ],
+      "syntax_error": null
+    },
+    {
+      "calls": [
+        {
+          "anchor": {
+            "column": 15,
+            "end_column": 36,
+            "end_line": 5,
+            "line": 5,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "Contact.objects.all",
+          "scope": "test_generated_3.test_contact_manager_all_returns_contacts"
+        },
+        {
+          "anchor": {
+            "column": 11,
+            "end_column": 37,
+            "end_line": 6,
+            "line": 6,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "isinstance",
+          "scope": "test_generated_3.test_contact_manager_all_returns_contacts"
+        },
+        {
+          "anchor": {
+            "column": 11,
+            "end_column": 24,
+            "end_line": 7,
+            "line": 7,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "len",
+          "scope": "test_generated_3.test_contact_manager_all_returns_contacts"
+        },
+        {
+          "anchor": {
+            "column": 15,
+            "end_column": 37,
+            "end_line": 9,
+            "line": 9,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "isinstance",
+          "scope": "test_generated_3.test_contact_manager_all_returns_contacts"
+        },
+        {
+          "anchor": {
+            "column": 15,
+            "end_column": 31,
+            "end_line": 10,
+            "line": 10,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "hasattr",
+          "scope": "test_generated_3.test_contact_manager_all_returns_contacts"
+        },
+        {
+          "anchor": {
+            "column": 15,
+            "end_column": 33,
+            "end_line": 11,
+            "line": 11,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "hasattr",
+          "scope": "test_generated_3.test_contact_manager_all_returns_contacts"
+        },
+        {
+          "anchor": {
+            "column": 23,
+            "end_column": 44,
+            "end_line": 15,
+            "line": 15,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "Contact.objects.all",
+          "scope": "test_generated_3.test_contact_manager_all_after_save"
+        },
+        {
+          "anchor": {
+            "column": 20,
+            "end_column": 41,
+            "end_line": 16,
+            "line": 16,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "len",
+          "scope": "test_generated_3.test_contact_manager_all_after_save"
+        },
+        {
+          "anchor": {
+            "column": 18,
+            "end_column": 60,
+            "end_line": 17,
+            "line": 17,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "Contact",
+          "scope": "test_generated_3.test_contact_manager_all_after_save"
+        },
+        {
+          "anchor": {
+            "column": 4,
+            "end_column": 22,
+            "end_line": 18,
+            "line": 18,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "new_contact.save",
+          "scope": "test_generated_3.test_contact_manager_all_after_save"
+        },
+        {
+          "anchor": {
+            "column": 23,
+            "end_column": 44,
+            "end_line": 20,
+            "line": 20,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "Contact.objects.all",
+          "scope": "test_generated_3.test_contact_manager_all_after_save"
+        },
+        {
+          "anchor": {
+            "column": 11,
+            "end_column": 32,
+            "end_line": 21,
+            "line": 21,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "len",
+          "scope": "test_generated_3.test_contact_manager_all_after_save"
+        },
+        {
+          "anchor": {
+            "column": 11,
+            "end_column": 67,
+            "end_line": 22,
+            "line": 22,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "expression": "any",
+          "scope": "test_generated_3.test_contact_manager_all_after_save"
+        }
+      ],
+      "imports": [
+        {
+          "alias": null,
+          "anchor": {
+            "column": 0,
+            "end_column": 33,
+            "end_line": 1,
+            "line": 1,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "bound_name": "Contact",
+          "guard": null,
+          "level": 0,
+          "module": "glom.tutorial",
+          "name": "Contact",
+          "scope": "test_generated_3"
+        }
+      ],
+      "is_test": true,
+      "module": "test_generated_3",
+      "path": "tests/stress_stack_generated/test_generated_3.py",
+      "source_sha256": "c24c7e1be0da4e405c3e92706153c0301ae7471f19db625d7cd603eb19ca22d8",
+      "symbols": [
+        {
+          "anchor": {
+            "column": 0,
+            "end_column": 33,
+            "end_line": 1,
+            "line": 1,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "bases": [],
+          "decorators": [],
+          "docstring": null,
+          "id": "tests/stress_stack_generated/test_generated_3.py::test_generated_3",
+          "is_public": true,
+          "is_test": true,
+          "kind": "module",
+          "name": "test_generated_3",
+          "parent": null,
+          "qualified_name": "test_generated_3",
+          "signature": null
+        },
+        {
+          "anchor": {
+            "column": 0,
+            "end_column": 33,
+            "end_line": 11,
+            "line": 4,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "bases": [],
+          "decorators": [],
+          "docstring": null,
+          "id": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_returns_contacts",
+          "is_public": true,
+          "is_test": true,
+          "kind": "function",
+          "name": "test_contact_manager_all_returns_contacts",
+          "parent": "tests/stress_stack_generated/test_generated_3.py::test_generated_3",
+          "qualified_name": "test_generated_3.test_contact_manager_all_returns_contacts",
+          "signature": "()"
+        },
+        {
+          "anchor": {
+            "column": 0,
+            "end_column": 67,
+            "end_line": 22,
+            "line": 14,
+            "path": "tests/stress_stack_generated/test_generated_3.py"
+          },
+          "bases": [],
+          "decorators": [],
+          "docstring": null,
+          "id": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_after_save",
+          "is_public": true,
+          "is_test": true,
+          "kind": "function",
+          "name": "test_contact_manager_all_after_save",
+          "parent": "tests/stress_stack_generated/test_generated_3.py::test_generated_3",
+          "qualified_name": "test_generated_3.test_contact_manager_all_after_save",
+          "signature": "()"
         }
       ],
       "syntax_error": null
@@ -84469,21 +84843,21 @@
   ],
   "schema_version": "0.1.0",
   "statistics": {
-    "edges": 2367,
-    "edges_calls": 1422,
-    "edges_contains": 637,
-    "edges_imports": 284,
+    "edges": 2373,
+    "edges_calls": 1424,
+    "edges_contains": 640,
+    "edges_imports": 285,
     "edges_inherits": 24,
     "external_modules": 9,
-    "files": 33,
-    "symbols": 670,
+    "files": 34,
+    "symbols": 674,
     "syntax_errors": 0,
-    "test_files": 20,
-    "unresolved": 1743,
-    "unresolved_builtin": 653,
-    "unresolved_dynamic_or_local": 600,
-    "unresolved_external_attribute": 59,
-    "unresolved_external_module": 352,
+    "test_files": 21,
+    "unresolved": 1758,
+    "unresolved_builtin": 661,
+    "unresolved_dynamic_or_local": 603,
+    "unresolved_external_attribute": 62,
+    "unresolved_external_module": 353,
     "unresolved_stdlib_module": 65
   },
   "unresolved": [
@@ -107098,8 +107472,8 @@
       "anchor": {
         "column": 0,
         "end_column": 13,
-        "end_line": 3,
-        "line": 3,
+        "end_line": 2,
+        "line": 2,
         "path": "tests/stress_stack_generated/test_generated_2.py"
       },
       "expression": "import pytest",
@@ -107110,41 +107484,236 @@
     {
       "anchor": {
         "column": 4,
-        "end_column": 5,
-        "end_line": 13,
-        "line": 9,
+        "end_column": 64,
+        "end_line": 7,
+        "line": 7,
         "path": "tests/stress_stack_generated/test_generated_2.py"
       },
       "expression": "monkeypatch.setattr",
       "kind": "call",
       "reason": "dynamic_or_local",
-      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_evaluates_spec_and_target"
+      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_success"
     },
     {
       "anchor": {
         "column": 9,
         "end_column": 34,
-        "end_line": 15,
-        "line": 15,
+        "end_line": 8,
+        "line": 8,
         "path": "tests/stress_stack_generated/test_generated_2.py"
       },
       "expression": "pytest.raises",
       "kind": "call",
       "reason": "external_module",
-      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_evaluates_spec_and_target"
+      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_success"
     },
     {
       "anchor": {
-        "column": 11,
-        "end_column": 30,
-        "end_line": 19,
-        "line": 19,
+        "column": 15,
+        "end_column": 34,
+        "end_line": 11,
+        "line": 11,
         "path": "tests/stress_stack_generated/test_generated_2.py"
       },
       "expression": "capsys.readouterr",
       "kind": "call",
       "reason": "dynamic_or_local",
-      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_evaluates_spec_and_target"
+      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_success"
+    },
+    {
+      "anchor": {
+        "column": 4,
+        "end_column": 74,
+        "end_line": 16,
+        "line": 16,
+        "path": "tests/stress_stack_generated/test_generated_2.py"
+      },
+      "expression": "monkeypatch.setattr",
+      "kind": "call",
+      "reason": "dynamic_or_local",
+      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_glom_error"
+    },
+    {
+      "anchor": {
+        "column": 9,
+        "end_column": 34,
+        "end_line": 17,
+        "line": 17,
+        "path": "tests/stress_stack_generated/test_generated_2.py"
+      },
+      "expression": "pytest.raises",
+      "kind": "call",
+      "reason": "external_module",
+      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_glom_error"
+    },
+    {
+      "anchor": {
+        "column": 15,
+        "end_column": 34,
+        "end_line": 20,
+        "line": 20,
+        "path": "tests/stress_stack_generated/test_generated_2.py"
+      },
+      "expression": "capsys.readouterr",
+      "kind": "call",
+      "reason": "dynamic_or_local",
+      "source": "tests/stress_stack_generated/test_generated_2.py::test_generated_2.test_console_main_glom_error"
+    },
+    {
+      "anchor": {
+        "column": 15,
+        "end_column": 36,
+        "end_line": 5,
+        "line": 5,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "Contact.objects.all",
+      "kind": "call",
+      "reason": "external_attribute",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_returns_contacts"
+    },
+    {
+      "anchor": {
+        "column": 11,
+        "end_column": 37,
+        "end_line": 6,
+        "line": 6,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "isinstance",
+      "kind": "call",
+      "reason": "builtin",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_returns_contacts"
+    },
+    {
+      "anchor": {
+        "column": 11,
+        "end_column": 24,
+        "end_line": 7,
+        "line": 7,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "len",
+      "kind": "call",
+      "reason": "builtin",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_returns_contacts"
+    },
+    {
+      "anchor": {
+        "column": 15,
+        "end_column": 37,
+        "end_line": 9,
+        "line": 9,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "isinstance",
+      "kind": "call",
+      "reason": "builtin",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_returns_contacts"
+    },
+    {
+      "anchor": {
+        "column": 15,
+        "end_column": 31,
+        "end_line": 10,
+        "line": 10,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "hasattr",
+      "kind": "call",
+      "reason": "builtin",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_returns_contacts"
+    },
+    {
+      "anchor": {
+        "column": 15,
+        "end_column": 33,
+        "end_line": 11,
+        "line": 11,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "hasattr",
+      "kind": "call",
+      "reason": "builtin",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_returns_contacts"
+    },
+    {
+      "anchor": {
+        "column": 23,
+        "end_column": 44,
+        "end_line": 15,
+        "line": 15,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "Contact.objects.all",
+      "kind": "call",
+      "reason": "external_attribute",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_after_save"
+    },
+    {
+      "anchor": {
+        "column": 20,
+        "end_column": 41,
+        "end_line": 16,
+        "line": 16,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "len",
+      "kind": "call",
+      "reason": "builtin",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_after_save"
+    },
+    {
+      "anchor": {
+        "column": 4,
+        "end_column": 22,
+        "end_line": 18,
+        "line": 18,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "new_contact.save",
+      "kind": "call",
+      "reason": "dynamic_or_local",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_after_save"
+    },
+    {
+      "anchor": {
+        "column": 23,
+        "end_column": 44,
+        "end_line": 20,
+        "line": 20,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "Contact.objects.all",
+      "kind": "call",
+      "reason": "external_attribute",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_after_save"
+    },
+    {
+      "anchor": {
+        "column": 11,
+        "end_column": 32,
+        "end_line": 21,
+        "line": 21,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "len",
+      "kind": "call",
+      "reason": "builtin",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_after_save"
+    },
+    {
+      "anchor": {
+        "column": 11,
+        "end_column": 67,
+        "end_line": 22,
+        "line": 22,
+        "path": "tests/stress_stack_generated/test_generated_3.py"
+      },
+      "expression": "any",
+      "kind": "call",
+      "reason": "builtin",
+      "source": "tests/stress_stack_generated/test_generated_3.py::test_generated_3.test_contact_manager_all_after_save"
     }
   ]
 }

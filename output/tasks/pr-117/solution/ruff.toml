@@ -4,7 +4,7 @@
 # Rule set:     ruff defaults (E4, E7, E9, F)
 # Applied:      `ruff check --fix` then `ruff format` (safe fixes only).
 #
-# Baseline adopted 2026-08-17: 94 violation(s) across 10 rule(s)
+# Baseline adopted 2026-08-18: 94 violation(s) across 10 rule(s)
 # remained after the fix pass. They are ignored below so `ruff check .`
 # exits 0 while every other rule stays enforced for new code.
 #

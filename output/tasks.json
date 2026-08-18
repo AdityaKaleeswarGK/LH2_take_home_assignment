@@ -1,18 +1,19 @@
 {
   "by_primary_module": {
     "glom.cli": 3,
-    "glom.core": 5,
+    "glom.core": 4,
     "glom.grouping": 1,
-    "glom.matching": 1
+    "glom.matching": 1,
+    "glom.mutation": 1
   },
   "by_source": {
     "excision": 4,
     "history": 6
   },
   "difficulty_spread": {
-    "easy": 1,
-    "hard": 4,
-    "medium": 5
+    "easy": 3,
+    "hard": 3,
+    "medium": 4
   },
   "distinct_modules": 9,
   "instructions_invalid": [],
@@ -28,7 +29,7 @@
     "glom.streaming",
     "setup"
   ],
-  "pool_size": 14,
+  "pool_size": 17,
   "quota": {
     "maximum": {
       "excision": 4,
@@ -47,10 +48,9 @@
   "tasks": [
     {
       "difficulty": {
-        "agrees_with_measurement": true,
+        "agrees_with_measurement": false,
         "criteria": [
-          "cross_module_reasoning",
-          "misleading_similar_code"
+          "local_and_self_describing"
         ],
         "dominant_factors": [
           "misleading_similarity",
@@ -58,7 +58,7 @@
         ],
         "exploration": {
           "refused": [],
-          "tool_calls": 14,
+          "tool_calls": 8,
           "tools_used": [
             "grep",
             "read_file"
@@ -71,15 +71,15 @@
           "misleading_similarity": 0.0,
           "scale": 38.0
         },
-        "justification": "Correctness depends on distinguishing GlomError’s finalized and unfinalized string-conversion paths and the separate S-specific _s_first_magic branch from general _t_eval handling; the similar error-construction paths make a local edit easy to apply incorrectly.",
+        "justification": "The failure is localized to PathAccessError.get_message(), and the required printable behavior is exposed by the failing path-formatting case without requiring coordinated changes or hidden domain rules.",
         "measured_justification": "This task depends on rules recorded in the change's description rather than inferable from the surrounding code.",
         "measured_tier": "hard",
         "score": 0.4286,
         "tercile_cuts": [
-          0.2155,
+          0.2188,
           0.3969
         ],
-        "tier": "hard",
+        "tier": "easy",
         "tier_origin": "agent",
         "verification_state": "reasoning_unverified_label_only"
       },
@@ -87,7 +87,7 @@
         "glom/core.py"
       ],
       "generation": {
-        "cache_key": "f28ba19c40ec0206aa1241b7fe88c9e4dd4117e36f9ea8995bbe6620d8180afe",
+        "cache_key": "47d78d8e1f10001c0abcec2d165b35330e89e4985ccfdaed632f2dc8e39ea930",
         "cached": false,
         "fell_back": null,
         "leak_check": {
@@ -96,10 +96,10 @@
           "private_names_leaked": [],
           "public_names_mentioned": []
         },
-        "model": "openai/gpt-5.6-luna"
+        "model": "google/gemini-3.7-flash"
       },
       "id": "pr-298",
-      "instruction": "Update glom.core so every PathAccessError can be converted to a readable string, including when its access path originated from a scope or is a T-expression/callable that cannot be represented as a plain dot-delimited path. While formatting the error, attempt the normal plain-path rendering when applicable, but safely fall back to a representation of the original access expression/path if path conversion or lookup fails; formatting must never re-raise the conversion exception or otherwise crash. Preserve the existing message and rendering for ordinary plain paths. Ensure scope-originated PathAccessError instances are printable, and that str(error) always returns a string rather than raising. Add or update coverage for the non-path fallback and scope-originated printable error behavior; unrelated existing failures do not need to be addressed.",
+      "instruction": "Ensure that `PathAccessError` can always be converted to a string or formatted into an error message without raising an exception (such as `TypeError`), even when the error originates from a `Scope` access or involves non-standard path objects.\n\nWhen formatting the error message for a `PathAccessError`, if the path cannot be resolved or looked up as a standard path, the exception should gracefully fall back to a readable string representation rather than crashing during `str(exc)` formatting. Standard `Path`-based error messages must continue to format correctly.",
       "instruction_origin": "generated",
       "leak_check": {
         "clean": true,
@@ -128,7 +128,7 @@
         "url": "https://github.com/mahmoud/glom/pull/298"
       },
       "source": "history",
-      "title": "Make PathAccessError formatting robust for scope and non-path accesses",
+      "title": "Fix string formatting for PathAccessError on scope and non-standard paths",
       "validation": {
         "fail_before_classes": {
           "glom.test.test_error::test_pae_fallback_for_non_path": "behavioral_exception",
@@ -192,7 +192,7 @@
         ],
         "exploration": {
           "refused": [],
-          "tool_calls": 7,
+          "tool_calls": 3,
           "tools_used": [
             "grep",
             "read_file"
@@ -205,12 +205,12 @@
           "misleading_similarity": 0.0,
           "scale": 26.0
         },
-        "justification": "Although confined to the CLI, the agent must trace the argument registration through centralized output handling and preserve the existing invocation and output-mode behavior; the relevant contract is not just a single symbol’s signature.",
+        "justification": "The feature spans CLI option registration and scalar-output handling in separate functions, with output behavior requiring inspection of the existing command and formatting paths rather than a single self-contained symbol.",
         "measured_justification": "This task depends on rules recorded in the change's description rather than inferable from the surrounding code.",
         "measured_tier": "medium",
         "score": 0.3348,
         "tercile_cuts": [
-          0.2155,
+          0.2188,
           0.3969
         ],
         "tier": "medium",
@@ -221,7 +221,7 @@
         "glom/cli.py"
       ],
       "generation": {
-        "cache_key": "a6677821e15bd020a685aa08d5749148fe84bf6e5a4977df51dfc12b105af175",
+        "cache_key": "798d1448c7812ebe9dc724dce19479ac73f51b209c53438292783b39349fd128",
         "cached": false,
         "fell_back": null,
         "leak_check": {
@@ -230,10 +230,10 @@
           "private_names_leaked": [],
           "public_names_mentioned": []
         },
-        "model": "openai/gpt-5.6-luna"
+        "model": "google/gemini-3.7-flash"
       },
       "id": "pr-280",
-      "instruction": "The CLI must support a `--scalar` option for glom transformations run against JSON, YAML, TOML, or Python target data supplied through command-line arguments, files, or standard input. With this option, a scalar result—such as a string, number, boolean, or null—is emitted as plain scalar text: string values must not include JSON quotes, and the output must not contain surrounding whitespace or an automatically added trailing newline. When the result is a collection, including an object or array, `--scalar` must fall back to the existing normal JSON output rather than flattening the collection. Without `--scalar`, existing JSON output behavior must remain unchanged, and existing input, spec, format, and error handling must continue to work.",
+      "instruction": "Support scalar / raw output in the glom command-line interface. When executing glom queries and transformations from the CLI, users should be able to specify a raw/scalar output option (e.g. `--raw` / `-r`) so that scalar results (such as strings, numbers, booleans, or null/None) are printed directly as raw unquoted text rather than JSON-encoded strings with surrounding quotes. If the transformation result is a container or collection (such as a dictionary, list, or other non-scalar mapping/sequence), the output should fall back to standard JSON output formatting.",
       "instruction_origin": "generated",
       "leak_check": {
         "clean": true,
@@ -262,7 +262,7 @@
         "url": "https://github.com/mahmoud/glom/pull/280"
       },
       "source": "history",
-      "title": "Add scalar output mode to the glom CLI",
+      "title": "Add raw scalar output support to the glom CLI",
       "validation": {
         "fail_before_classes": {
           "glom.test.test_cli::test_cli_scalar": "behavioral_exception"
@@ -315,9 +315,8 @@
       "difficulty": {
         "agrees_with_measurement": true,
         "criteria": [
-          "cross_module_reasoning",
           "coordinated_multi_file_change",
-          "non_local_cause"
+          "cross_module_reasoning"
         ],
         "dominant_factors": [
           "coordinated_change",
@@ -325,7 +324,7 @@
         ],
         "exploration": {
           "refused": [],
-          "tool_calls": 20,
+          "tool_calls": 8,
           "tools_used": [
             "grep",
             "read_file"
@@ -338,12 +337,12 @@
           "misleading_similarity": 0.0,
           "scale": 233.0
         },
-        "justification": "Behavior is coordinated across core’s MODE propagation and recursive scope handling plus matching, mutation, and reprlib compatibility code. Changes can affect Match defaults, Switch chaining, Assign evaluation, and T/S subspec behavior outside the edited site.",
+        "justification": "Mode and argument semantics must be changed consistently across core, matching, mutation, and related representation code; updating one dispatcher or spec handler without its counterparts leaves cross-module behavior inconsistent.",
         "measured_justification": "This task requires coordinated edits across 4 source files; and it spans 4 modules, so the change cannot be reasoned about locally.",
         "measured_tier": "hard",
         "score": 0.8195,
         "tercile_cuts": [
-          0.2155,
+          0.2188,
           0.3969
         ],
         "tier": "hard",
@@ -357,29 +356,25 @@
         "glom/reprlib_backport.py"
       ],
       "generation": {
-        "cache_key": "8ce0e0c4f4e8f35bab9ddb042433ccdf2993c57c801296d78990f06564812e61",
+        "cache_key": "cde4d9ad81ad2b5979891cc5cc8c8cdd1cd38256d8ff24cb728d92fb031e6786",
         "cached": false,
         "fell_back": null,
         "leak_check": {
           "clean": true,
           "copied_spans": [],
           "private_names_leaked": [],
-          "public_names_mentioned": [
-            "defaults"
-          ]
+          "public_names_mentioned": []
         },
-        "model": "openai/gpt-5.6-luna"
+        "model": "google/gemini-3.7-flash"
       },
       "id": "pr-196",
-      "instruction": "Make nested glom specifications behave consistently wherever an operator accepts a child specification. Child specs must be evaluated against the current target and scope, including when they are nested inside Spec wrappers or other composite specifications, rather than being returned as literal values. Preserve an explicit way to request literal values, and do not reinterpret structural arguments such as path strings, mapping keys, match predicates, or switch case labels as specs.\n\nThis behavior must cover recursive Spec composition, Match fallbacks, Switch selectors/cases/fallbacks, Assign values, subspecs embedded in T expressions, and values assigned through S scope variables. Match and Switch defaults must be evaluated as child specs when supplied, while omitting a default must retain their normal no-match behavior. Assign must evaluate a spec-valued assignment before storing it, and S assignments must evaluate their right-hand side in the current scope so later specifications can read the assigned variable. The same rules must hold through multiple levels of nesting and for combinations with dot-delimited paths, callable invocations, T expressions, and other existing glom features.\n\nThe completed behavior is observable through the existing tests named “spec and recursion”, “match default”, “switch”, “assign spec val”, “t subspec”, and “s scope assign”: each must pass without special-casing only one nesting depth or one operator, and existing literal-value and error behavior must remain compatible.",
+      "instruction": "Ensure that glom spec primitives (including `Spec`, `T`, `S`, `Match`, `Switch`, `Assign`, `Coalesce`, `Call`, and `Invoke`) treat `default`, `val`, and subspec arguments consistently by evaluating them as valid glom specs rather than treating them strictly as constants or requiring special-cased wrapper types.\\n\\nSpecifically:\\n- When a primitive accepts a `default` value (such as in `Match`, `Coalesce`, or path lookups), if a fallback is triggered, the default argument should be interpreted and evaluated as a spec against the target and scope, rather than returned as an uninterpreted raw constant.\\n- `Assign` should support specs for both its target path and assigned value (`val`), evaluating the `val` spec against the current target before assignment to target objects or scope (`S`).\\n- `T` (Target) subspecs and expressions should seamlessly support nested specs, callable sub-expressions, and recursive `Spec` evaluation without requiring manual unwrapping.\\n- `Switch` and `Match` should evaluate case targets, results, and fallback/default handlers as specs against the matched target.\\n- Nested and recursive spec resolution should maintain consistent scope and target propagation across all standard spec primitives.",
       "instruction_origin": "generated",
       "leak_check": {
         "clean": true,
         "copied_spans": [],
         "private_names_leaked": [],
-        "public_names_mentioned": [
-          "defaults"
-        ]
+        "public_names_mentioned": []
       },
       "modules": [
         "glom.core",
@@ -405,7 +400,7 @@
         "url": "https://github.com/mahmoud/glom/pull/196"
       },
       "source": "history",
-      "title": "Unify nested spec evaluation across glom operators",
+      "title": "Standardize spec evaluation for default and value arguments across glom spec primitives",
       "validation": {
         "fail_before_classes": {
           "glom.test.test_basic::test_spec_and_recursion": "behavioral_exception",
@@ -479,8 +474,7 @@
       "difficulty": {
         "agrees_with_measurement": false,
         "criteria": [
-          "coordinated_multi_file_change",
-          "cross_module_reasoning"
+          "local_and_self_describing"
         ],
         "dominant_factors": [
           "misleading_similarity",
@@ -488,9 +482,8 @@
         ],
         "exploration": {
           "refused": [],
-          "tool_calls": 8,
+          "tool_calls": 5,
           "tools_used": [
-            "callers_of",
             "grep",
             "read_file"
           ]
@@ -502,12 +495,12 @@
           "misleading_similarity": 0.0,
           "scale": 43.0
         },
-        "justification": "The feature requires coordinated changes between CLI format parsing and setup dependency configuration, with user-facing validation and error behavior constrained by tests; a change in one module is incomplete without the other.",
+        "justification": "CLI parsing and TOML loading must be paired with the matching dependency metadata in setup; changing either module alone produces an incomplete feature, making this a coordinated cross-module edit.",
         "measured_justification": "This task requires coordinated edits across 2 source files; and it spans 2 modules, so the change cannot be reasoned about locally.",
         "measured_tier": "medium",
         "score": 0.3969,
         "tercile_cuts": [
-          0.2155,
+          0.2188,
           0.3969
         ],
         "tier": "hard",
@@ -519,7 +512,7 @@
         "setup.py"
       ],
       "generation": {
-        "cache_key": "69b6ad76bbb8b166d8d8c0de305e5e93f65297a4cd8fca66f6395e396cf7bf93",
+        "cache_key": "ec5ee2045cdc162fd03ac80dc41d34079092ce0dab41f71fa65213dc669c7353",
         "cached": false,
         "fell_back": null,
         "leak_check": {
@@ -527,20 +520,20 @@
           "copied_spans": [],
           "private_names_leaked": [],
           "public_names_mentioned": [
-            "missing"
+            "toml"
           ]
         },
-        "model": "openai/gpt-5.6-luna"
+        "model": "google/gemini-3.7-flash"
       },
       "id": "pr-277",
-      "instruction": "Extend the glom command-line interface so TOML is a supported target-data format alongside JSON, YAML, and Python. A user must be able to select TOML through the CLI’s existing format and input mechanisms, including target data supplied as an argument, loaded from a file, or read from standard input. TOML documents must be parsed into the native mapping/list/scalar structures expected by glom, then passed through the requested spec or transformation with the same output and error behavior as other target formats. Existing JSON, YAML, and Python workflows must remain compatible. Invalid or incomplete command-line usage—including missing required inputs, unsupported format selections, or invalid option combinations—must produce a nonzero CLI result with a clear usage-oriented error rather than an unhandled traceback; malformed TOML must likewise fail cleanly and identify the input problem.",
+      "instruction": "Extend the glom command-line interface (`glom.cli`) to support reading and querying TOML-formatted input data.\n\nRequired behaviors:\n- Support a `--toml` input format flag alongside existing format options (such as `--yaml`, `--json`, and `--python`).\n- When the `--toml` flag is provided, glom should parse input data (provided via arguments, files, or standard input) as TOML before applying the glom spec/query.\n- Ensure proper CLI argument validation and error handling: passing conflicting format flags (or invalid flag combinations) must trigger appropriate usage errors consistent with existing format flags.",
       "instruction_origin": "generated",
       "leak_check": {
         "clean": true,
         "copied_spans": [],
         "private_names_leaked": [],
         "public_names_mentioned": [
-          "missing"
+          "toml"
         ]
       },
       "modules": [
@@ -565,7 +558,7 @@
         "url": "https://github.com/mahmoud/glom/pull/277"
       },
       "source": "history",
-      "title": "Add TOML target support to the glom CLI",
+      "title": "Add TOML format support to the glom CLI",
       "validation": {
         "fail_before_classes": {
           "glom.test.test_cli::test_main_toml_target": "behavioral_exception",
@@ -623,10 +616,7 @@
       "difficulty": {
         "agrees_with_measurement": true,
         "criteria": [
-          "cross_module_reasoning",
-          "business_logic_knowledge",
-          "coordinated_multi_file_change",
-          "non_local_cause"
+          "cross_module_reasoning"
         ],
         "dominant_factors": [
           "misleading_similarity",
@@ -634,7 +624,7 @@
         ],
         "exploration": {
           "refused": [],
-          "tool_calls": 10,
+          "tool_calls": 7,
           "tools_used": [
             "grep",
             "read_file"
@@ -647,12 +637,12 @@
           "misleading_similarity": 0.0,
           "scale": 68.0
         },
-        "justification": "GROUP’s behavior is not fully specified locally: it must align with core’s recursive spec dispatch and reduction protocols while handling nested grouping, limits, and sentinel control flow. Understanding neighboring code and tests is required, but no coordinated edit is needed.",
+        "justification": "GROUP has to implement recursive bucketing, list accumulation, and aggregation protocols whose correct scope and accumulator behavior is defined by neighboring grouping and reduction code.",
         "measured_justification": "This task touches 62 lines with 6 tests that must end up passing.",
         "measured_tier": "medium",
         "score": 0.2531,
         "tercile_cuts": [
-          0.2155,
+          0.2188,
           0.3969
         ],
         "tier": "medium",
@@ -663,7 +653,7 @@
         "glom/grouping.py"
       ],
       "generation": {
-        "cache_key": "6b451f435e4b33808053a686f0ab017cba6058476915b1c47f88170d8ed5ad28",
+        "cache_key": "925a35964b74ae905f78249097d7834550a337bf0a2503e6570ab5e6fe2328fd",
         "cached": false,
         "fell_back": null,
         "leak_check": {
@@ -672,10 +662,10 @@
           "private_names_leaked": [],
           "public_names_mentioned": []
         },
-        "model": "openai/gpt-5.6-luna"
+        "model": "google/gemini-3.7-flash"
       },
       "id": "excise-glom_grouping.py-glom.grouping.GROUP",
-      "instruction": "Implement only the missing body of `glom.grouping.GROUP`, preserving its existing signature and documentation. The function must provide the documented group-mode dispatcher behavior: partition the target collection into buckets, produce the documented structured group result, and evaluate nested grouping and aggregation specifications correctly. Support all documented aggregation operations, including averages, limits, sampling, and minimum/maximum selection, as well as the current-mode group sentinel. Preserve the repository’s established behavior for empty inputs, scalar or otherwise unusual targets, nested specs, and all invalid public inputs: valid calls must return the expected grouped values, while invalid calls must raise the documented error types and messages. No other functions, APIs, or files should be changed.",
+      "instruction": "Implement the `glom.grouping.GROUP` function to handle data grouping, partitioning, hierarchical bucketing, and aggregation over iterable target data in `glom`.\n\nThe `GROUP(target, spec, scope)` function acts as the grouping dispatcher and should support:\n- Grouping iterable targets into nested/hierarchical buckets according to grouping specifications.\n- Applying aggregate functions and accumulators (such as `First`, `Avg`, `Max`, `Min`, `Sample`, etc.) over grouped elements.\n- Respecting grouping parameters such as limits, ordering, bucketing rules, and nested sub-specs.\n- Raising appropriate errors on invalid targets or grouping specs in accordance with `glom` grouping conventions.\n- Functioning correctly as the group-mode handler within `glom`'s evaluation scope.",
       "instruction_origin": "generated",
       "leak_check": {
         "clean": true,
@@ -704,7 +694,7 @@
         "symbol_id": "glom/grouping.py::glom.grouping.GROUP"
       },
       "source": "excision",
-      "title": "Implement grouping mode dispatch",
+      "title": "Implement grouping dispatcher `GROUP` in `glom.grouping`",
       "validation": {
         "fail_before_classes": {
           "glom.test.test_error::test_all_public_errors": "behavioral_exception",
@@ -773,8 +763,6 @@
       "difficulty": {
         "agrees_with_measurement": false,
         "criteria": [
-          "cross_module_reasoning",
-          "business_logic_knowledge",
           "local_and_self_describing"
         ],
         "dominant_factors": [
@@ -783,7 +771,7 @@
         ],
         "exploration": {
           "refused": [],
-          "tool_calls": 13,
+          "tool_calls": 8,
           "tools_used": [
             "grep",
             "read_file"
@@ -796,12 +784,12 @@
           "misleading_similarity": 0.0,
           "scale": 21.0
         },
-        "justification": "The ordering is defined by how _handle_dict performs first-match dispatch and by distinctions among equality constants, types, Match expressions, Optional, and Required. Those rules require inspecting callers and adjacent matching logic rather than only the helper body.",
+        "justification": "The precedence ladder is not stated at the helper’s call site; it must be inferred from Optional, Required, dictionary matching dispatch, and surrounding test expectations.",
         "measured_justification": "This task touches 18 lines with 3 tests that must end up passing.",
         "measured_tier": "easy",
         "score": 0.2147,
         "tercile_cuts": [
-          0.2155,
+          0.2188,
           0.3969
         ],
         "tier": "medium",
@@ -812,7 +800,7 @@
         "glom/matching.py"
       ],
       "generation": {
-        "cache_key": "042fc5a0238cadc95dfb2d273aca9cee7fddfc443d8f4820ad11210c75a2f9d2",
+        "cache_key": "1f8bbd1718c7be72d0abd98cb810c9aa662cae844a33694888bde829a1cc2a43",
         "cached": false,
         "fell_back": null,
         "leak_check": {
@@ -821,10 +809,10 @@
           "private_names_leaked": [],
           "public_names_mentioned": []
         },
-        "model": "openai/gpt-5.6-luna"
+        "model": "google/gemini-3.7-flash"
       },
       "id": "excise-glom_matching.py-glom.matching._precedence",
-      "instruction": "Implement only the existing `glom.matching._precedence` function, preserving its signature and documentation. It must return a deterministic ordering value for match keys, where larger values are tried later: exact literal-value keys come first, predicate-style keys (including regular-expression and custom `Match` specifications, including wrapped specifications) follow, and type keys come last because they are broadest. Ordinary non-matcher values must receive the literal-key precedence. The ordering must allow overlapping keys such as `1`, `M > 0`, and `int` to select the most specific applicable branch, while remaining stable for nested structures and double-wrapped match specifications. Do not modify any other file, function, or public behavior.",
+      "instruction": "Complete the implementation of `glom.matching._precedence(pattern)` so that pattern-matching specifications in dictionaries and structured specifiers (such as `Match`, `Check`, `Switch`, `Regex`, and logical combinators like `And`, `Or`, `Not`) evaluate candidate spec keys in the correct priority order.\n\nWhen a target key can match multiple spec keys (for example, the target `1` matching a literal `1`, type `int`, and predicate `M > 0`), `_precedence` must return an ordering score where lower values correspond to higher priority (tried earlier) and higher values correspond to lower priority (tried later).\n\nThe ordering must properly distinguish between literal exact values, specialized patterns/types/predicates, wrapped/nested combinators (e.g., `And`, `Or`, `Not`), and broad catch-all or fallback matchers, ensuring double-wrapped patterns, nested structures, and sample matching test suites pass consistently.",
       "instruction_origin": "generated",
       "leak_check": {
         "clean": true,
@@ -853,7 +841,7 @@
         "symbol_id": "glom/matching.py::glom.matching._precedence"
       },
       "source": "excision",
-      "title": "Implement matching-key precedence",
+      "title": "Implement pattern precedence scoring in glom.matching",
       "validation": {
         "fail_before_classes": {
           "glom.test.test_match::test_double_wrapping": "behavioral_exception",
@@ -913,8 +901,7 @@
       "difficulty": {
         "agrees_with_measurement": false,
         "criteria": [
-          "cross_module_reasoning",
-          "non_local_cause"
+          "cross_module_reasoning"
         ],
         "dominant_factors": [
           "misleading_similarity",
@@ -922,9 +909,155 @@
         ],
         "exploration": {
           "refused": [],
-          "tool_calls": 12,
+          "tool_calls": 8,
           "tools_used": [
-            "callers_of",
+            "grep",
+            "read_file"
+          ]
+        },
+        "factors": {
+          "business_logic": 0.0,
+          "coordinated_change": 1.0,
+          "cross_module": 1.0,
+          "misleading_similarity": 0.0,
+          "scale": 26.0
+        },
+        "justification": "Correct deletion depends on TargetRegistry dispatch, ignore-missing behavior, and PathDeleteError wrapping, requiring comparison with the sibling assignment operation and its callers.",
+        "measured_justification": "This task touches 20 lines with 6 tests that must end up passing.",
+        "measured_tier": "easy",
+        "score": 0.2188,
+        "tercile_cuts": [
+          0.2188,
+          0.3969
+        ],
+        "tier": "medium",
+        "tier_origin": "agent",
+        "verification_state": "reasoning_unverified_label_only"
+      },
+      "files_in_scope": [
+        "glom/mutation.py"
+      ],
+      "generation": {
+        "cache_key": "b878b812aee5a2c538cb298ca196a81d7e69a1ca2517ef5ead334527c7ab65b8",
+        "cached": false,
+        "fell_back": null,
+        "leak_check": {
+          "clean": true,
+          "copied_spans": [],
+          "private_names_leaked": [],
+          "public_names_mentioned": []
+        },
+        "model": "google/gemini-3.7-flash"
+      },
+      "id": "excise-glom_mutation.py-glom.mutation.Delete._del_one",
+      "instruction": "Implement the missing `_del_one` method on `glom.mutation.Delete` to perform in-place deletion operations on target data structures and objects.\n\nThe method should execute single-target deletion on the given destination (`dest`) using the operation (`op`) and argument (`arg`) within the provided `scope`. It must properly handle deletion across various object types supported by `glom` (such as dictionary keys, sequence elements, attributes, and custom objects registered with deletion handlers), raise the appropriate glom public errors for invalid delete targets or unregistered operations, and integrate with sequence/star broadcast deletions as expected by glom's mutation suite.",
+      "instruction_origin": "generated",
+      "leak_check": {
+        "clean": true,
+        "copied_spans": [],
+        "private_names_leaked": [],
+        "public_names_mentioned": []
+      },
+      "modules": [
+        "glom.mutation"
+      ],
+      "paths": {
+        "evidence": "excise-glom_mutation.py-glom.mutation.Delete._del_one/evidence",
+        "golden_diff": "excise-glom_mutation.py-glom.mutation.Delete._del_one/goldenSolution.diff",
+        "golden_solution": "excise-glom_mutation.py-glom.mutation.Delete._del_one/goldenSolution.md",
+        "input": "excise-glom_mutation.py-glom.mutation.Delete._del_one/input",
+        "solution": "excise-glom_mutation.py-glom.mutation.Delete._del_one/solution",
+        "verifier": "excise-glom_mutation.py-glom.mutation.Delete._del_one/verifier"
+      },
+      "primary_module": "glom.mutation",
+      "provenance": {
+        "commit_sha": "30b477ab65560914a38f331614947d0894701044",
+        "kind": "excision_target",
+        "path": "glom/mutation.py",
+        "qualified_name": "glom.mutation.Delete._del_one",
+        "stub_strategy": "neutral",
+        "symbol_id": "glom/mutation.py::glom.mutation.Delete._del_one"
+      },
+      "source": "excision",
+      "title": "Implement in-place deletion in `glom.mutation.Delete._del_one`",
+      "validation": {
+        "fail_before_classes": {
+          "glom.test.test_error::test_all_public_errors": "behavioral_exception",
+          "glom.test.test_mutation::test_bad_delete_target": "assertion",
+          "glom.test.test_mutation::test_delete": "assertion",
+          "glom.test.test_mutation::test_sequence_delete": "assertion",
+          "glom.test.test_mutation::test_star_broadcast": "assertion",
+          "glom.test.test_mutation::test_unregistered_delete": "behavioral_exception"
+        },
+        "gates_failed": [],
+        "gates_passed": [
+          "fail_before",
+          "pass_after",
+          "collateral",
+          "determinism_before",
+          "determinism_after",
+          "verifier_integrity",
+          "solver_bundle",
+          "alternative_implementation"
+        ],
+        "repeats": 2,
+        "runs": [
+          "after_full",
+          "before_full",
+          "baseline_full",
+          "before_targets_1",
+          "before_targets_2",
+          "after_targets_1",
+          "after_targets_2"
+        ],
+        "status": "validated"
+      },
+      "verifier": {
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-p",
+          "no:cacheprovider",
+          "--continue-on-collection-errors",
+          "-q",
+          "glom/test/test_error.py::test_all_public_errors",
+          "glom/test/test_mutation.py::test_bad_delete_target",
+          "glom/test/test_mutation.py::test_delete",
+          "glom/test/test_mutation.py::test_sequence_delete",
+          "glom/test/test_mutation.py::test_star_broadcast",
+          "glom/test/test_mutation.py::test_unregistered_delete"
+        ],
+        "command_line": "python -m pytest -p no:cacheprovider --continue-on-collection-errors -q glom/test/test_error.py::test_all_public_errors glom/test/test_mutation.py::test_bad_delete_target glom/test/test_mutation.py::test_delete glom/test/test_mutation.py::test_sequence_delete glom/test/test_mutation.py::test_star_broadcast glom/test/test_mutation.py::test_unregistered_delete",
+        "files": [
+          "glom/test/test_error.py",
+          "glom/test/test_mutation.py"
+        ],
+        "node_ids": [
+          "glom.test.test_error::test_all_public_errors",
+          "glom.test.test_mutation::test_bad_delete_target",
+          "glom.test.test_mutation::test_delete",
+          "glom.test.test_mutation::test_sequence_delete",
+          "glom.test.test_mutation::test_star_broadcast",
+          "glom.test.test_mutation::test_unregistered_delete"
+        ],
+        "procedure": "Copy input/, overlay verifier/ onto it, then run the command below from the tree root. It must fail before the change and pass after."
+      }
+    },
+    {
+      "difficulty": {
+        "agrees_with_measurement": true,
+        "criteria": [
+          "local_and_self_describing"
+        ],
+        "dominant_factors": [
+          "misleading_similarity",
+          "scale"
+        ],
+        "exploration": {
+          "refused": [],
+          "tool_calls": 8,
+          "tools_used": [
             "grep",
             "read_file"
           ]
@@ -936,15 +1069,15 @@
           "misleading_similarity": 0.0,
           "scale": 11.0
         },
-        "justification": "The correct semantics are constrained by mutation callers that convert S-rooted paths for evaluation against an outer target, as well as Path identity behavior tested elsewhere; the symbol cannot be implemented reliably from its local definition alone.",
+        "justification": "Path.from_t is a small, isolated Path helper with its identity and T-conversion contract directly demonstrated by the nearby test, without cross-module coupling.",
         "measured_justification": "This task touches 8 lines with 3 tests that must end up passing.",
         "measured_tier": "easy",
         "score": 0.2065,
         "tercile_cuts": [
-          0.2155,
+          0.2188,
           0.3969
         ],
-        "tier": "medium",
+        "tier": "easy",
         "tier_origin": "agent",
         "verification_state": "reasoning_unverified_label_only"
       },
@@ -952,7 +1085,7 @@
         "glom/core.py"
       ],
       "generation": {
-        "cache_key": "e3499cdee0dedaafd72572e937525815726c9d795f2e2f1475735a15c4bd3305",
+        "cache_key": "e4d9480d25634c354b1bf06b26a0c3ee69a79e4e4d244024c3afb70992f4b99c",
         "cached": false,
         "fell_back": null,
         "leak_check": {
@@ -961,10 +1094,10 @@
           "private_names_leaked": [],
           "public_names_mentioned": []
         },
-        "model": "openai/gpt-5.6-luna"
+        "model": "google/gemini-3.7-flash"
       },
       "id": "excise-glom_core.py-glom.core.Path.from_t",
-      "instruction": "Implement only `glom.core.Path.from_t`, preserving its existing signature and documentation. It must convert a T-expression representing a navigable path into the equivalent `Path`, with the path rooted at `T` and all subsequent attribute or item components preserved in order. Converting the root `T` expression itself must produce the corresponding root path without adding or removing components. The result must work wherever a `Path` is expected, including deletion and assignment targets, and must retain the existing behavior and error handling for unsupported inputs. Do not modify any other function or feature.",
+      "instruction": "Implement the `Path.from_t` method on `glom.core.Path`.\n\nThe method should convert a `Path` instance into an equivalent target-relative expression starting from `T` (the target placeholder). It must return a representation of the path rooted at `T` such that path navigation, assignment, and deletion operations that rely on target-relative paths function properly and preserve path identity.",
       "instruction_origin": "generated",
       "leak_check": {
         "clean": true,
@@ -993,7 +1126,7 @@
         "symbol_id": "glom/core.py::glom.core.Path.from_t"
       },
       "source": "excision",
-      "title": "Implement Path.from_t conversion",
+      "title": "Implement Path.from_t in glom.core",
       "validation": {
         "fail_before_classes": {
           "glom.test.test_mutation::test_delete": "behavioral_exception",
@@ -1051,164 +1184,6 @@
     },
     {
       "difficulty": {
-        "agrees_with_measurement": false,
-        "criteria": [
-          "local_and_self_describing"
-        ],
-        "dominant_factors": [
-          "misleading_similarity",
-          "scale"
-        ],
-        "exploration": {
-          "refused": [],
-          "tool_calls": 14,
-          "tools_used": [
-            "grep",
-            "read_file"
-          ]
-        },
-        "factors": {
-          "business_logic": 0.0,
-          "coordinated_change": 1.0,
-          "cross_module": 1.0,
-          "misleading_similarity": 0.0,
-          "scale": 22.0
-        },
-        "justification": "The helper’s short local description does not establish its full contract. Its implementation must be inferred from _t_eval, scope initialization, ScopeVars/Vars, and neighboring S/A path behavior, including error and assignment cases.",
-        "measured_justification": "This task touches 13 lines with 9 tests that must end up passing.",
-        "measured_tier": "easy",
-        "score": 0.2155,
-        "tercile_cuts": [
-          0.2155,
-          0.3969
-        ],
-        "tier": "medium",
-        "tier_origin": "agent",
-        "verification_state": "reasoning_unverified_label_only"
-      },
-      "files_in_scope": [
-        "glom/core.py"
-      ],
-      "generation": {
-        "cache_key": "ed0804cd6558c94f192915c7a990d85a9e88c267274526e46ed45b0829a30f22",
-        "cached": false,
-        "fell_back": null,
-        "leak_check": {
-          "clean": true,
-          "copied_spans": [],
-          "private_names_leaked": [],
-          "public_names_mentioned": []
-        },
-        "model": "openai/gpt-5.6-luna"
-      },
-      "id": "excise-glom_core.py-glom.core._s_first_magic",
-      "instruction": "Implement only the missing `glom.core._s_first_magic(scope, key, _t)` behavior. A dotted `S` expression such as `S.a` must resolve a string identifier as the corresponding user-defined scope variable, with the same result as `S['a']`; chained expressions such as `S.a.val` must continue navigating the resolved value just like the equivalent bracket form. The behavior must remain compatible with scope values supplied by globals, `let`, scoped variables, and scope assignments, including nested dictionaries, T-expression subspecs, fallback handling, and skip/max-skip behavior. Preserve the repository’s existing error and formatting conventions for invalid or unavailable lookups. Do not change any other files, APIs, or features.",
-      "instruction_origin": "generated",
-      "leak_check": {
-        "clean": true,
-        "copied_spans": [],
-        "private_names_leaked": [],
-        "public_names_mentioned": []
-      },
-      "modules": [
-        "glom.core"
-      ],
-      "paths": {
-        "evidence": "excise-glom_core.py-glom.core._s_first_magic/evidence",
-        "golden_diff": "excise-glom_core.py-glom.core._s_first_magic/goldenSolution.diff",
-        "golden_solution": "excise-glom_core.py-glom.core._s_first_magic/goldenSolution.md",
-        "input": "excise-glom_core.py-glom.core._s_first_magic/input",
-        "solution": "excise-glom_core.py-glom.core._s_first_magic/solution",
-        "verifier": "excise-glom_core.py-glom.core._s_first_magic/verifier"
-      },
-      "primary_module": "glom.core",
-      "provenance": {
-        "commit_sha": "30b477ab65560914a38f331614947d0894701044",
-        "kind": "excision_target",
-        "path": "glom/core.py",
-        "qualified_name": "glom.core._s_first_magic",
-        "stub_strategy": "neutral",
-        "symbol_id": "glom/core.py::glom.core._s_first_magic"
-      },
-      "source": "excision",
-      "title": "Restore S-expression scope lookup",
-      "validation": {
-        "fail_before_classes": {
-          "glom.test.test_match::test_nested_dict": "assertion",
-          "glom.test.test_path_and_t::test_s_magic": "assertion",
-          "glom.test.test_path_and_t::test_t_subspec": "behavioral_exception",
-          "glom.test.test_scope_vars::test_globals": "behavioral_exception",
-          "glom.test.test_scope_vars::test_let": "behavioral_exception",
-          "glom.test.test_scope_vars::test_max_skip": "behavioral_exception",
-          "glom.test.test_scope_vars::test_s_scope_assign": "behavioral_exception",
-          "glom.test.test_scope_vars::test_scoped_vars": "behavioral_exception",
-          "glom.test.test_scope_vars::test_vars": "assertion"
-        },
-        "gates_failed": [],
-        "gates_passed": [
-          "fail_before",
-          "pass_after",
-          "collateral",
-          "determinism_before",
-          "determinism_after",
-          "verifier_integrity",
-          "solver_bundle",
-          "alternative_implementation"
-        ],
-        "repeats": 2,
-        "runs": [
-          "after_full",
-          "before_full",
-          "baseline_full",
-          "before_targets_1",
-          "before_targets_2",
-          "after_targets_1",
-          "after_targets_2"
-        ],
-        "status": "validated"
-      },
-      "verifier": {
-        "command": [
-          "python",
-          "-m",
-          "pytest",
-          "-p",
-          "no:cacheprovider",
-          "--continue-on-collection-errors",
-          "-q",
-          "glom/test/test_match.py::test_nested_dict",
-          "glom/test/test_path_and_t.py::test_s_magic",
-          "glom/test/test_path_and_t.py::test_t_subspec",
-          "glom/test/test_scope_vars.py::test_globals",
-          "glom/test/test_scope_vars.py::test_let",
-          "glom/test/test_scope_vars.py::test_max_skip",
-          "glom/test/test_scope_vars.py::test_s_scope_assign",
-          "glom/test/test_scope_vars.py::test_scoped_vars",
-          "glom/test/test_scope_vars.py::test_vars"
-        ],
-        "command_line": "python -m pytest -p no:cacheprovider --continue-on-collection-errors -q glom/test/test_match.py::test_nested_dict glom/test/test_path_and_t.py::test_s_magic glom/test/test_path_and_t.py::test_t_subspec glom/test/test_scope_vars.py::test_globals glom/test/test_scope_vars.py::test_let glom/test/test_scope_vars.py::test_max_skip glom/test/test_scope_vars.py::test_s_scope_assign glom/test/test_scope_vars.py::test_scoped_vars glom/test/test_scope_vars.py::test_vars",
-        "files": [
-          "glom/test/test_match.py",
-          "glom/test/test_path_and_t.py",
-          "glom/test/test_scope_vars.py",
-          "glom/test/test_snippets.py"
-        ],
-        "node_ids": [
-          "glom.test.test_match::test_nested_dict",
-          "glom.test.test_path_and_t::test_s_magic",
-          "glom.test.test_path_and_t::test_t_subspec",
-          "glom.test.test_scope_vars::test_globals",
-          "glom.test.test_scope_vars::test_let",
-          "glom.test.test_scope_vars::test_max_skip",
-          "glom.test.test_scope_vars::test_s_scope_assign",
-          "glom.test.test_scope_vars::test_scoped_vars",
-          "glom.test.test_scope_vars::test_vars"
-        ],
-        "procedure": "Copy input/, overlay verifier/ onto it, then run the command below from the tree root. It must fail before the change and pass after."
-      }
-    },
-    {
-      "difficulty": {
         "agrees_with_measurement": true,
         "criteria": [
           "local_and_self_describing"
@@ -1219,9 +1194,8 @@
         ],
         "exploration": {
           "refused": [],
-          "tool_calls": 6,
+          "tool_calls": 2,
           "tools_used": [
-            "callers_of",
             "grep",
             "read_file"
           ]
@@ -1233,12 +1207,12 @@
           "misleading_similarity": 0.0,
           "scale": 3.0
         },
-        "justification": "The required behavior is a localized YAML loader compatibility change in glom.cli, and the relevant test directly identifies the expected safe-loading behavior without hidden coupling.",
+        "justification": "The change is confined to the YAML loading branch in glom.cli, and the safe-loading requirement is directly visible in the existing loader call and test context.",
         "measured_justification": "This task is a contained change verified by 1 test.",
         "measured_tier": "easy",
         "score": 0.2039,
         "tercile_cuts": [
-          0.2155,
+          0.2188,
           0.3969
         ],
         "tier": "easy",
@@ -1249,7 +1223,7 @@
         "glom/cli.py"
       ],
       "generation": {
-        "cache_key": "35ecb030bad783852c05eec40fd84b90b9165f68295a4715eaedd1fc6d4ee144",
+        "cache_key": "df10aaf4bf2956dab948bcbff3f02eeb67132491798224c0bf17bef5054b9eb7",
         "cached": false,
         "fell_back": null,
         "leak_check": {
@@ -1258,10 +1232,10 @@
           "private_names_leaked": [],
           "public_names_mentioned": []
         },
-        "model": "openai/gpt-5.6-luna"
+        "model": "google/gemini-3.7-flash"
       },
       "id": "pr-262",
-      "instruction": "Update the glom command-line interface so users can apply a glom transformation or specification to target data supplied as a command-line value, a file, or standard input. Target input must be recognized and loaded as JSON, YAML, TOML, or Python data according to the CLI’s existing argument and file conventions, including correct handling of YAML targets in the main command path. The resulting transformed value must be emitted in the CLI’s established output format, and the same behavior must work when input arrives through a pipe. Parsing must be safe: data supplied by users, especially YAML and Python-formatted input, must not be able to execute arbitrary code. Invalid formats, unreadable files, malformed data, missing required arguments, and invalid transformations/specifications must produce a clear command-line error and nonzero exit status rather than a traceback or silent result. Preserve existing CLI behavior where unrelated, and ensure the complete test and tox configuration runs successfully on Python 3.10.",
+      "instruction": "Update glom's command-line interface (`glom.cli`) to safely parse YAML target inputs. When YAML data is supplied as a target (via CLI arguments, files, or stdin), glom CLI should use safe YAML loading (e.g., `yaml.safe_load`) rather than unsafe loader mechanisms. All existing CLI operations for querying and transforming YAML target data should continue to function properly and remain compatible with Python 3.10 and later.",
       "instruction_origin": "generated",
       "leak_check": {
         "clean": true,
@@ -1290,7 +1264,7 @@
         "url": "https://github.com/mahmoud/glom/pull/262"
       },
       "source": "history",
-      "title": "Make the glom CLI execute transformations across supported input formats",
+      "title": "Use safe YAML loading in glom CLI",
       "validation": {
         "fail_before_classes": {
           "glom.test.test_cli::test_main_yaml_target": "behavioral_exception"
@@ -1343,9 +1317,7 @@
       "difficulty": {
         "agrees_with_measurement": true,
         "criteria": [
-          "cross_module_reasoning",
-          "coordinated_multi_file_change",
-          "non_local_cause"
+          "coordinated_multi_file_change"
         ],
         "dominant_factors": [
           "coordinated_change",
@@ -1353,7 +1325,7 @@
         ],
         "exploration": {
           "refused": [],
-          "tool_calls": 17,
+          "tool_calls": 8,
           "tools_used": [
             "grep",
             "read_file"
@@ -1366,12 +1338,12 @@
           "misleading_similarity": 0.0,
           "scale": 248.0
         },
-        "justification": "Builtin representation and invocation semantics span core, mutation, reduction, and streaming. Compatibility depends on interactions with Path/T composition, Check defaults, reduction initialization, and streaming SKIP behavior across modules.",
+        "justification": "Builtin roundtripping requires coordinated representation changes across core, mutation, reduction, and streaming, with parallel specifier implementations that must remain consistent across the suite.",
         "measured_justification": "This task requires coordinated edits across 4 source files; and it spans 4 modules, so the change cannot be reasoned about locally.",
         "measured_tier": "hard",
         "score": 0.8293,
         "tercile_cuts": [
-          0.2155,
+          0.2188,
           0.3969
         ],
         "tier": "hard",
@@ -1385,7 +1357,7 @@
         "glom/streaming.py"
       ],
       "generation": {
-        "cache_key": "a830f9554678eb4fedf03b18e194e08d56ee76539ff734b27075d5991c017083",
+        "cache_key": "3b34edae40e08a9e25d7a41e28eedef55c95a205bd7037c254334e973ba60f3f",
         "cached": false,
         "fell_back": null,
         "leak_check": {
@@ -1394,10 +1366,10 @@
           "private_names_leaked": [],
           "public_names_mentioned": []
         },
-        "model": "openai/gpt-5.6-luna"
+        "model": "google/gemini-3.7-flash"
       },
       "id": "pr-117",
-      "instruction": "Ensure glom.core can consistently evaluate and report callable-based specifications on all supported Python versions, including built-in functions, ordinary functions, bound methods, partials, and callable objects. Callable invocation must correctly resolve positional and keyword arguments from glom specifications, preserve the expected target and scope behavior, and support zero-argument and multi-argument callables.\n\nThe completed behavior must support the existing invoke, check, test, assign, path/T round-trip, flatten, fold, sum, and filter workflows. Checks and predicates must return their documented values, apply defaults or raise the documented glom errors when validation fails, and retain useful formatted context identifying the failing operation and path. Assignments must create or update nested destinations addressed by dot-delimited paths without corrupting existing data. Path conversion to and from T expressions must preserve equivalent paths, including paths that require non-attribute access. Flattening, folding, summing integer values, and filtering must work when their callable arguments are built-ins as well as user-defined callables.\n\nDo not make behavior depend on callable repr formats or introspection APIs that differ between Python implementations or versions. Existing public APIs and normal error types must remain compatible, and invalid paths, failed predicates, unsupported argument shapes, and callable exceptions must produce the library’s established error behavior rather than being silently ignored.",
+      "instruction": "Enhance representation and string formatting of callables across glom specifier types (such as Invoke, Call, T, Path, Check, Assign, Flatten, Fold, and Filter) so that builtins and other callables produce consistent, cross-platform repr strings.\n\nEnsure that all declarative spec primitives continue to correctly access, extract, transform, and reshape deeply nested target objects, supporting:\n- Target-relative expressions and method/function calls via Invoke, Call, and T.\n- Accurate representations during inspection and roundtripping of Spec, Path, and T expressions.\n- Proper error propagation, fallback handling, and filtering/folding semantics across collections and nested data structures.",
       "instruction_origin": "generated",
       "leak_check": {
         "clean": true,
@@ -1429,7 +1401,7 @@
         "url": "https://github.com/mahmoud/glom/pull/117"
       },
       "source": "history",
-      "title": "Make callable-based glom specs reliable across platforms",
+      "title": "Improve callable representations and roundtripping across glom specifiers",
       "validation": {
         "fail_before_classes": {
           "glom.test.test_basic::test_invoke": "assertion",
@@ -1512,14 +1484,15 @@
     }
   ],
   "validated_not_shipped": [
+    "excise-glom_core.py-glom.core.TargetRegistry._register_fuzzy_type",
+    "excise-glom_core.py-glom.core.TargetRegistry.register_op",
+    "excise-glom_core.py-glom.core._s_first_magic",
     "pr-144",
     "pr-170",
     "pr-271",
     "pr-32"
   ],
   "withdrawn_statements": [
-    "pr-144",
-    "pr-170",
-    "pr-250"
+    "excise-glom_core.py-glom.core._s_first_magic"
   ]
 }

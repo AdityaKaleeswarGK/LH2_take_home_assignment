@@ -2,8 +2,6 @@
   "difficulty": {
     "agrees_with_measurement": false,
     "criteria": [
-      "cross_module_reasoning",
-      "business_logic_knowledge",
       "local_and_self_describing"
     ],
     "dominant_factors": [
@@ -12,7 +10,7 @@
     ],
     "exploration": {
       "refused": [],
-      "tool_calls": 13,
+      "tool_calls": 8,
       "tools_used": [
         "grep",
         "read_file"
@@ -25,12 +23,12 @@
       "misleading_similarity": 0.0,
       "scale": 21.0
     },
-    "justification": "The ordering is defined by how _handle_dict performs first-match dispatch and by distinctions among equality constants, types, Match expressions, Optional, and Required. Those rules require inspecting callers and adjacent matching logic rather than only the helper body.",
+    "justification": "The precedence ladder is not stated at the helper’s call site; it must be inferred from Optional, Required, dictionary matching dispatch, and surrounding test expectations.",
     "measured_justification": "This task touches 18 lines with 3 tests that must end up passing.",
     "measured_tier": "easy",
     "score": 0.2147,
     "tercile_cuts": [
-      0.2155,
+      0.2188,
       0.3969
     ],
     "tier": "medium",
@@ -144,7 +142,7 @@
     }
   ],
   "generation": {
-    "cache_key": "042fc5a0238cadc95dfb2d273aca9cee7fddfc443d8f4820ad11210c75a2f9d2",
+    "cache_key": "1f8bbd1718c7be72d0abd98cb810c9aa662cae844a33694888bde829a1cc2a43",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -153,10 +151,10 @@
       "private_names_leaked": [],
       "public_names_mentioned": []
     },
-    "model": "openai/gpt-5.6-luna"
+    "model": "google/gemini-3.7-flash"
   },
   "id": "excise-glom_matching.py-glom.matching._precedence",
-  "instruction": "Implement only the existing `glom.matching._precedence` function, preserving its signature and documentation. It must return a deterministic ordering value for match keys, where larger values are tried later: exact literal-value keys come first, predicate-style keys (including regular-expression and custom `Match` specifications, including wrapped specifications) follow, and type keys come last because they are broadest. Ordinary non-matcher values must receive the literal-key precedence. The ordering must allow overlapping keys such as `1`, `M > 0`, and `int` to select the most specific applicable branch, while remaining stable for nested structures and double-wrapped match specifications. Do not modify any other file, function, or public behavior.",
+  "instruction": "Complete the implementation of `glom.matching._precedence(pattern)` so that pattern-matching specifications in dictionaries and structured specifiers (such as `Match`, `Check`, `Switch`, `Regex`, and logical combinators like `And`, `Or`, `Not`) evaluate candidate spec keys in the correct priority order.\n\nWhen a target key can match multiple spec keys (for example, the target `1` matching a literal `1`, type `int`, and predicate `M > 0`), `_precedence` must return an ordering score where lower values correspond to higher priority (tried earlier) and higher values correspond to lower priority (tried later).\n\nThe ordering must properly distinguish between literal exact values, specialized patterns/types/predicates, wrapped/nested combinators (e.g., `And`, `Or`, `Not`), and broad catch-all or fallback matchers, ensuring double-wrapped patterns, nested structures, and sample matching test suites pass consistently.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
@@ -185,7 +183,7 @@
     "symbol_id": "glom/matching.py::glom.matching._precedence"
   },
   "source": "excision",
-  "title": "Implement matching-key precedence",
+  "title": "Implement pattern precedence scoring in glom.matching",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_match::test_double_wrapping": "behavioral_exception",

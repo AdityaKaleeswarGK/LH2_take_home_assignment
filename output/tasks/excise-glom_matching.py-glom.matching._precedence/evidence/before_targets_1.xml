@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="0.093" timestamp="2026-08-17T15:09:32.417948+00:00" hostname="78be25ded166"><testcase classname="glom.test.test_match" name="test_double_wrapping" time="0.001"><failure message="ValueError: Optional() keys must be == match constants, not 'key'">glom/test/test_match.py:113: in test_double_wrapping
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="0.159" timestamp="2026-08-18T07:12:14.901707+00:00" hostname="38a04ac8ef77"><testcase classname="glom.test.test_match" name="test_double_wrapping" time="0.005"><failure message="ValueError: Optional() keys must be == match constants, not 'key'">glom/test/test_match.py:113: in test_double_wrapping
     outer(Optional('key'))
           ^^^^^^^^^^^^^^^
 glom/matching.py:596: in __init__
