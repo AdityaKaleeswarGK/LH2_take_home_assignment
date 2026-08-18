@@ -34,14 +34,50 @@ DEFAULT_MODELS: dict[str, str] = {
     "reasoning": "openai/gpt-5.6-luna-pro",
 }
 
-KNOWN_MODELS: tuple[str, ...] = (
-    "qwen/qwen3.7-flash",
-    "openai/gpt-5.6-luna",
-    "openai/gpt-5.6-luna-pro",
-    "meta/muse-glimmer-30b",
-    "z-ai/glm-5.2",
-    "google/gemini-3.7-flash",
-)
+# Which shape of model a name is, so a role can say whether it got one. This is
+# not about quality: a reasoning model in the `worker` role is a correct answer
+# arriving ten times too slowly, and the run above measured exactly that —
+# 40.7s per call against the 4.7s this file was written around, across 203 calls,
+# with nothing in any artifact recording which model had been used.
+MODEL_CLASS: dict[str, str] = {
+    "qwen/qwen3.7-flash": "flash",
+    "google/gemini-3.7-flash": "flash",
+    "z-ai/glm-5.2": "flash",
+    "openai/gpt-5.6-luna": "reasoning",
+    "openai/gpt-5.6-luna-pro": "reasoning",
+    "meta/muse-glimmer-30b": "reasoning",
+}
+
+KNOWN_MODELS: tuple[str, ...] = tuple(MODEL_CLASS)
+
+ROLE_CLASS: dict[str, str] = {"worker": "flash", "synthesis": "flash", "reasoning": "reasoning"}
+
+
+def role_advisories(settings: "Settings") -> list[dict[str, str]]:
+    """Roles whose configured model is a different shape from the role's default.
+
+    Advisory, never fatal — an operator may well want a reasoning model in the
+    worker role and should not be argued with. The point is that the choice is
+    visible before the run rather than reconstructible from cache timestamps
+    afterwards.
+    """
+    advisories: list[dict[str, str]] = []
+    for role, wanted in sorted(ROLE_CLASS.items()):
+        model = settings.models.get(role)
+        if not model:
+            continue
+        actual = MODEL_CLASS.get(model)
+        if actual is None or actual == wanted:
+            continue
+        detail = f"{role}={model} is {actual}-class where this role expects {wanted}-class."
+        if role == "worker":
+            detail += (
+                " The worker role is the wall clock: it runs adjudication's agent turns and one"
+                " statement per task, so its per-call latency multiplies by roughly ten in each"
+                " of those stages. Measured 40.7s per call against 4.7s for the default."
+            )
+        advisories.append({"role": role, "model": model, "class": actual, "detail": detail})
+    return advisories
 
 
 @dataclass(frozen=True, slots=True)

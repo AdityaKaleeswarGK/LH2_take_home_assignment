@@ -153,3 +153,46 @@ def test_role_lookup_rejects_an_unknown_role() -> None:
 
     with pytest.raises(InputError, match="known roles"):
         Settings().model_for("nonexistent")
+
+
+def test_role_advisories_name_an_off_class_model() -> None:
+    """A reasoning model in the worker role is correct and ten times too slow."""
+    from stress_stack.config import Settings, role_advisories
+
+    quiet = Settings(models={"worker": "qwen/qwen3.7-flash", "synthesis": "google/gemini-3.7-flash"})
+    assert role_advisories(quiet) == []
+
+    loud = role_advisories(Settings(models={"worker": "openai/gpt-5.6-luna"}))
+    assert [a["role"] for a in loud] == ["worker"]
+    assert loud[0]["class"] == "reasoning"
+    assert "wall clock" in loud[0]["detail"]
+
+
+def test_an_unknown_model_is_not_second_guessed() -> None:
+    """Advisories are for models we have measured, not for anything unfamiliar."""
+    from stress_stack.config import Settings, role_advisories
+
+    assert role_advisories(Settings(models={"worker": "someone/new-model"})) == []
+
+
+def test_usage_records_latency_per_model_not_just_calls() -> None:
+    """Call counts could not show that one model was ten times slower."""
+    from stress_stack.openrouter import Completion, UsageLedger
+
+    def completion(model: str, seconds: float, cached: bool) -> Completion:
+        return Completion(
+            content="{}", model=model, prompt_tokens=1, completion_tokens=1,
+            cost=0.0, latency_seconds=seconds, cached=cached,
+            finish_reason="stop", cache_key="k",
+        )
+
+    ledger = UsageLedger()
+    ledger.record(completion("slow/model", 40.0, False))
+    ledger.record(completion("slow/model", 44.0, False))
+    ledger.record(completion("slow/model", 0.0, True))
+    ledger.record(completion("fast/model", 4.0, False))
+
+    payload = ledger.to_dict()
+    assert payload["by_model"] == {"fast/model": 1, "slow/model": 3}
+    assert payload["live_calls_by_model"] == {"fast/model": 1, "slow/model": 2}
+    assert payload["mean_live_seconds_by_model"] == {"fast/model": 4.0, "slow/model": 42.0}

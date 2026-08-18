@@ -100,6 +100,10 @@ class UsageLedger:
     cost: float = 0.0
     truncations: int = 0
     by_model: dict[str, int] = field(default_factory=dict)
+    # Call counts alone could not show that one model was ten times slower than
+    # the role expected; seconds per model is the field that would have.
+    seconds_by_model: dict[str, float] = field(default_factory=dict)
+    live_calls_by_model: dict[str, int] = field(default_factory=dict)
 
     def record(self, completion: Completion) -> None:
         self.calls += 1
@@ -110,7 +114,13 @@ class UsageLedger:
         self.seconds += completion.latency_seconds
         self.cost += completion.cost
         self.truncations += int(completion.truncated)
-        self.by_model[completion.model] = self.by_model.get(completion.model, 0) + 1
+        model = completion.model
+        self.by_model[model] = self.by_model.get(model, 0) + 1
+        self.seconds_by_model[model] = round(
+            self.seconds_by_model.get(model, 0.0) + completion.latency_seconds, 3
+        )
+        if not completion.cached:
+            self.live_calls_by_model[model] = self.live_calls_by_model.get(model, 0) + 1
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -124,6 +134,13 @@ class UsageLedger:
             "cost_usd": round(self.cost, 6),
             "truncations": self.truncations,
             "by_model": dict(sorted(self.by_model.items())),
+            "seconds_by_model": dict(sorted(self.seconds_by_model.items())),
+            "live_calls_by_model": dict(sorted(self.live_calls_by_model.items())),
+            "mean_live_seconds_by_model": {
+                model: round(self.seconds_by_model.get(model, 0.0) / live, 2)
+                for model, live in sorted(self.live_calls_by_model.items())
+                if live
+            },
         }
 
 

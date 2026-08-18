@@ -1102,6 +1102,10 @@ def build_adjudication_artifacts(
         index_path=knowledge_root / "index.sqlite",
         blueprint=blueprint,
     )
+    # The most expensive stage in the pipeline recorded no model usage at all,
+    # which is why its cost had to be reconstructed from cache file timestamps.
+    if client is not None:
+        result["usage"] = client.usage.to_dict()
     atomic_write_json(knowledge_root / "adjudication.json", result)
     update_stage(metadata_root, "task_generation", "adjudicated")
     return {"repository_root": str(repository.root), **result}

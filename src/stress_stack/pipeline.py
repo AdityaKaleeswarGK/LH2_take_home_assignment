@@ -77,6 +77,11 @@ class PipelineResult:
     # The detected ecosystem this run was processed as. Recorded because every
     # stage verdict below is only meaningful relative to it.
     profile: dict[str, Any] = field(default_factory=dict)
+    # Which model each role actually resolved to. Recorded for the same reason
+    # as the profile: two runs of the same repository are not comparable without
+    # it, and a reasoning-class model sat in the latency-critical worker role for
+    # a full run with no artifact anywhere naming it.
+    models: dict[str, Any] = field(default_factory=dict)
 
     @property
     def ok(self) -> bool:
@@ -103,6 +108,7 @@ class PipelineResult:
             "deliverable_complete": self.deliverable_complete,
             "seconds": round(sum(stage.seconds for stage in self.stages), 2),
             "project_profile": self.profile,
+            "models": self.models,
             "stages": [stage.to_dict() for stage in self.stages],
             "manifest": self.manifest,
         }
@@ -197,9 +203,24 @@ def run_pipeline(
             lambda: build_bundle_artifacts(here["source"], cwd=working, output=output),
         ),
     ]
+    from stress_stack.config import load_settings, role_advisories
     from stress_stack.progress import reporter
 
     live = reporter()
+
+    # Resolved once, before anything runs, so the record describes the run that
+    # is about to happen rather than whatever the config says afterwards.
+    settings = load_settings()
+    advisories = role_advisories(settings)
+    result.models = {
+        "resolved": dict(sorted(settings.models.items())),
+        "key_source": settings.key_source,
+        "configured": settings.configured,
+        "advisories": advisories,
+    }
+    for advisory in advisories:
+        live.note(f"model advisory: {advisory['detail']}")
+
     for position, (name, action) in enumerate(stages, start=1):
         if name in skip:
             result.stages.append(StageResult(name, "skipped", 0.0, "skipped by request"))
