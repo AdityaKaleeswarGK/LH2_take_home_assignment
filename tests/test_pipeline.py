@@ -61,9 +61,11 @@ def test_python_only_stages_cover_task_generation() -> None:
         "mine", "validate", "select", "adjudicate", "emit", "bundle",
     }
     assert aware.isdisjoint(_PYTHON_ONLY)
-    # Still Python-only: generated tests use pytest idioms, and enrichment and
-    # the SQLite projection read the Python graph's richer edge set.
-    assert {"testgen", "enrich", "index"} <= _PYTHON_ONLY
+    # Still Python-only: enrichment and the SQLite projection read the Python
+    # graph's richer edge set.
+    assert {"enrich", "index"} <= _PYTHON_ONLY
+    # testgen is not skipped here because it no longer runs here at all.
+    assert "testgen" not in _PYTHON_ONLY
 
 
 def test_unverified_hygiene_cannot_pass_as_verified() -> None:
@@ -106,3 +108,21 @@ def test_legacy_dependency_artifacts_gate_is_unchanged() -> None:
     legacy_unlocked = SimpleNamespace(lock={"status": "skipped"}, environment_available=True)
     assert _semantic_failure("deps", legacy_unlocked)
 
+
+
+def test_testgen_is_not_on_the_path_to_the_deliverable() -> None:
+    """Measured on glom: none of ten shipped tasks referenced a generated test.
+
+    It targets uncovered symbols, and an excision candidate needs one that is
+    already well covered — the coverage band excludes exactly what it adds. It
+    also wrote into the analysed repository, which is how the container baseline
+    came to compare against a suite that no longer existed. Still reachable as
+    `stress-stack testgen` for anyone who wants it.
+    """
+    import inspect
+
+    from stress_stack import pipeline
+
+    source = inspect.getsource(pipeline.run_pipeline)
+    assert '("testgen"' not in source
+    assert '("coverage"' in source and '("container"' in source

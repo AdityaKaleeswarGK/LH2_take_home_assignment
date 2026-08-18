@@ -140,7 +140,127 @@ def attribute_go(root: Path, *, max_tests: int = 60) -> AttributionResult:
     )
 
 
-_ATTRIBUTORS = {"go": attribute_go}
+# LCOV is the one coverage format every Rust tool agrees on. `SF:` opens a file
+# section, `DA:<line>,<hits>` records a line, `end_of_record` closes it.
+_LCOV_FILE = re.compile(r"^SF:(?P<path>.+)$")
+_LCOV_LINE = re.compile(r"^DA:(?P<line>\d+),(?P<hits>\d+)")
+
+
+def _rust_test_ids(root: Path) -> list[tuple[str, str]]:
+    """Every test in the workspace, as (target, name).
+
+    ``--format=terse`` prints ``name: test`` per line, which is stable across
+    the versions of libtest anyone is likely to be running.
+    """
+    result = run(
+        ["cargo", "test", "--all-targets", "--", "--list", "--format=terse"],
+        cwd=root,
+        timeout=900.0,
+    )
+    found: list[tuple[str, str]] = []
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+        if not stripped.endswith(": test"):
+            continue
+        name = stripped[: -len(": test")].strip()
+        if name:
+            found.append(("", name))
+    return found
+
+
+def _parse_lcov(root: Path, report: Path) -> dict[str, set[int]]:
+    """Which lines an LCOV report records as executed, repository-relative."""
+    covered: dict[str, set[int]] = {}
+    if not report.is_file():
+        return covered
+    resolved = root.resolve()
+    current: set[int] | None = None
+    for raw in report.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        opened = _LCOV_FILE.match(line)
+        if opened:
+            path = Path(opened.group("path"))
+            try:
+                relative = str((resolved / path).resolve().relative_to(resolved))
+            except ValueError:
+                # A dependency compiled from outside the workspace. Dropping it
+                # is right — it cannot be attributed to a symbol in this graph.
+                current = None
+                continue
+            current = covered.setdefault(relative, set())
+            continue
+        if line == "end_of_record":
+            current = None
+            continue
+        if current is None:
+            continue
+        hit = _LCOV_LINE.match(line)
+        if hit and int(hit.group("hits")) > 0:
+            current.add(int(hit.group("line")))
+    return covered
+
+
+def attribute_rust(root: Path, *, max_tests: int = 60) -> AttributionResult:
+    """Run each Rust test alone under llvm-cov and record what it reached.
+
+    Same shape as the Go attributor and the same honest cost: one process per
+    test. Rust had a test plan but no attributor, which made it a dead end —
+    ``mine_excision`` needs a coverage map, so a Rust repository produced no
+    candidates and the run stopped at a MetadataError rather than at anything
+    explaining why.
+
+    ``cargo llvm-cov`` is a separate installation. Its absence is reported, not
+    worked around: a coverage map assembled without it would be empty, and an
+    empty map that claims to be available is how excision mining gets nothing
+    and no reason.
+    """
+    probe = run(["cargo", "llvm-cov", "--version"], cwd=root, timeout=120.0)
+    if not probe.ok:
+        return AttributionResult(
+            "unavailable",
+            reason="cargo_llvm_cov_not_installed: install with `cargo install cargo-llvm-cov`",
+        )
+
+    tests = _rust_test_ids(root)
+    if not tests:
+        return AttributionResult("unavailable", reason="no_tests_listed")
+
+    workspace = root / ".stress_stack" / "coverage"
+    workspace.mkdir(parents=True, exist_ok=True)
+    lines: dict[str, dict[int, list[str]]] = {}
+    measured = 0
+
+    for _target, name in tests[:max_tests]:
+        report = workspace / f"{re.sub(r'[^A-Za-z0-9_.-]', '_', name)}.lcov"
+        report.unlink(missing_ok=True)
+        outcome = run(
+            [
+                "cargo", "llvm-cov",
+                "--lcov", f"--output-path={report}",
+                "test", "--",
+                "--exact", name,
+            ],
+            cwd=root,
+            timeout=600.0,
+        )
+        if not outcome.ok and not report.is_file():
+            continue
+        measured += 1
+        for path, rows in _parse_lcov(root, report).items():
+            per_file = lines.setdefault(path, {})
+            for row in rows:
+                per_file.setdefault(row, []).append(name)
+
+    if measured == 0:
+        return AttributionResult(
+            "unavailable", tests_total=len(tests), reason="no_test_produced_a_report"
+        )
+    return AttributionResult(
+        "available", lines=lines, tests_measured=measured, tests_total=len(tests)
+    )
+
+
+_ATTRIBUTORS = {"go": attribute_go, "rust": attribute_rust}
 
 
 def build_coverage_map(graph: Any, attribution: AttributionResult) -> CoverageMap:

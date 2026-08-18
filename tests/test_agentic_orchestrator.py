@@ -885,3 +885,95 @@ def test_hygiene_never_formats_the_staged_task_trees() -> None:
 
     assert found == ["calc.go"]
     assert len(found) == 1, "must not reach into .stress_stack"
+
+
+# --------------------------------------------------------------------------
+# Rust per-test coverage — the attributor that stops Rust being a dead end
+# --------------------------------------------------------------------------
+
+
+def test_rust_is_registered_as_an_attributor() -> None:
+    """Without one, mine_excision yields nothing and the run stops with no reason."""
+    from stress_stack.coverage_multilang import _ATTRIBUTORS
+
+    assert set(_ATTRIBUTORS) >= {"go", "rust"}
+
+
+def test_lcov_lines_become_repository_relative(tmp_path: Path) -> None:
+    from stress_stack.coverage_multilang import _parse_lcov
+
+    (tmp_path / "src").mkdir()
+    report = tmp_path / "cov.lcov"
+    report.write_text(
+        f"SF:{tmp_path}/src/lib.rs\n"
+        "DA:1,3\nDA:2,0\nDA:7,1\n"
+        "end_of_record\n",
+        encoding="utf-8",
+    )
+
+    assert _parse_lcov(tmp_path, report) == {"src/lib.rs": {1, 7}}
+
+
+def test_a_dependency_compiled_outside_the_workspace_is_dropped(tmp_path: Path) -> None:
+    """It cannot be attributed to a symbol in this graph, so it is not kept."""
+    from stress_stack.coverage_multilang import _parse_lcov
+
+    report = tmp_path / "cov.lcov"
+    report.write_text(
+        "SF:/root/.cargo/registry/src/serde/lib.rs\nDA:5,9\nend_of_record\n"
+        f"SF:{tmp_path}/src/lib.rs\nDA:3,1\nend_of_record\n",
+        encoding="utf-8",
+    )
+
+    assert _parse_lcov(tmp_path, report) == {"src/lib.rs": {3}}
+
+
+def test_an_unexecuted_line_is_not_coverage(tmp_path: Path) -> None:
+    from stress_stack.coverage_multilang import _parse_lcov
+
+    report = tmp_path / "cov.lcov"
+    report.write_text(f"SF:{tmp_path}/a.rs\nDA:1,0\nDA:2,0\nend_of_record\n", encoding="utf-8")
+
+    assert _parse_lcov(tmp_path, report) == {"a.rs": set()}
+
+
+def test_a_missing_report_is_empty_rather_than_an_error(tmp_path: Path) -> None:
+    from stress_stack.coverage_multilang import _parse_lcov
+
+    assert _parse_lcov(tmp_path, tmp_path / "absent.lcov") == {}
+
+
+def test_rust_test_ids_come_from_the_terse_listing(tmp_path: Path, monkeypatch) -> None:
+    from stress_stack import coverage_multilang as cm
+
+    class _Result:
+        ok = True
+        stdout = (
+            "\nrunning 3 tests\n"
+            "tests::adds_two: test\n"
+            "tests::handles_zero: test\n"
+            "benches::speed: bench\n"
+            "\n3 tests, 1 benchmark\n"
+        )
+        stderr = ""
+
+    monkeypatch.setattr(cm, "run", lambda *a, **k: _Result())
+
+    assert cm._rust_test_ids(tmp_path) == [("", "tests::adds_two"), ("", "tests::handles_zero")]
+
+
+def test_a_missing_llvm_cov_is_reported_not_worked_around(tmp_path: Path, monkeypatch) -> None:
+    """An empty map that claims to be available is how mining gets nothing and no reason."""
+    from stress_stack import coverage_multilang as cm
+
+    class _Absent:
+        ok = False
+        stdout = ""
+        stderr = "command not found"
+
+    monkeypatch.setattr(cm, "run", lambda *a, **k: _Absent())
+    result = cm.attribute_rust(tmp_path)
+
+    assert result.status == "unavailable"
+    assert "cargo_llvm_cov_not_installed" in result.reason
+    assert "cargo install cargo-llvm-cov" in result.reason

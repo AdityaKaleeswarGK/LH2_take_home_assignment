@@ -43,10 +43,8 @@ _OPTIONAL = frozenset({"enrich", "adjudicate"})
 # incidental reason.
 _PYTHON_ONLY = frozenset(
     {
-        # Generated tests are written against pytest's idioms and asserted with
-        # Python mutation; enrichment and the SQLite projection both read the
-        # Python graph's richer edge set.
-        "testgen",
+        # Enrichment and the SQLite projection both read the Python graph's
+        # richer edge set.
         "enrich",
         "index",
     }
@@ -153,7 +151,6 @@ def run_pipeline(
         build_bundle_artifacts,
         build_index_artifacts,
         build_selection_artifacts,
-        build_test_generation_artifacts,
         build_validation_artifacts,
     )
     from stress_stack.ingest import ingest
@@ -179,7 +176,15 @@ def run_pipeline(
         ("deps", lambda: lock_dependencies(here["source"], here["profile"])),
         ("graph", lambda: _build_graph(here, working)),
         ("coverage", lambda: _build_coverage(here, working)),
-        ("testgen", lambda: build_test_generation_artifacts(here["source"], cwd=working)),
+        # `testgen` used to run here. It generated tests for *uncovered*
+        # symbols, but an excision candidate needs a symbol that is already
+        # well covered — the coverage band excludes exactly what testgen
+        # adds. Measured on glom: of ten shipped tasks and seventeen
+        # eligible ones, none referenced a generated test. Against that it
+        # wrote into the analysed repository, which is what made the
+        # container baseline compare against a suite that no longer existed.
+        # It remains available as `stress-stack testgen`; it is simply not
+        # on the path to the deliverable.
         ("container", lambda: run_container_verification(here["source"], here["profile"])),
         ("enrich", lambda: build_enrichment_artifacts(here["source"], cwd=working)),
         ("index", lambda: build_index_artifacts(here["source"], cwd=working)),
