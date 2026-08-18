@@ -261,7 +261,9 @@ def declared_dependencies(tree: Path) -> tuple[str, ...]:
 # --------------------------------------------------------------------------
 
 
-def _resolve_python(tree: Path, head: "HeadRuntime") -> RuntimeSpec | None:
+def _resolve_python(
+    tree: Path, head: "HeadRuntime", version_hint: str | None = None
+) -> RuntimeSpec | None:
     from stress_stack.container import _CANDIDATE_PYTHONS, _satisfies, select_python_version
 
     evidence: dict[str, Any] = {}
@@ -287,6 +289,14 @@ def _resolve_python(tree: Path, head: "HeadRuntime") -> RuntimeSpec | None:
     pins: list[str] = []
     if shadowed:
         name, own_version, source = project_metadata(tree)
+        # A project using setuptools-scm declares `dynamic = ["version"]` and no
+        # version at all — pluggy is one. The version still exists, in the place
+        # setuptools-scm reads it from, so the caller supplies it from git rather
+        # than this giving up. Without it the shadow is detected and then does
+        # nothing, which is how the first pluggy run still lost sixteen
+        # candidates after the detection was already working.
+        if not own_version and version_hint:
+            own_version, source = version_hint, "git_describe"
         normalized = (name or "").replace("_", "-").lower()
         if normalized and own_version and normalized in {s.replace("_", "-") for s in shadowed}:
             pins.append(f"{name}=={own_version}")
@@ -294,6 +304,11 @@ def _resolve_python(tree: Path, head: "HeadRuntime") -> RuntimeSpec | None:
                 "distribution": name,
                 "version": own_version,
                 "from": source,
+            }
+        else:
+            evidence["unpinnable_shadow"] = {
+                "distributions": list(shadowed),
+                "reason": "no_version_for_the_shadowed_distribution",
             }
 
     if not pins and version == head.toolchain_version:
@@ -383,7 +398,7 @@ def _resolve_node(tree: Path, head: "HeadRuntime") -> RuntimeSpec | None:
 # `test_runners._PLANS` and `linters._DISPATCH`. A resolver returns None to mean
 # "the image the container stage already proved is right for this tree", which
 # is the correct answer far more often than not.
-_RESOLVERS: dict[str, Callable[[Path, "HeadRuntime"], RuntimeSpec | None]] = {
+_RESOLVERS: dict[str, Callable[..., RuntimeSpec | None]] = {
     "python": _resolve_python,
     "go": _resolve_go,
     "rust": _resolve_rust,
@@ -396,10 +411,21 @@ def supported_languages() -> frozenset[str]:
     return frozenset(_RESOLVERS)
 
 
-def resolve_runtime(tree: Path, language: str, head: "HeadRuntime") -> RuntimeSpec | None:
+def resolve_runtime(
+    tree: Path, language: str, head: "HeadRuntime", *, version_hint: str | None = None
+) -> RuntimeSpec | None:
+    """What runtime this tree needs, or None to keep the image HEAD already proved.
+
+    ``version_hint`` is the version the tree would publish as, for the ecosystems
+    where a manifest does not carry one — a repository using setuptools-scm
+    declares its version dynamically, and the answer lives in git. Resolvers that
+    do not need it ignore it.
+    """
     resolver = _RESOLVERS.get(language)
     if resolver is None:
         return None
+    if language in {"python"}:
+        return resolver(tree, head, version_hint)
     return resolver(tree, head)
 
 
@@ -483,10 +509,14 @@ class RuntimeImages:
     built: dict[str, str] = field(default_factory=dict)
     records: dict[str, dict[str, Any]] = field(default_factory=dict)
 
-    def runtime_for(self, tree: Path) -> tuple[str, dict[str, Any]]:
+    def runtime_for(
+        self, tree: Path, *, version_hint: str | None = None
+    ) -> tuple[str, dict[str, Any]]:
         """The image this tree should be judged in, and why."""
         try:
-            spec = resolve_runtime(tree, self.head.language, self.head)
+            spec = resolve_runtime(
+                tree, self.head.language, self.head, version_hint=version_hint
+            )
         except Exception as exc:  # noqa: BLE001 — resolution must never end a run
             return self.head.image, {
                 "status": "fallback",
@@ -495,10 +525,18 @@ class RuntimeImages:
             }
 
         if spec is None:
+            # A tree that shadows the runner and cannot be pinned is not the same
+            # as a tree with nothing to do, even though both end up on the HEAD
+            # image. Saying so is the difference between a known limitation and
+            # sixteen candidates failing for no recorded reason.
+            shadowed = shadowed_distributions(tree) if self.head.language == "python" else ()
             return self.head.image, {
                 "status": "head_image",
-                "reason": "tree_matches_head_runtime",
+                "reason": (
+                    "shadowed_but_version_unknown" if shadowed else "tree_matches_head_runtime"
+                ),
                 "image": self.head.image,
+                **({"shadowed": list(shadowed)} if shadowed else {}),
             }
 
         tag = spec.tag(self.repository_name)
@@ -543,8 +581,12 @@ class RuntimeImages:
             }
         return tag, {
             "status": "per_candidate_image",
+            # Keyed on the pin, not on the shadow: a tree can shadow the runner
+            # and still have no pinnable version, and calling that image a
+            # shadow fix would misreport what it does.
             "reason": (
-                "tree_shadows_the_runner" if spec.shadowed else "tree_wants_another_toolchain"
+                "tree_shadows_the_runner" if spec.install and "==" in spec.install[0]
+                else "tree_wants_another_toolchain"
             ),
             "image": tag,
             "spec": spec.to_dict(),

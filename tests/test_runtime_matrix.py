@@ -361,7 +361,9 @@ def test_a_failed_build_degrades_visibly(tmp_path: Path, monkeypatch) -> None:
 def test_a_resolver_crash_never_ends_the_run(tmp_path: Path, monkeypatch) -> None:
     images = make_images(monkeypatch, budget=4)
     monkeypatch.setitem(
-        rm._RESOLVERS, "python", lambda tree, head: (_ for _ in ()).throw(RuntimeError("nope"))
+        rm._RESOLVERS,
+        "python",
+        lambda tree, head, hint=None: (_ for _ in ()).throw(RuntimeError("nope")),
     )
 
     image, record = images.runtime_for(tmp_path)
@@ -387,3 +389,62 @@ def test_a_block_style_matrix_is_read_in_full(tmp_path: Path) -> None:
     assert spec is not None
     assert spec.evidence["ci_matrix"]["value"] == ["3.11", "3.9"]
     assert spec.base_image == "python:3.11-slim"
+
+
+def test_a_setuptools_scm_project_is_pinned_from_git(tmp_path: Path) -> None:
+    """`dynamic = ["version"]` means the version is real but not in the manifest.
+
+    This is pluggy. Without the hint the shadow is detected and then does
+    nothing, which is exactly how the first run still lost sixteen candidates
+    after detection was already working.
+    """
+    write(tmp_path / "src" / "pluggy" / "__init__.py", "")
+    write(
+        tmp_path / "pyproject.toml",
+        '[project]\nname = "pluggy"\ndynamic = ["version"]\n',
+    )
+
+    without = resolve_runtime(tmp_path, "python", HEAD_PY)
+    assert without is None, "nothing to pin, and the interpreter already matches"
+
+    forget_source_roots()
+    spec = resolve_runtime(tmp_path, "python", HEAD_PY, version_hint="1.5.0")
+
+    assert spec is not None
+    assert spec.install == ('pip install "pluggy==1.5.0" "pytest"',)
+    assert spec.evidence["self_hosted"]["from"] == "git_describe"
+
+
+def test_a_manifest_version_outranks_the_hint(tmp_path: Path) -> None:
+    """The tree's own declaration is more precise than the nearest tag."""
+    tree = pluggy_tree(tmp_path, version="0.6.0", src_layout=False)
+
+    spec = resolve_runtime(tree, "python", HEAD_PY, version_hint="0.9.9")
+
+    assert spec is not None
+    assert spec.install == ('pip install "pluggy==0.6.0" "pytest"',)
+
+
+def test_an_unpinnable_shadow_says_so_rather_than_looking_ordinary(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Both end up on the HEAD image; only one of them is a known limitation."""
+    images = make_images(monkeypatch, budget=4)
+    write(tmp_path / "src" / "pluggy" / "__init__.py", "")
+    write(tmp_path / "pyproject.toml", '[project]\nname = "pluggy"\ndynamic = ["version"]\n')
+
+    _, record = images.runtime_for(tmp_path)
+
+    assert record["reason"] == "shadowed_but_version_unknown"
+    assert record["shadowed"] == ["pluggy"]
+
+
+def test_an_image_built_only_for_the_interpreter_is_not_called_a_shadow_fix(
+    tmp_path: Path, monkeypatch
+) -> None:
+    images = make_images(monkeypatch, budget=4)
+    write(tmp_path / "pyproject.toml", '[project]\nname = "app"\nrequires-python = "<3.10"\n')
+
+    _, record = images.runtime_for(tmp_path)
+
+    assert record["reason"] == "tree_wants_another_toolchain"
