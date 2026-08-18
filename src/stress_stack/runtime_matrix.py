@@ -496,16 +496,22 @@ class RuntimeImages:
     """Builds and reuses one image per distinct runtime, under a budget.
 
     The budget is less a performance guard than a blast radius: a repository
-    whose history spans four toolchains is worth four images, and one whose every
-    commit resolves differently is telling us the resolution is wrong. Exhausting
-    it falls back to the HEAD image and records that it did, so a degraded
-    verdict is never silent.
+    whose every commit resolves differently is telling us the resolution is
+    wrong. Exhausting it falls back to the HEAD image and records that it did,
+    so a degraded verdict is never silent.
+
+    Twelve rather than a handful, because a self-hosting repository needs one
+    image per *release* in the mined window and that is the case the mechanism
+    exists for: pluggy's pool wanted eleven distinct pins, and a budget of four
+    sent fourteen candidates back to the image that cannot run them. The images
+    are cheap by construction — same base layer, only the install layer differs
+    — so the ceiling should sit above the realistic need rather than below it.
     """
 
     repository_name: str
     head: HeadRuntime
     stamp_path: Path | None = None
-    budget: int = 4
+    budget: int = 12
     built: dict[str, str] = field(default_factory=dict)
     records: dict[str, dict[str, Any]] = field(default_factory=dict)
 
