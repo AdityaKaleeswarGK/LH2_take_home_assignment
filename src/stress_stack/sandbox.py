@@ -23,11 +23,34 @@ in a throwaway container with:
 from __future__ import annotations
 
 import os
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from stress_stack.tooling import run
+
+
+def _container_slots() -> int:
+    """How many sandboxed runs may execute at once, machine-wide.
+
+    Two levels of concurrency meet here: the validate stage puts several
+    candidates through the gates at once, and each candidate runs its two
+    verifier lanes together. Neither knows about the other, so the bound lives
+    at the one point every run passes through rather than being split between
+    them — otherwise the two multiply.
+
+    The unit is cores, not runs: each container is capped at
+    ``SandboxPolicy.cpus``, so one run per two cores keeps a full pool from
+    oversubscribing the machine it is measuring on.
+    """
+    override = os.environ.get("STRESS_STACK_CONTAINER_SLOTS")
+    if override and override.isdigit() and int(override) > 0:
+        return int(override)
+    return max(1, (os.cpu_count() or 2) // 2)
+
+
+_CONTAINER_SLOTS = threading.BoundedSemaphore(_container_slots())
 
 _DEFAULT_ENVIRONMENT = {
     "PYTHONDONTWRITEBYTECODE": "1",
@@ -172,7 +195,8 @@ def run_sandboxed(
         policy=policy,
         environment=environment,
     )
-    result = run(arguments, timeout=policy.timeout_seconds)
+    with _CONTAINER_SLOTS:
+        result = run(arguments, timeout=policy.timeout_seconds)
     combined = result.stdout + result.stderr
     return SandboxResult(
         exit_code=result.exit_code,

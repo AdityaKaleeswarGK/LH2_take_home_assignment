@@ -28,6 +28,7 @@ import ast
 import os
 import re
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -513,15 +514,25 @@ def validate_task(
         built.rejected = f"baseline_run_failed: {baseline_full.infrastructure_failure}"
         return built
 
-    before_targets: list[RunOutcome] = []
-    after_targets: list[RunOutcome] = []
-    for index in range(1, max(2, repeats) + 1):
-        before_targets.append(
-            runner.execute(evaluation_tree, evidence, f"before_targets_{index}", resolved)
-        )
-        after_targets.append(
-            runner.execute(solution_dir, evidence, f"after_targets_{index}", resolved)
-        )
+    # The two sides are independent, so they run as concurrent lanes. The
+    # repeats *within* a side stay sequential and ordered on purpose: the
+    # determinism gate compares them against each other, and taking them under
+    # different machine load would let contention masquerade as
+    # nondeterminism. Two lanes keeps both repeats of a side under the same
+    # conditions — one other lane running — while halving the wall clock.
+    repeat_count = max(2, repeats)
+
+    def _lane(tree: Path, prefix: str) -> list[RunOutcome]:
+        return [
+            runner.execute(tree, evidence, f"{prefix}_{index}", resolved)
+            for index in range(1, repeat_count + 1)
+        ]
+
+    with ThreadPoolExecutor(max_workers=2, thread_name_prefix="gate") as pool:
+        before_lane = pool.submit(_lane, evaluation_tree, "before_targets")
+        after_lane = pool.submit(_lane, solution_dir, "after_targets")
+        before_targets = before_lane.result()
+        after_targets = after_lane.result()
     built.outcomes.extend(before_targets + after_targets)
 
     broken = [o for o in before_targets + after_targets if not o.usable]
