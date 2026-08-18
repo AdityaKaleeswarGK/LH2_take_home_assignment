@@ -669,9 +669,9 @@ def measure_coverage(
     Memoized on the content of the sources it would measure. This is a guard
     rather than the fix — the callers that had no business re-measuring now load
     the map instead — but it means a future caller cannot silently reintroduce a
-    whole extra suite run. testgen's post-generation refresh still re-measures
-    correctly and needs no flag: it runs after new test files have been written,
-    so the fingerprint has already changed.
+    whole extra suite run. A caller that legitimately changes the sources it
+    measures still gets a fresh measurement with no flag, because the
+    fingerprint moves with them.
     """
     from stress_stack import coverage_map as cm
     from stress_stack.hygiene import provision_test_environment
@@ -725,58 +725,6 @@ def build_coverage_artifacts(source_value: str, *, cwd: Path | None = None) -> d
         "statistics": coverage.statistics() if coverage else {},
         "knowledge_root": str(knowledge_root),
     }
-
-
-def build_test_generation_artifacts(
-    source_value: str, *, cwd: Path | None = None, limit: int = 3
-) -> dict[str, Any]:
-    """Generate behavior tests for uncovered public callables and mutation-check them."""
-    from stress_stack import coverage_map as cm
-    from stress_stack.hygiene import provision_test_environment
-    from stress_stack.openrouter import OpenRouterClient
-    from stress_stack.testgen import generate_tests
-
-    working_directory = (cwd or Path.cwd()).resolve()
-    source = resolve_source(source_value, working_directory)
-    repository, _ = prepare_repository(source, working_directory)
-    repository.add_metadata_exclude()
-    metadata_root = repository.root / ".stress_stack"
-    knowledge_root = metadata_root / "knowledge"
-    evidence_root = metadata_root / "test_generation"
-    evidence_root.mkdir(parents=True, exist_ok=True)
-
-    coverage = cm.load(knowledge_root / "coverage_map.json")
-    if coverage.status != "available":
-        return {
-            "repository_root": str(repository.root),
-            "status": "unavailable",
-            "reason": coverage.reason or "coverage_unavailable",
-        }
-    environment = provision_test_environment(repository.root, metadata_root / "tools" / "test")
-    if not environment.get("installed"):
-        return {
-            "repository_root": str(repository.root),
-            "status": "unavailable",
-            "reason": environment.get("reason") or "test_environment_unavailable",
-        }
-    graph = build_graph(repository.root)
-    client = OpenRouterClient(cache_dir=metadata_root / "cache" / "llm")
-    result = generate_tests(
-        repository.root,
-        graph,
-        coverage,
-        Path(environment["python"]),
-        evidence_root,
-        client=client,
-        limit=limit,
-    )
-    if result.get("status") == "generated":
-        refreshed_graph = build_graph(repository.root)
-        refreshed, note = measure_coverage(repository.root, refreshed_graph, knowledge_root)
-        result["refreshed_coverage"] = note
-        result["coverage_statistics"] = refreshed.statistics() if refreshed else {}
-        update_stage(metadata_root, "repo_hygiene", "tests_generated")
-    return {"repository_root": str(repository.root), **result}
 
 
 def build_index_artifacts(source_value: str, *, cwd: Path | None = None) -> dict[str, Any]:

@@ -379,19 +379,19 @@
         "task_id": "excise-glom_grouping.py-glom.grouping.GROUP"
       },
       {
-        "adjusted": 0.5179,
+        "adjusted": 0.5166,
         "module": "glom.matching",
         "reason": "ranked",
         "task_id": "excise-glom_matching.py-glom.matching._precedence"
       },
       {
-        "adjusted": 0.4943,
+        "adjusted": 0.4938,
         "module": "glom.mutation",
         "reason": "ranked",
         "task_id": "excise-glom_mutation.py-glom.mutation.Delete._del_one"
       },
       {
-        "adjusted": -0.155,
+        "adjusted": -0.1544,
         "module": "glom.core",
         "reason": "ranked",
         "task_id": "excise-glom_core.py-glom.core.Path.from_t"

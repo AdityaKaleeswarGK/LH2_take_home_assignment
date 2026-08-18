@@ -10,7 +10,7 @@
     ],
     "exploration": {
       "refused": [],
-      "tool_calls": 8,
+      "tool_calls": 7,
       "tools_used": [
         "grep",
         "read_file"
@@ -23,7 +23,7 @@
       "misleading_similarity": 0.0,
       "scale": 38.0
     },
-    "justification": "The failure is localized to PathAccessError.get_message(), and the required printable behavior is exposed by the failing path-formatting case without requiring coordinated changes or hidden domain rules.",
+    "justification": "The behavior is localized to path-based error formatting in glom.core, and the expected printable output is exposed directly by the failing tests without hidden coupling.",
     "measured_justification": "This task depends on rules recorded in the change's description rather than inferable from the surrounding code.",
     "measured_tier": "hard",
     "score": 0.4286,
@@ -129,7 +129,7 @@
     }
   ],
   "generation": {
-    "cache_key": "47d78d8e1f10001c0abcec2d165b35330e89e4985ccfdaed632f2dc8e39ea930",
+    "cache_key": "a474114ab97793a70df5d42f2e3ee655f40f4d7eb457d6ef9249caaf2b31804b",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -141,7 +141,7 @@
     "model": "google/gemini-3.7-flash"
   },
   "id": "pr-298",
-  "instruction": "Ensure that `PathAccessError` can always be converted to a string or formatted into an error message without raising an exception (such as `TypeError`), even when the error originates from a `Scope` access or involves non-standard path objects.\n\nWhen formatting the error message for a `PathAccessError`, if the path cannot be resolved or looked up as a standard path, the exception should gracefully fall back to a readable string representation rather than crashing during `str(exc)` formatting. Standard `Path`-based error messages must continue to format correctly.",
+  "instruction": "When a `PathAccessError` is raised during scope-originated access (e.g., using `S`) or when the associated path cannot be represented or processed as a standard `Path`, converting the exception to a string (`str(exc)`) or formatting its error message must not raise an unhandled exception (such as `ValueError`).\n\nEnsure that:\n1. `PathAccessError` stringification safely handles non-standard and scope-based paths, falling back to a readable representation of the path or target when path formatting cannot be resolved in the standard manner.\n2. Normal `PathAccessError` message output for standard paths remains unchanged.\n3. Calling `str(exc)` or `repr(exc)` on any `PathAccessError` always produces a valid string without crashing.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
@@ -170,7 +170,7 @@
     "url": "https://github.com/mahmoud/glom/pull/298"
   },
   "source": "history",
-  "title": "Fix string formatting for PathAccessError on scope and non-standard paths",
+  "title": "Ensure PathAccessError string formatting handles scope-based and non-standard paths gracefully",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_error::test_pae_fallback_for_non_path": "behavioral_exception",

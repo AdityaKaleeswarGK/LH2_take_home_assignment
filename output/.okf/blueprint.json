@@ -1,8 +1,8 @@
 {
   "_meta": {
     "cached": false,
-    "cost": 0.002579,
-    "files_cited": 9,
+    "cost": 0.00479,
+    "files_cited": 10,
     "model": "google/gemini-3.7-flash",
     "status": "grounded",
     "unknown_files": [],
@@ -10,61 +10,60 @@
   },
   "features": [
     {
-      "definition": "Access, extract, and reshape deeply-nested target objects using declarative spec primitives (such as Path, Spec, T, Coalesce, Call, Invoke, and Ref) with fallback handling, target-relative expressions, and explicit exception management.",
+      "definition": "Extract and transform nested data using declarative specifications, deep path navigators, target-relative expressions (T), and control flow specifiers such as Coalesce, Call, Invoke, Ref, Val, and Spec.",
       "files": [
         "glom/__init__.py",
         "glom/core.py"
       ],
-      "name": "Core Specification and Path-Based Navigation"
+      "name": "Core Declarative Data Transformation and Path Access"
     },
     {
-      "definition": "Perform in-place deep assignments and deep deletions across nested data structures and custom object hierarchies based on glom paths.",
-      "files": [
-        "glom/__init__.py",
-        "glom/mutation.py"
-      ],
-      "name": "Target Mutation and In-Place Operations"
-    },
-    {
-      "definition": "Validate, assert, and conditionally route target data structures using specifiers such as Match, Check, Switch, Regex, and logical combinators (And, Or, Not).",
+      "definition": "Validate and assert target data structures, route values, and perform conditional transformations using Match, Check, Switch, Regex, and boolean combinators like And, Or, and Not.",
       "files": [
         "glom/__init__.py",
         "glom/matching.py"
       ],
-      "name": "Pattern Matching and Data Validation"
+      "name": "Pattern Matching and Structural Validation"
     },
     {
-      "definition": "Group, partition, and bucket iterable target data into hierarchical buckets and compute aggregate summaries using accumulators like First, Avg, Max, Min, and Sample.",
+      "definition": "Perform deep assignment, value updates, and deep key/attribute deletion operations across complex nested target structures based on glom paths.",
       "files": [
         "glom/__init__.py",
-        "glom/grouping.py"
+        "glom/mutation.py"
       ],
-      "name": "Data Grouping, Aggregation, and Bucketing"
+      "name": "In-Place Target Mutation and Deletion"
     },
     {
-      "definition": "Fold and aggregate iterable datasets through custom reducers, summation, counting, and list or collection flattening operations.",
+      "definition": "Aggregate, fold, sum, count, flatten, bucket, and group iterable target data using specifiers such as Fold, Flatten, Group, and built-in accumulators (First, Avg, Max, Min, Sample).",
       "files": [
         "glom/__init__.py",
+        "glom/grouping.py",
         "glom/reduction.py"
       ],
-      "name": "Reductions, Merging, and Flattening"
+      "name": "Data Reduction, Aggregation, and Grouping"
     },
     {
-      "definition": "Process and transform iterable data streams lazily using operations such as map, filter, chunked, windowed, split, flatten, unique, slice, takewhile, dropwhile, and terminal evaluations.",
+      "definition": "Construct lazy iterable transformation pipelines with the Iter specifier, supporting operations like map, filter, chunked, windowed, split, unique, slice, takewhile, and dropwhile.",
       "files": [
-        "glom/__init__.py",
         "glom/streaming.py"
       ],
-      "name": "Lazy Streaming Pipelines"
+      "name": "Lazy Streaming and Pipeline Processing"
     },
     {
-      "definition": "Run glom transformations and queries directly from the terminal or shell pipelines against various data formats (JSON, Python, TOML, YAML) provided via arguments, files, or standard input.",
+      "definition": "Run glom transformations directly from the terminal against files or standard input across JSON, YAML, TOML, and Python formats using command-line arguments and flags.",
       "files": [
         "glom/__main__.py",
         "glom/cli.py"
       ],
-      "name": "Command-Line Interface (CLI)"
+      "name": "Command-Line Interface"
+    },
+    {
+      "definition": "Provides built-in tutorial data structures, sample models (Contact, Email), and in-memory persistence managers for interactive learning and demonstrations.",
+      "files": [
+        "glom/tutorial.py"
+      ],
+      "name": "Interactive Tutorial and Sample Models"
     }
   ],
-  "project_purpose": "glom is a Python library and CLI tool for declarative nested data access, mutation, restructuring, and validation. It lets developers navigate and transform complex, deeply-nested Python objects and serialized formats using composable, expressive specifications with detailed error handling."
+  "project_purpose": "glom is a Python library for querying, transforming, validating, and restructuring nested data structures declaratively. It provides deep path-based navigation, pattern matching, stream processing, in-place mutations, and a command-line interface for manipulating complex Python objects and data formats."
 }

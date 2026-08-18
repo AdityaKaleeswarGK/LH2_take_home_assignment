@@ -10,7 +10,7 @@
     ],
     "exploration": {
       "refused": [],
-      "tool_calls": 2,
+      "tool_calls": 3,
       "tools_used": [
         "grep",
         "read_file"
@@ -23,7 +23,7 @@
       "misleading_similarity": 0.0,
       "scale": 3.0
     },
-    "justification": "The change is confined to the YAML loading branch in glom.cli, and the safe-loading requirement is directly visible in the existing loader call and test context.",
+    "justification": "The loader call and its safety behavior are localized in glom.cli, with the required PyYAML API change directly visible at the call site.",
     "measured_justification": "This task is a contained change verified by 1 test.",
     "measured_tier": "easy",
     "score": 0.2039,
@@ -127,7 +127,7 @@
     }
   ],
   "generation": {
-    "cache_key": "df10aaf4bf2956dab948bcbff3f02eeb67132491798224c0bf17bef5054b9eb7",
+    "cache_key": "6ee2c6eae299f4c2f9668055cbc6912bc1ebf20ff30ee556b512a5f69150256a",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -139,7 +139,7 @@
     "model": "google/gemini-3.7-flash"
   },
   "id": "pr-262",
-  "instruction": "Update glom's command-line interface (`glom.cli`) to safely parse YAML target inputs. When YAML data is supplied as a target (via CLI arguments, files, or stdin), glom CLI should use safe YAML loading (e.g., `yaml.safe_load`) rather than unsafe loader mechanisms. All existing CLI operations for querying and transforming YAML target data should continue to function properly and remain compatible with Python 3.10 and later.",
+  "instruction": "Update glom's command-line interface (`glom.cli`) so that YAML target inputs are parsed using PyYAML's safe loading mechanism instead of the deprecated/unsafe default `yaml.load`. CLI commands targeting YAML data (from files or standard input) must continue to parse valid YAML correctly and execute specs as expected without raising deprecation warnings or errors on newer Python and PyYAML versions.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,

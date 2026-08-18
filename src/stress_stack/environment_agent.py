@@ -13,9 +13,9 @@ Three properties make this safe to put a model behind:
 
 * **There is an oracle.** "Does this environment run the suite?" is settled by
   building it and counting what it collects, so the model proposes and a
-  measurement decides. That is the same contract ``testgen`` already uses — a
-  model writes tests, mutation testing decides whether they ship — and it is the
-  test for whether a model belongs anywhere in this pipeline at all.
+  measurement decides. It is the test for whether a model belongs anywhere in
+  this pipeline at all: where no measurement can settle the question the answer
+  is advisory, and where none is even attempted the model does not belong.
 * **The proposal is checked, not trusted.** Every field is validated against an
   allowlist before it reaches a shell, and the test command is rejected if it
   narrows collection. A wrong command fails the probe and is repaired; a

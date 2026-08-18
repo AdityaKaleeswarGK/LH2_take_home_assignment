@@ -197,7 +197,7 @@ _PROVISION_SCHEMA = "1"
 # The files whose contents decide what gets installed. Deliberately not every
 # `.py`: a source edit changes nothing about the environment, because every
 # runtime path puts the source tree on PYTHONPATH ahead of site-packages. Hashing
-# sources would also let testgen's freshly written tests invalidate the stamp,
+# sources would also let any stage that writes into the tree invalidate the stamp,
 # which is exactly the reinstall this exists to avoid.
 _INSTALL_MANIFESTS = ("pyproject.toml", "setup.py", "setup.cfg", "tox.ini")
 
@@ -235,7 +235,7 @@ def provision_test_environment(
     Idempotent, because it is called seven times per pipeline run and only the
     first call has anything to do. Each of the other six re-resolved the whole
     dependency set over the network — on glom that is the dominant term in the
-    deps, coverage, testgen and container stages, all of which measure a few
+    deps, coverage and container stages, all of which measure a few
     seconds of their own work. The stamp follows ``tooling.ensure_ruff``: check
     what is installed, skip if it is current.
     """

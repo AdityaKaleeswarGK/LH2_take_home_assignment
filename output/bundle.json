@@ -5,11 +5,11 @@
     "repo_graph.json",
     "tasks/ (10)",
     "tasks.json",
-    "transcripts/ (333)"
+    "transcripts/ (627)"
   ],
   "missing": [],
   "output_root": "/Users/adityagk/Desktop/projects/stress_stack/output",
   "repository_root": "/Users/adityagk/Desktop/projects/stress_stack/glom",
   "task_count": 10,
-  "transcripts": 333
+  "transcripts": 627
 }

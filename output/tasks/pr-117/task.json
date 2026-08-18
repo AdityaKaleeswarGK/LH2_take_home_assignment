@@ -23,7 +23,7 @@
       "misleading_similarity": 0.0,
       "scale": 248.0
     },
-    "justification": "Builtin roundtripping requires coordinated representation changes across core, mutation, reduction, and streaming, with parallel specifier implementations that must remain consistent across the suite.",
+    "justification": "Builtin roundtripping requires coordinated repr and constructor-argument conventions across several distinct specifier modules, where consistency between parallel implementations is essential.",
     "measured_justification": "This task requires coordinated edits across 4 source files; and it spans 4 modules, so the change cannot be reasoned about locally.",
     "measured_tier": "hard",
     "score": 0.8293,
@@ -157,7 +157,7 @@
     }
   ],
   "generation": {
-    "cache_key": "3b34edae40e08a9e25d7a41e28eedef55c95a205bd7037c254334e973ba60f3f",
+    "cache_key": "d0b0ca6c900b0f306b15b408f9e1052a92fc215acd88ff42f959fe1a0110c0d1",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -169,7 +169,7 @@
     "model": "google/gemini-3.7-flash"
   },
   "id": "pr-117",
-  "instruction": "Enhance representation and string formatting of callables across glom specifier types (such as Invoke, Call, T, Path, Check, Assign, Flatten, Fold, and Filter) so that builtins and other callables produce consistent, cross-platform repr strings.\n\nEnsure that all declarative spec primitives continue to correctly access, extract, transform, and reshape deeply nested target objects, supporting:\n- Target-relative expressions and method/function calls via Invoke, Call, and T.\n- Accurate representations during inspection and roundtripping of Spec, Path, and T expressions.\n- Proper error propagation, fallback handling, and filtering/folding semantics across collections and nested data structures.",
+  "instruction": "Ensure glom specifiers that wrap or handle callables (such as Invoke, Call, Check, Assign, Fold, Flatten, Filter, and target-relative Path/T expressions) produce clean, consistent, and round-trippable string/repr representations across platforms and Python versions. All core glom specifiers, navigators, and control flow constructs (including Coalesce, Ref, Val, Spec, Invoke, Call, Check, Assign, Fold, Flatten, and Filter) must correctly transform data, navigate deep paths, and execute callables, ensuring all existing test suites for invocation, basic checks, assignments, path/T roundtripping, flattening, folding, filtering, and aggregation pass without error.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
@@ -201,7 +201,7 @@
     "url": "https://github.com/mahmoud/glom/pull/117"
   },
   "source": "history",
-  "title": "Improve callable representations and roundtripping across glom specifiers",
+  "title": "Improve callable representations across glom specifiers",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_basic::test_invoke": "assertion",

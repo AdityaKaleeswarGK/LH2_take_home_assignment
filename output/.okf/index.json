@@ -1,10 +1,10 @@
 {
-  "coverage_rows": 4360,
-  "edges": 2374,
-  "files": 34,
+  "coverage_rows": 4300,
+  "edges": 2364,
+  "files": 32,
   "module_test_matrix": {
-    "glom.cli": 12,
-    "glom.core": 194,
+    "glom.cli": 10,
+    "glom.core": 192,
     "glom.grouping": 16,
     "glom.matching": 40,
     "glom.mutation": 22,
@@ -26,14 +26,12 @@
     "glom.test.test_streaming": 13,
     "glom.test.test_target_types": 12,
     "glom.test.test_tutorial": 2,
-    "glom.tutorial": 3,
-    "test_generated_2": 2,
-    "test_generated_3": 2
+    "glom.tutorial": 1
   },
-  "modules": 34,
+  "modules": 32,
   "path": "/Users/adityagk/Desktop/projects/stress_stack/glom/.stress_stack/knowledge/index.sqlite",
   "pull_requests": 126,
   "schema_version": "0.1.0",
-  "symbols": 672,
-  "tests": 206
+  "symbols": 666,
+  "tests": 202
 }

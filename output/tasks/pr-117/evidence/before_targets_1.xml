@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="9" time="0.456" timestamp="2026-08-18T07:11:34.931916+00:00" hostname="12ee879a643a"><testcase classname="glom.test.test_basic" name="test_invoke" time="0.001"><failure message="AssertionError: assert 'Invoke(&lt;buil...en&gt;).specs(T)' == 'Invoke(len).specs(T)'&#10;  &#10;  - Invoke(len).specs(T)&#10;  + Invoke(&lt;built-in function len&gt;).specs(T)">glom/test/test_basic.py:236: in test_invoke
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="9" time="0.304" timestamp="2026-08-18T16:27:43.348958+00:00" hostname="952fe09cfdef"><testcase classname="glom.test.test_basic" name="test_invoke" time="0.001"><failure message="AssertionError: assert 'Invoke(&lt;buil...en&gt;).specs(T)' == 'Invoke(len).specs(T)'&#10;  &#10;  - Invoke(len).specs(T)&#10;  + Invoke(&lt;built-in function len&gt;).specs(T)">glom/test/test_basic.py:236: in test_invoke
     assert repr(Invoke(len).specs(T)) == 'Invoke(len).specs(T)'
 E   AssertionError: assert 'Invoke(&lt;buil...en&gt;).specs(T)' == 'Invoke(len).specs(T)'
 E     
@@ -9,7 +9,7 @@ E   assert "Check(instan...lass 'dict'&gt;)" == 'Check(instance_of=dict)'
 E     
 E     - Check(instance_of=dict)
 E     + Check(instance_of=&lt;class 'dict'&gt;)
-E     ?                   ++++++++    ++</failure></testcase><testcase classname="glom.test.test_fill" name="test" time="0.000"><failure message="AssertionError: assert 'Fill(&lt;built-...unction len&gt;)' == 'Fill(len)'&#10;  &#10;  - Fill(len)&#10;  + Fill(&lt;built-in function len&gt;)">glom/test/test_fill.py:20: in test
+E     ?                   ++++++++    ++</failure></testcase><testcase classname="glom.test.test_fill" name="test" time="0.001"><failure message="AssertionError: assert 'Fill(&lt;built-...unction len&gt;)' == 'Fill(len)'&#10;  &#10;  - Fill(len)&#10;  + Fill(&lt;built-in function len&gt;)">glom/test/test_fill.py:20: in test
     assert repr(Fill(len)) == 'Fill(len)'
 E   AssertionError: assert 'Fill(&lt;built-...unction len&gt;)' == 'Fill(len)'
 E     
@@ -20,7 +20,7 @@ E   assert "Assign(T.a, ...lass 'dict'&gt;)" == 'Assign(T.a, 1, missing=dict)'
 E     
 E     - Assign(T.a, 1, missing=dict)
 E     + Assign(T.a, 1, missing=&lt;class 'dict'&gt;)
-E     ?                        ++++++++    ++</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_path_t_roundtrip" time="0.000"><failure message="AssertionError: assert 'T[&lt;built-in function len&gt;]' == 'T[len]'&#10;  &#10;  - T[len]&#10;  + T[&lt;built-in function len&gt;]">glom/test/test_path_and_t.py:49: in test_path_t_roundtrip
+E     ?                        ++++++++    ++</failure></testcase><testcase classname="glom.test.test_path_and_t" name="test_path_t_roundtrip" time="0.001"><failure message="AssertionError: assert 'T[&lt;built-in function len&gt;]' == 'T[len]'&#10;  &#10;  - T[len]&#10;  + T[&lt;built-in function len&gt;]">glom/test/test_path_and_t.py:49: in test_path_t_roundtrip
     assert repr(T[len]) == 'T[len]'
 E   AssertionError: assert 'T[&lt;built-in function len&gt;]' == 'T[len]'
 E     
@@ -30,7 +30,7 @@ E     + T[&lt;built-in function len&gt;]</failure></testcase><testcase classname
 E   assert "Flatten(T, i...lass 'list'&gt;)" == 'Flatten()'
 E     
 E     - Flatten()
-E     + Flatten(T, init=&lt;class 'list'&gt;)</failure></testcase><testcase classname="glom.test.test_reduction" name="test_fold" time="0.004"><failure message="AssertionError: assert 'Fold(T, init...nction iadd&gt;)' == 'Fold(T, init=int)'&#10;  &#10;  - Fold(T, init=int)&#10;  + Fold(T, init=&lt;class 'int'&gt;, op=&lt;built-in function iadd&gt;)">glom/test/test_reduction.py:54: in test_fold
+E     + Flatten(T, init=&lt;class 'list'&gt;)</failure></testcase><testcase classname="glom.test.test_reduction" name="test_fold" time="0.001"><failure message="AssertionError: assert 'Fold(T, init...nction iadd&gt;)' == 'Fold(T, init=int)'&#10;  &#10;  - Fold(T, init=int)&#10;  + Fold(T, init=&lt;class 'int'&gt;, op=&lt;built-in function iadd&gt;)">glom/test/test_reduction.py:54: in test_fold
     assert repr(Fold(T, int)) == 'Fold(T, init=int)'
 E   AssertionError: assert 'Fold(T, init...nction iadd&gt;)' == 'Fold(T, init=int)'
 E     

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.167" timestamp="2026-08-18T07:11:41.171266+00:00" hostname="41f0ff78e0e4"><testcase classname="glom.test.test_cli" name="test_main_toml_target" time="0.003"><failure message="face.errors.UsageError: expected target-format to be one of python, json, or yaml">glom/test/test_cli.py:146: in test_main_toml_target
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.123" timestamp="2026-08-18T16:29:32.866338+00:00" hostname="2cd19c4f0130"><testcase classname="glom.test.test_cli" name="test_main_toml_target" time="0.005"><failure message="face.errors.UsageError: expected target-format to be one of python, json, or yaml">glom/test/test_cli.py:146: in test_main_toml_target
     assert cli.main(argv) == 0
            ^^^^^^^^^^^^^^
 glom/cli.py:94: in main
@@ -18,7 +18,7 @@ glom/cli.py:190: in mw_get_target
              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 glom/cli.py:134: in mw_handle_target
     raise UsageError('expected target-format to be one of python, json, or yaml')
-E   face.errors.UsageError: expected target-format to be one of python, json, or yaml</failure></testcase><testcase classname="glom.test.test_cli" name="test_usage_errors" time="0.015"><failure message="assert 'could not load target data' in 'error: expected target-format to be one of python, json, or yaml\n'&#10; +  where 'error: expected target-format to be one of python, json, or yaml\n' = RunResult(args=['glom', '--target-format', 'toml', '{&quot;a&quot;: &quot;a.b&quot;}', '{{&quot;a&quot;: {&quot;b&quot;: &quot;c&quot;}}'], returncode=1, stdout='error:... be one of python, json, or yaml\n', exception=UsageError('expected target-format to be one of python, json, or yaml')).stdout">glom/test/test_cli.py:83: in test_usage_errors
+E   face.errors.UsageError: expected target-format to be one of python, json, or yaml</failure></testcase><testcase classname="glom.test.test_cli" name="test_usage_errors" time="0.013"><failure message="assert 'could not load target data' in 'error: expected target-format to be one of python, json, or yaml\n'&#10; +  where 'error: expected target-format to be one of python, json, or yaml\n' = RunResult(args=['glom', '--target-format', 'toml', '{&quot;a&quot;: &quot;a.b&quot;}', '{{&quot;a&quot;: {&quot;b&quot;: &quot;c&quot;}}'], returncode=1, stdout='error:... be one of python, json, or yaml\n', exception=UsageError('expected target-format to be one of python, json, or yaml')).stdout">glom/test/test_cli.py:83: in test_usage_errors
     assert 'could not load target data' in res.stdout  # TODO: stderr
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 E   assert 'could not load target data' in 'error: expected target-format to be one of python, json, or yaml\n'

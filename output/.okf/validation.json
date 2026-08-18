@@ -34,7 +34,7 @@
       "no_test_changed_verdict": 8,
       "only_uncollectable_tests_changed_verdict": 7
     },
-    "seconds": 86.7
+    "seconds": 536.5
   },
   "tasks": [
     {
@@ -122,9 +122,60 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/dr945d96fabi4o22au9wcid4a",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:b53f496ca43e5af6994f8e316cf03af31050bf7944e0e4a308ad86c001cf028b",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/dr945d96fabi4o22au9wcid4a",
+          "era": "20.5.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 20.5.0 did not pass checking: install_rejected: shell_metacharacter",
+          "spec": {
+            "base_image": "python:3.7-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "envlist = py27,py34,py36,py37,pypy... and testenv command runs pytest --doctest-modules on glom"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "attrs==19.1.0, boltons>=20.2.0, coverage, face>=20.1.1, pytest==4.1.1, tox==3.7.0, virtualenv==15.1.0, PyYAML==3.13"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "classifiers indicate Python 2.7, 3.4, 3.5, 3.6, 3.7 support and install_requires includes boltons>=19.3.0, attrs, face"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "a9e6e74bc824",
+            "install": [
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [
@@ -401,7 +452,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 149,
-          "seconds": 2.1,
+          "seconds": 1.58,
           "total": 168
         },
         {
@@ -417,7 +468,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 73,
-          "seconds": 1.73,
+          "seconds": 1.26,
           "total": 80
         },
         {
@@ -433,7 +484,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 123,
-          "seconds": 1.75,
+          "seconds": 1.12,
           "total": 125
         },
         {
@@ -447,7 +498,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.02,
+          "seconds": 0.76,
           "total": 1
         },
         {
@@ -461,7 +512,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.95,
+          "seconds": 0.68,
           "total": 1
         },
         {
@@ -475,7 +526,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 1,
-          "seconds": 1.04,
+          "seconds": 0.74,
           "total": 1
         },
         {
@@ -489,7 +540,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 1,
-          "seconds": 0.92,
+          "seconds": 0.67,
           "total": 1
         },
         {
@@ -503,7 +554,7 @@
           "infrastructure_failure": null,
           "name": "alternative",
           "passing": 1,
-          "seconds": 0.68,
+          "seconds": 0.63,
           "total": 1
         }
       ],
@@ -894,9 +945,67 @@
           ]
         },
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.11-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/8whsdo9jnyj6nqxp7ei3cxj1h",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.in\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/occzbzxoz40xh9e6d5h85l9bh",
+              "install": [
+                "pip install -r requirements.in"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:a78e4529630cfe8c5199cafd6e0c28ee1579a13f86274396d8b6b2d80367aa3a",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.in\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/occzbzxoz40xh9e6d5h85l9bh",
+          "era": "23.5.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "spec": {
+            "base_image": "python:3.10-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "setup.py",
+                    "says": "Supported python versions include Python 3.7 through 3.11."
+                  },
+                  {
+                    "file": "requirements.in",
+                    "says": "Direct unpinned dependencies: attrs, boltons, coverage, face, pytest, tox, PyYAML."
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "Runs pytest with --doctest-modules glom."
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "bfd6083d44c6",
+            "install": [
+              "pip install -r requirements.in"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -961,7 +1070,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 200,
-          "seconds": 1.83,
+          "seconds": 1.54,
           "total": 200
         },
         {
@@ -975,7 +1084,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 200,
-          "seconds": 1.91,
+          "seconds": 1.39,
           "total": 200
         }
       ],
@@ -1321,9 +1430,62 @@
           ]
         },
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+              "install": [
+                "pip install --upgrade pip",
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:b53f496ca43e5af6994f8e316cf03af31050bf7944e0e4a308ad86c001cf028b",
+          "build_log_tail": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+          "era": "20.5.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 20.5.0 did not pass checking: install_rejected: shell_metacharacter",
+          "spec": {
+            "base_image": "python:3.7-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest --doctest-modules {envsitepackagesdir}/glom {posargs} and lists python 3.7 in envlist"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Lists runtime and test dependencies: attrs==19.1.0, boltons>=20.2.0, face>=20.1.1, pytest==4.1.1, PyYAML==3.13"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "Lists supported Python classifiers including Python 3.7 and package requirements"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "4ce2b29cc366",
+            "install": [
+              "pip install --upgrade pip",
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [
@@ -1430,7 +1592,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 137,
-          "seconds": 1.88,
+          "seconds": 1.45,
           "total": 149
         },
         {
@@ -1446,7 +1608,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 90,
-          "seconds": 1.73,
+          "seconds": 1.15,
           "total": 94
         }
       ],
@@ -1669,9 +1831,70 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.11-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/ehon0x18t26w66dh1leplaxp8",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.10-slim",
+              "error": "  17 |     \n  18 | >>> RUN pip install -r requirements.in\n  19 |     \n  20 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/ve2crcmg7idhxxjrtuqih97wa",
+              "install": [
+                "pip install --upgrade pip",
+                "pip install -r requirements.in"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:a78e4529630cfe8c5199cafd6e0c28ee1579a13f86274396d8b6b2d80367aa3a",
+          "build_log_tail": "  17 |     \n  18 | >>> RUN pip install -r requirements.in\n  19 |     \n  20 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/ve2crcmg7idhxxjrtuqih97wa",
+          "era": "25.12.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "spec": {
+            "base_image": "python:3.10-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "requirements.in",
+                    "says": "Specifies direct unpinned dependencies: attrs>=19.2.0, boltons>=20.2.0, coverage<=7.2.7, face>=20.1.1, pytest>=6.2.5, tox>=3.7.0, PyYAML>=6.0.1."
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "Specifies envlist py37-py314 and runs pytest -vv --doctest-modules glom."
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "Lists supported Python versions from 3.7 to 3.14 and requires boltons, attrs, face, and optional PyYAML."
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "01a13f66c6bf",
+            "install": [
+              "pip install --upgrade pip",
+              "pip install -r requirements.in"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -1806,7 +2029,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 1.87,
+          "seconds": 1.31,
           "total": 202
         },
         {
@@ -1821,7 +2044,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 200,
-          "seconds": 2.03,
+          "seconds": 1.37,
           "total": 202
         },
         {
@@ -1835,7 +2058,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 200,
-          "seconds": 1.94,
+          "seconds": 1.39,
           "total": 200
         },
         {
@@ -1849,7 +2072,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.01,
+          "seconds": 0.77,
           "total": 2
         },
         {
@@ -1863,7 +2086,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.98,
+          "seconds": 0.75,
           "total": 2
         },
         {
@@ -1877,7 +2100,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 2,
-          "seconds": 0.91,
+          "seconds": 0.68,
           "total": 2
         },
         {
@@ -1891,7 +2114,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 2,
-          "seconds": 0.91,
+          "seconds": 0.69,
           "total": 2
         }
       ],
@@ -1981,9 +2204,68 @@
           ]
         },
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/x2cj7g6akwen1n4y0iu1cpski",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.9-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/pkmhy9fpbtrjtqcu1hkkf63me",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/pkmhy9fpbtrjtqcu1hkkf63me",
+          "era": "23.1.1",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "spec": {
+            "base_image": "python:3.9-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "tox.ini tests py37, py38, py39, py310 and uses pytest with command: coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest -vv --doctest-modules {envsitepackagesdir}/glom"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Lists project test and runtime dependencies including attrs, boltons, pytest, face, and PyYAML==5.4.1 (which has pre-built binary wheels for Python 3.9)."
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "Lists supported Python versions 2.7, 3.6-3.10 and install_requires."
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "84b57ee2d225",
+            "install": [
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -2040,7 +2322,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 175,
-          "seconds": 2.2,
+          "seconds": 1.53,
           "total": 194
         },
         {
@@ -2056,7 +2338,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 175,
-          "seconds": 2.03,
+          "seconds": 1.57,
           "total": 194
         }
       ],
@@ -2238,9 +2520,57 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.9-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/kwlyfykibsyszvn93354zyyk6",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/kwlyfykibsyszvn93354zyyk6",
+          "era": "22.1.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 22.1.0 did not pass checking: install_rejected: shell_metacharacter",
+          "spec": {
+            "base_image": "python:3.9-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest -vv --doctest-modules {envsitepackagesdir}/glom and envlist includes py39"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Specifies test and runtime dependencies: attrs==19.1.0, boltons>=20.2.0, coverage, face>=20.1.1, pytest==4.1.1, tox==3.7.0, virtualenv==15.1.0, PyYAML==5.4.1"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "84b57ee2d225",
+            "install": [
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -2410,7 +2740,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 176,
-          "seconds": 2.21,
+          "seconds": 2.2,
           "total": 194
         },
         {
@@ -2426,7 +2756,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 170,
-          "seconds": 2.17,
+          "seconds": 1.65,
           "total": 194
         },
         {
@@ -2442,7 +2772,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 174,
-          "seconds": 2.22,
+          "seconds": 1.61,
           "total": 193
         },
         {
@@ -2457,7 +2787,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 2.32,
+          "seconds": 0.99,
           "total": 6
         },
         {
@@ -2472,7 +2802,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 2.07,
+          "seconds": 0.92,
           "total": 6
         },
         {
@@ -2486,7 +2816,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 6,
-          "seconds": 2.34,
+          "seconds": 0.88,
           "total": 6
         },
         {
@@ -2500,7 +2830,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 6,
-          "seconds": 1.73,
+          "seconds": 0.83,
           "total": 6
         },
         {
@@ -2514,7 +2844,7 @@
           "infrastructure_failure": null,
           "name": "alternative",
           "passing": 6,
-          "seconds": 0.98,
+          "seconds": 0.77,
           "total": 6
         }
       ],
@@ -2682,9 +3012,55 @@
           ]
         },
         "runtime": {
-          "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "attempt": 2,
+          "base_image": "python@sha256:b53f496ca43e5af6994f8e316cf03af31050bf7944e0e4a308ad86c001cf028b",
+          "base_image_pin": "digest_pinned",
+          "era": "18.4.0",
+          "image": "stress-stack/glom:python-3-7-slim-a1c1744a",
+          "reason": "tree_wants_another_toolchain",
+          "repaired_after": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.6-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/xiqu3c75k99jzaye8f2nsek4p",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "spec": {
+            "base_image": "python:3.7-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "setup.py",
+                    "says": "Specifies dependencies: install_requires=['boltons', 'attrs', 'face'], extras_require={'yaml': ['PyYAML']}, and Python 3 classifiers."
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "Defines test command using pytest: coverage run ... -m pytest --doctest-modules {envsitepackagesdir}/glom"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "a1c1744a330f",
+            "install": [
+              "pip install boltons attrs face PyYAML pytest"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "per_candidate_image"
         },
         "screen": {
           "absent_before": [
@@ -2744,7 +3120,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 66,
-          "seconds": 1.06,
+          "seconds": 0.97,
           "total": 69
         },
         {
@@ -2761,7 +3137,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 72,
-          "seconds": 1.13,
+          "seconds": 0.88,
           "total": 76
         }
       ],
@@ -2879,9 +3255,68 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.11-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/8whsdo9jnyj6nqxp7ei3cxj1h",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.in\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/occzbzxoz40xh9e6d5h85l9bh",
+              "install": [
+                "pip install -r requirements.in"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:a78e4529630cfe8c5199cafd6e0c28ee1579a13f86274396d8b6b2d80367aa3a",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.in\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/occzbzxoz40xh9e6d5h85l9bh",
+          "era": "23.5.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.10-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "setup.py",
+                    "says": "Supported python versions include Python 3.7 through 3.11."
+                  },
+                  {
+                    "file": "requirements.in",
+                    "says": "Direct unpinned dependencies: attrs, boltons, coverage, face, pytest, tox, PyYAML."
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "Runs pytest with --doctest-modules glom."
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "bfd6083d44c6",
+            "install": [
+              "pip install -r requirements.in"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -3013,7 +3448,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 200,
-          "seconds": 1.86,
+          "seconds": 1.29,
           "total": 200
         },
         {
@@ -3028,7 +3463,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 199,
-          "seconds": 1.91,
+          "seconds": 1.29,
           "total": 200
         },
         {
@@ -3042,7 +3477,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 199,
-          "seconds": 1.66,
+          "seconds": 1.29,
           "total": 199
         },
         {
@@ -3056,7 +3491,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.82,
+          "seconds": 0.72,
           "total": 1
         },
         {
@@ -3070,7 +3505,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.32,
+          "seconds": 0.67,
           "total": 1
         },
         {
@@ -3084,7 +3519,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 1,
-          "seconds": 0.8,
+          "seconds": 0.69,
           "total": 1
         },
         {
@@ -3098,7 +3533,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 1,
-          "seconds": 1.27,
+          "seconds": 0.66,
           "total": 1
         }
       ],
@@ -3188,9 +3623,63 @@
           ]
         },
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+              "install": [
+                "pip install --upgrade pip",
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:b53f496ca43e5af6994f8e316cf03af31050bf7944e0e4a308ad86c001cf028b",
+          "build_log_tail": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+          "era": "20.5.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 20.5.0 did not pass checking: install_rejected: shell_metacharacter",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.7-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest --doctest-modules {envsitepackagesdir}/glom {posargs} and lists python 3.7 in envlist"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Lists runtime and test dependencies: attrs==19.1.0, boltons>=20.2.0, face>=20.1.1, pytest==4.1.1, PyYAML==3.13"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "Lists supported Python classifiers including Python 3.7 and package requirements"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "4ce2b29cc366",
+            "install": [
+              "pip install --upgrade pip",
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [
@@ -3255,7 +3744,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 122,
-          "seconds": 1.62,
+          "seconds": 1.22,
           "total": 124
         },
         {
@@ -3271,7 +3760,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 109,
-          "seconds": 2.78,
+          "seconds": 1.1,
           "total": 111
         }
       ],
@@ -3376,9 +3865,68 @@
       "detail": {
         "designated": {},
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.11-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/r208w5lmq75njqacjtlupsdwu",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.11-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.in\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/jjqsnj8senznid8cvyd7it9h0",
+              "install": [
+                "pip install -r requirements.in"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:9c900dea9e8fb7e16277c179b555cc72d29a352dbc33cff48ad5a0412fd5bfc7",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.in\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/jjqsnj8senznid8cvyd7it9h0",
+          "era": "24.11.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "spec": {
+            "base_image": "python:3.11-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "setup.py",
+                    "says": "Classifiers list Python 3.7 through 3.12 support; core deps include boltons>=19.3.0, attrs, face>=20.1.1, and extras PyYAML."
+                  },
+                  {
+                    "file": "requirements.in",
+                    "says": "Specifies dependencies: attrs>=19.2.0, boltons>=20.2.0, face>=20.1.1, pytest>=6.2.5, tox>=3.7.0, PyYAML>=6.0.1."
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "Defines test command `pytest -vv --doctest-modules {envsitepackagesdir}/glom` across py37..py312."
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "15b8143cd819",
+            "install": [
+              "pip install -r requirements.in"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -3421,7 +3969,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 200,
-          "seconds": 2.47,
+          "seconds": 1.34,
           "total": 200
         },
         {
@@ -3435,7 +3983,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 200,
-          "seconds": 1.94,
+          "seconds": 1.29,
           "total": 200
         }
       ],
@@ -3534,9 +4082,68 @@
       "detail": {
         "designated": {},
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/r1u7mmbr5p45wr18vyg5gpenf",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.9-slim",
+              "error": "p install --no-cache-dir -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install --no-cache-dir -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/z25eu83vczjqcjn5mvkz0888k",
+              "install": [
+                "pip install --no-cache-dir -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install --no-cache-dir -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install --no-cache-dir -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/z25eu83vczjqcjn5mvkz0888k",
+          "era": "23.3.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "spec": {
+            "base_image": "python:3.9-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "envlist = py37,py38,py39,py310,pypy3 and commands run pytest -vv --doctest-modules glom"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "pinned dependencies include PyYAML==5.4.1, attrs==19.2.0, boltons>=20.2.0, face<22.0.0, pytest>=6.2.5"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "supported python versions include 3.7 through 3.10; Python 3.9 provides binary wheels for PyYAML 5.4.1"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "a885663d344e",
+            "install": [
+              "pip install --no-cache-dir -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -3581,7 +4188,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 175,
-          "seconds": 2.8,
+          "seconds": 1.86,
           "total": 194
         },
         {
@@ -3597,7 +4204,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 175,
-          "seconds": 2.43,
+          "seconds": 1.88,
           "total": 194
         }
       ],
@@ -3672,9 +4279,63 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+              "install": [
+                "pip install --upgrade pip",
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:b53f496ca43e5af6994f8e316cf03af31050bf7944e0e4a308ad86c001cf028b",
+          "build_log_tail": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+          "era": "20.5.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 20.5.0 did not pass checking: install_rejected: shell_metacharacter",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.7-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest --doctest-modules {envsitepackagesdir}/glom {posargs} and lists python 3.7 in envlist"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Lists runtime and test dependencies: attrs==19.1.0, boltons>=20.2.0, face>=20.1.1, pytest==4.1.1, PyYAML==3.13"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "Lists supported Python classifiers including Python 3.7 and package requirements"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "4ce2b29cc366",
+            "install": [
+              "pip install --upgrade pip",
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -3841,7 +4502,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 146,
-          "seconds": 2.6,
+          "seconds": 1.42,
           "total": 164
         },
         {
@@ -3857,7 +4518,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 145,
-          "seconds": 2.72,
+          "seconds": 1.56,
           "total": 169
         },
         {
@@ -3873,7 +4534,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 145,
-          "seconds": 2.99,
+          "seconds": 1.4,
           "total": 163
         },
         {
@@ -3887,7 +4548,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.19,
+          "seconds": 0.95,
           "total": 5
         },
         {
@@ -3901,7 +4562,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.07,
+          "seconds": 0.87,
           "total": 5
         },
         {
@@ -3915,7 +4576,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 5,
-          "seconds": 0.95,
+          "seconds": 0.75,
           "total": 5
         },
         {
@@ -3929,7 +4590,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 5,
-          "seconds": 0.95,
+          "seconds": 0.75,
           "total": 5
         }
       ],
@@ -4090,9 +4751,59 @@
         },
         "repeats": 2,
         "runtime": {
-          "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "attempt": 2,
+          "base_image": "python@sha256:1d52838af602b4b5a831beb13a0e4d073280665ea7be7f69ce2382f29c5a613f",
+          "base_image_pin": "digest_pinned",
+          "era": "19.10.0",
+          "image": "stress-stack/glom:python-3-8-slim-98b67363",
+          "reason": "tree_wants_another_toolchain",
+          "repaired_after": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/whx6jrlv46hln709yx78ph2w6",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "spec": {
+            "base_image": "python:3.8-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "setup.py",
+                    "says": "install_requires=['boltons>=19.3.0', 'attrs', 'face'], extras_require={'yaml': ['PyYAML']}"
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run ... -m pytest --doctest-modules {envsitepackagesdir}/glom"
+                  },
+                  {
+                    "file": "pytest.ini",
+                    "says": "doctest_optionflags=NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL ELLIPSIS"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "98b673633891",
+            "install": [
+              "pip install pytest boltons attrs face PyYAML"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "per_candidate_image"
         },
         "screen": {
           "absent_before": [],
@@ -4266,7 +4977,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 97,
-          "seconds": 1.29,
+          "seconds": 1.04,
           "total": 98
         },
         {
@@ -4282,7 +4993,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 88,
-          "seconds": 1.41,
+          "seconds": 0.94,
           "total": 98
         },
         {
@@ -4297,7 +5008,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 97,
-          "seconds": 1.17,
+          "seconds": 0.82,
           "total": 98
         },
         {
@@ -4311,7 +5022,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.67,
+          "seconds": 0.92,
           "total": 9
         },
         {
@@ -4325,7 +5036,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.8,
+          "seconds": 0.86,
           "total": 9
         },
         {
@@ -4339,7 +5050,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 9,
-          "seconds": 1.62,
+          "seconds": 0.82,
           "total": 9
         },
         {
@@ -4353,7 +5064,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 9,
-          "seconds": 1.13,
+          "seconds": 0.82,
           "total": 9
         }
       ],
@@ -4531,9 +5242,60 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/riazbhs1j6q9cmfealf3upsl7",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:a78e4529630cfe8c5199cafd6e0c28ee1579a13f86274396d8b6b2d80367aa3a",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/riazbhs1j6q9cmfealf3upsl7",
+          "era": "23.4.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 23.4.0 did not pass checking: install_rejected: shell_metacharacter",
+          "spec": {
+            "base_image": "python:3.10-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest -vv --doctest-modules {envsitepackagesdir}/glom {posargs}"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "lists test dependencies: attrs==19.2.0, boltons>=20.2.0, coverage, face<22.0.0, pytest>=6.2.5, PyYAML==6.0.1"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "declares support for Python 3.7 through 3.10 classifiers"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "0af9c629315f",
+            "install": [
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -4670,7 +5432,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 196,
-          "seconds": 2.86,
+          "seconds": 1.48,
           "total": 196
         },
         {
@@ -4686,7 +5448,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 194,
-          "seconds": 1.89,
+          "seconds": 1.26,
           "total": 196
         },
         {
@@ -4700,7 +5462,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 195,
-          "seconds": 1.72,
+          "seconds": 1.26,
           "total": 195
         },
         {
@@ -4715,7 +5477,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.07,
+          "seconds": 0.79,
           "total": 2
         },
         {
@@ -4730,7 +5492,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.14,
+          "seconds": 0.71,
           "total": 2
         },
         {
@@ -4744,7 +5506,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 2,
-          "seconds": 0.99,
+          "seconds": 0.76,
           "total": 2
         },
         {
@@ -4758,7 +5520,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 2,
-          "seconds": 1.13,
+          "seconds": 0.67,
           "total": 2
         }
       ],
@@ -4870,9 +5632,69 @@
           ]
         },
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/gb3skoovuk8gfdvdnwrx2u4yg",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.6-slim",
+              "error": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/5vww4cfes9sorlfk20gqexzh5",
+              "install": [
+                "pip install --upgrade pip",
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:2cfebc27956e6a55f78606864d91fe527696f9e32a724e6f9702b5f9602d0474",
+          "build_log_tail": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/5vww4cfes9sorlfk20gqexzh5",
+          "era": "19.2.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "spec": {
+            "base_image": "python:3.6-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "Lists py27,py34,py36,py37 under tox envlist and runs 'pytest --doctest-modules {envsitepackagesdir}/glom'."
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Specifies dependencies including attrs==17.4.0, boltons==19.1.0, pytest==4.1.1, and PyYAML==3.13 (PyYAML 3.13 has binary wheels for Python 3.6)."
+                  },
+                  {
+                    "file": "pytest.ini",
+                    "says": "Configures doctest flags for pytest runs."
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "43c03561b594",
+            "install": [
+              "pip install --upgrade pip",
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [
@@ -4936,7 +5758,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 86,
-          "seconds": 1.43,
+          "seconds": 0.84,
           "total": 87
         },
         {
@@ -4952,7 +5774,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 73,
-          "seconds": 1.69,
+          "seconds": 0.78,
           "total": 75
         }
       ],
@@ -5060,9 +5882,60 @@
           ]
         },
         "runtime": {
-          "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "attempt": 2,
+          "base_image": "python@sha256:1d52838af602b4b5a831beb13a0e4d073280665ea7be7f69ce2382f29c5a613f",
+          "base_image_pin": "digest_pinned",
+          "era": "19.10.0",
+          "image": "stress-stack/glom:python-3-8-slim-98b67363",
+          "reason": "tree_wants_another_toolchain",
+          "repaired_after": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/whx6jrlv46hln709yx78ph2w6",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.8-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "setup.py",
+                    "says": "install_requires=['boltons>=19.3.0', 'attrs', 'face'], extras_require={'yaml': ['PyYAML']}"
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run ... -m pytest --doctest-modules {envsitepackagesdir}/glom"
+                  },
+                  {
+                    "file": "pytest.ini",
+                    "says": "doctest_optionflags=NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL ELLIPSIS"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "98b673633891",
+            "install": [
+              "pip install pytest boltons attrs face PyYAML"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "per_candidate_image"
         },
         "screen": {
           "absent_before": [
@@ -5077,7 +5950,7 @@
             "glom.test.test_grouping"
           ],
           "failed_on_load": [],
-          "passing_both": 103,
+          "passing_both": 102,
           "ran_and_failed": []
         },
         "transition": {
@@ -5114,32 +5987,32 @@
         {
           "backend": "docker",
           "class_counts": {
-            "behavioral_exception": 1,
-            "passed": 109
-          },
-          "detail": "",
-          "exit_code": 1,
-          "failing": 1,
-          "infrastructure_failure": null,
-          "name": "after_full",
-          "passing": 109,
-          "seconds": 2.09,
-          "total": 110
-        },
-        {
-          "backend": "docker",
-          "class_counts": {
-            "behavioral_exception": 1,
-            "infrastructure": 1,
-            "passed": 103
+            "behavioral_exception": 2,
+            "passed": 108
           },
           "detail": "",
           "exit_code": 1,
           "failing": 2,
           "infrastructure_failure": null,
+          "name": "after_full",
+          "passing": 108,
+          "seconds": 1.03,
+          "total": 110
+        },
+        {
+          "backend": "docker",
+          "class_counts": {
+            "behavioral_exception": 2,
+            "infrastructure": 1,
+            "passed": 102
+          },
+          "detail": "",
+          "exit_code": 1,
+          "failing": 3,
+          "infrastructure_failure": null,
           "name": "before_full",
-          "passing": 103,
-          "seconds": 1.71,
+          "passing": 102,
+          "seconds": 0.99,
           "total": 105
         }
       ],
@@ -5262,9 +6135,63 @@
           ]
         },
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+              "install": [
+                "pip install --upgrade pip",
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:b53f496ca43e5af6994f8e316cf03af31050bf7944e0e4a308ad86c001cf028b",
+          "build_log_tail": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+          "era": "20.5.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 20.5.0 did not pass checking: install_rejected: shell_metacharacter",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.7-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest --doctest-modules {envsitepackagesdir}/glom {posargs} and lists python 3.7 in envlist"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Lists runtime and test dependencies: attrs==19.1.0, boltons>=20.2.0, face>=20.1.1, pytest==4.1.1, PyYAML==3.13"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "Lists supported Python classifiers including Python 3.7 and package requirements"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "4ce2b29cc366",
+            "install": [
+              "pip install --upgrade pip",
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [
@@ -5359,7 +6286,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 142,
-          "seconds": 2.38,
+          "seconds": 1.62,
           "total": 156
         },
         {
@@ -5376,7 +6303,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 102,
-          "seconds": 2.51,
+          "seconds": 1.34,
           "total": 115
         }
       ],
@@ -5507,9 +6434,57 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.8-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/kyl727lp6yonodyx79doerkp6",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:1d52838af602b4b5a831beb13a0e4d073280665ea7be7f69ce2382f29c5a613f",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/kyl727lp6yonodyx79doerkp6",
+          "era": "20.11.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 20.11.0 did not pass checking: install_rejected: shell_metacharacter",
+          "spec": {
+            "base_image": "python:3.8-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "envlist = py27,py36,py37,py38,py39,pypy and commands = coverage run ... -m pytest -vv --doctest-modules {envsitepackagesdir}/glom"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Lists test dependencies: attrs==19.1.0, boltons>=20.2.0, coverage, face>=20.1.1, pytest==4.1.1, PyYAML==5.4.1"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "f9851ac69e0f",
+            "install": [
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -5677,7 +6652,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 174,
-          "seconds": 3.09,
+          "seconds": 1.68,
           "total": 193
         },
         {
@@ -5693,7 +6668,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 169,
-          "seconds": 2.58,
+          "seconds": 1.55,
           "total": 193
         },
         {
@@ -5709,7 +6684,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 170,
-          "seconds": 2.17,
+          "seconds": 1.57,
           "total": 189
         },
         {
@@ -5723,7 +6698,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.25,
+          "seconds": 0.93,
           "total": 5
         },
         {
@@ -5737,7 +6712,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.73,
+          "seconds": 0.83,
           "total": 5
         },
         {
@@ -5751,7 +6726,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 5,
-          "seconds": 1.06,
+          "seconds": 0.77,
           "total": 5
         },
         {
@@ -5765,7 +6740,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 5,
-          "seconds": 1.33,
+          "seconds": 0.78,
           "total": 5
         },
         {
@@ -5779,7 +6754,7 @@
           "infrastructure_failure": null,
           "name": "alternative",
           "passing": 5,
-          "seconds": 1.35,
+          "seconds": 0.69,
           "total": 5
         }
       ],
@@ -5873,9 +6848,68 @@
       "detail": {
         "designated": {},
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.11-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/8whsdo9jnyj6nqxp7ei3cxj1h",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.in\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/occzbzxoz40xh9e6d5h85l9bh",
+              "install": [
+                "pip install -r requirements.in"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:a78e4529630cfe8c5199cafd6e0c28ee1579a13f86274396d8b6b2d80367aa3a",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.in\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.in\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/occzbzxoz40xh9e6d5h85l9bh",
+          "era": "23.5.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.10-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "setup.py",
+                    "says": "Supported python versions include Python 3.7 through 3.11."
+                  },
+                  {
+                    "file": "requirements.in",
+                    "says": "Direct unpinned dependencies: attrs, boltons, coverage, face, pytest, tox, PyYAML."
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "Runs pytest with --doctest-modules glom."
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "bfd6083d44c6",
+            "install": [
+              "pip install -r requirements.in"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -5920,7 +6954,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 199,
-          "seconds": 2.67,
+          "seconds": 1.69,
           "total": 199
         },
         {
@@ -5934,7 +6968,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 199,
-          "seconds": 2.29,
+          "seconds": 1.71,
           "total": 199
         }
       ],
@@ -6044,9 +7078,63 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+              "install": [
+                "pip install --upgrade pip",
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:b53f496ca43e5af6994f8e316cf03af31050bf7944e0e4a308ad86c001cf028b",
+          "build_log_tail": "  17 |     \n  18 | >>> RUN pip install -r requirements.txt\n  19 |     \n  20 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/2hpec3otzxqarfkldm2whjr5m",
+          "era": "20.5.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 20.5.0 did not pass checking: install_rejected: shell_metacharacter",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.7-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest --doctest-modules {envsitepackagesdir}/glom {posargs} and lists python 3.7 in envlist"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Lists runtime and test dependencies: attrs==19.1.0, boltons>=20.2.0, face>=20.1.1, pytest==4.1.1, PyYAML==3.13"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "Lists supported Python classifiers including Python 3.7 and package requirements"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "4ce2b29cc366",
+            "install": [
+              "pip install --upgrade pip",
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -6196,7 +7284,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 145,
-          "seconds": 2.68,
+          "seconds": 1.78,
           "total": 163
         },
         {
@@ -6212,7 +7300,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 143,
-          "seconds": 2.14,
+          "seconds": 1.84,
           "total": 163
         },
         {
@@ -6228,7 +7316,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 144,
-          "seconds": 2.15,
+          "seconds": 1.5,
           "total": 157
         },
         {
@@ -6243,7 +7331,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.14,
+          "seconds": 0.96,
           "total": 2
         },
         {
@@ -6258,7 +7346,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.54,
+          "seconds": 0.96,
           "total": 2
         },
         {
@@ -6272,7 +7360,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 2,
-          "seconds": 1.28,
+          "seconds": 0.9,
           "total": 2
         },
         {
@@ -6286,7 +7374,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 2,
-          "seconds": 1.97,
+          "seconds": 0.92,
           "total": 2
         }
       ],
@@ -6438,9 +7526,69 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/r1u7mmbr5p45wr18vyg5gpenf",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.9-slim",
+              "error": "p install --no-cache-dir -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install --no-cache-dir -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/z25eu83vczjqcjn5mvkz0888k",
+              "install": [
+                "pip install --no-cache-dir -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install --no-cache-dir -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install --no-cache-dir -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/z25eu83vczjqcjn5mvkz0888k",
+          "era": "23.3.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.9-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "envlist = py37,py38,py39,py310,pypy3 and commands run pytest -vv --doctest-modules glom"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "pinned dependencies include PyYAML==5.4.1, attrs==19.2.0, boltons>=20.2.0, face<22.0.0, pytest>=6.2.5"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "supported python versions include 3.7 through 3.10; Python 3.9 provides binary wheels for PyYAML 5.4.1"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "a885663d344e",
+            "install": [
+              "pip install --no-cache-dir -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -6637,7 +7785,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 195,
-          "seconds": 2.09,
+          "seconds": 1.62,
           "total": 195
         },
         {
@@ -6653,7 +7801,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 176,
-          "seconds": 2.2,
+          "seconds": 1.96,
           "total": 195
         },
         {
@@ -6669,7 +7817,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 176,
-          "seconds": 2.45,
+          "seconds": 1.74,
           "total": 194
         },
         {
@@ -6684,7 +7832,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.95,
+          "seconds": 1.5,
           "total": 19
         },
         {
@@ -6699,7 +7847,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.85,
+          "seconds": 1.09,
           "total": 19
         },
         {
@@ -6713,7 +7861,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 19,
-          "seconds": 1.64,
+          "seconds": 1.14,
           "total": 19
         },
         {
@@ -6727,7 +7875,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 19,
-          "seconds": 1.53,
+          "seconds": 0.99,
           "total": 19
         }
       ],
@@ -6875,9 +8023,60 @@
         },
         "repeats": 2,
         "runtime": {
-          "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "attempt": 2,
+          "base_image": "python@sha256:b53f496ca43e5af6994f8e316cf03af31050bf7944e0e4a308ad86c001cf028b",
+          "base_image_pin": "digest_pinned",
+          "era": "18.1.1",
+          "image": "stress-stack/glom:python-3-7-slim-747eca6c",
+          "reason": "tree_wants_another_toolchain",
+          "repaired_after": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.6-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/svb1towfn2223yh0ph8hp95h1",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "spec": {
+            "base_image": "python:3.7-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "setup.py",
+                    "says": "install_requires=['boltons', 'attrs', 'face'], extras_require={'yaml': ['PyYAML']}"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "attrs==17.4.0, boltons==17.2.0, coverage==4.5.1, face>=0.1.0, pytest==3.5.1, PyYAML==3.12"
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run ... -m pytest --doctest-modules {envsitepackagesdir}/glom"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "747eca6ca23d",
+            "install": [
+              "pip install --upgrade pip setuptools",
+              "pip install attrs boltons coverage face funcsigs more-itertools pluggy py pytest six PyYAML"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "per_candidate_image"
         },
         "screen": {
           "absent_before": [
@@ -7076,7 +8275,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 32,
-          "seconds": 1.15,
+          "seconds": 0.78,
           "total": 33
         },
         {
@@ -7093,7 +8292,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 6,
-          "seconds": 1.03,
+          "seconds": 0.6,
           "total": 11
         },
         {
@@ -7108,7 +8307,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 26,
-          "seconds": 1.05,
+          "seconds": 0.56,
           "total": 27
         },
         {
@@ -7123,7 +8322,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.85,
+          "seconds": 0.55,
           "total": 2
         },
         {
@@ -7138,7 +8337,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.12,
+          "seconds": 0.51,
           "total": 2
         },
         {
@@ -7152,7 +8351,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 2,
-          "seconds": 1.67,
+          "seconds": 0.52,
           "total": 2
         },
         {
@@ -7166,7 +8365,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 2,
-          "seconds": 0.79,
+          "seconds": 0.49,
           "total": 2
         },
         {
@@ -7180,7 +8379,7 @@
           "infrastructure_failure": null,
           "name": "alternative",
           "passing": 2,
-          "seconds": 0.61,
+          "seconds": 0.47,
           "total": 2
         }
       ],
@@ -7302,9 +8501,61 @@
       "detail": {
         "designated": {},
         "runtime": {
+          "attempt": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/riazbhs1j6q9cmfealf3upsl7",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:a78e4529630cfe8c5199cafd6e0c28ee1579a13f86274396d8b6b2d80367aa3a",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/riazbhs1j6q9cmfealf3upsl7",
+          "era": "23.4.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "repair_failed": "EnvironmentProposalError: the environment proposed for era 23.4.0 did not pass checking: install_rejected: shell_metacharacter",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.10-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest -vv --doctest-modules {envsitepackagesdir}/glom {posargs}"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "lists test dependencies: attrs==19.2.0, boltons>=20.2.0, coverage, face<22.0.0, pytest>=6.2.5, PyYAML==6.0.1"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "declares support for Python 3.7 through 3.10 classifiers"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "0af9c629315f",
+            "install": [
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -7347,7 +8598,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 195,
-          "seconds": 2.29,
+          "seconds": 1.72,
           "total": 195
         },
         {
@@ -7361,7 +8612,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 195,
-          "seconds": 2.27,
+          "seconds": 1.61,
           "total": 195
         }
       ],
@@ -7416,9 +8667,69 @@
         },
         "repeats": 2,
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/r1u7mmbr5p45wr18vyg5gpenf",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.9-slim",
+              "error": "p install --no-cache-dir -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install --no-cache-dir -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/z25eu83vczjqcjn5mvkz0888k",
+              "install": [
+                "pip install --no-cache-dir -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install --no-cache-dir -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install --no-cache-dir -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/z25eu83vczjqcjn5mvkz0888k",
+          "era": "23.3.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.9-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "envlist = py37,py38,py39,py310,pypy3 and commands run pytest -vv --doctest-modules glom"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "pinned dependencies include PyYAML==5.4.1, attrs==19.2.0, boltons>=20.2.0, face<22.0.0, pytest>=6.2.5"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "supported python versions include 3.7 through 3.10; Python 3.9 provides binary wheels for PyYAML 5.4.1"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "a885663d344e",
+            "install": [
+              "pip install --no-cache-dir -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -7552,7 +8863,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 176,
-          "seconds": 2.78,
+          "seconds": 2.05,
           "total": 194
         },
         {
@@ -7568,7 +8879,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 175,
-          "seconds": 2.51,
+          "seconds": 1.86,
           "total": 194
         },
         {
@@ -7584,7 +8895,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 175,
-          "seconds": 1.98,
+          "seconds": 1.58,
           "total": 194
         },
         {
@@ -7598,7 +8909,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 0.97,
+          "seconds": 0.77,
           "total": 1
         },
         {
@@ -7612,7 +8923,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 0.95,
+          "seconds": 0.73,
           "total": 1
         },
         {
@@ -7626,7 +8937,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 1,
-          "seconds": 0.93,
+          "seconds": 0.75,
           "total": 1
         },
         {
@@ -7640,7 +8951,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 1,
-          "seconds": 0.95,
+          "seconds": 0.72,
           "total": 1
         }
       ],
@@ -7702,9 +9013,69 @@
       "detail": {
         "designated": {},
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/r1u7mmbr5p45wr18vyg5gpenf",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.9-slim",
+              "error": "p install --no-cache-dir -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install --no-cache-dir -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/z25eu83vczjqcjn5mvkz0888k",
+              "install": [
+                "pip install --no-cache-dir -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install --no-cache-dir -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install --no-cache-dir -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/z25eu83vczjqcjn5mvkz0888k",
+          "era": "23.3.0",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.9-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "envlist = py37,py38,py39,py310,pypy3 and commands run pytest -vv --doctest-modules glom"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "pinned dependencies include PyYAML==5.4.1, attrs==19.2.0, boltons>=20.2.0, face<22.0.0, pytest>=6.2.5"
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "supported python versions include 3.7 through 3.10; Python 3.9 provides binary wheels for PyYAML 5.4.1"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "a885663d344e",
+            "install": [
+              "pip install --no-cache-dir -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -7749,7 +9120,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 176,
-          "seconds": 2.56,
+          "seconds": 2.07,
           "total": 194
         },
         {
@@ -7765,7 +9136,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 176,
-          "seconds": 2.44,
+          "seconds": 1.85,
           "total": 194
         }
       ],
@@ -7825,9 +9196,60 @@
           ]
         },
         "runtime": {
-          "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "attempt": 2,
+          "base_image": "python@sha256:1d52838af602b4b5a831beb13a0e4d073280665ea7be7f69ce2382f29c5a613f",
+          "base_image_pin": "digest_pinned",
+          "era": "19.10.0",
+          "image": "stress-stack/glom:python-3-8-slim-98b67363",
+          "reason": "tree_wants_another_toolchain",
+          "repaired_after": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.7-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/whx6jrlv46hln709yx78ph2w6",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.8-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "setup.py",
+                    "says": "install_requires=['boltons>=19.3.0', 'attrs', 'face'], extras_require={'yaml': ['PyYAML']}"
+                  },
+                  {
+                    "file": "tox.ini",
+                    "says": "commands = coverage run ... -m pytest --doctest-modules {envsitepackagesdir}/glom"
+                  },
+                  {
+                    "file": "pytest.ini",
+                    "says": "doctest_optionflags=NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL ELLIPSIS"
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "98b673633891",
+            "install": [
+              "pip install pytest boltons attrs face PyYAML"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "per_candidate_image"
         },
         "screen": {
           "absent_before": [
@@ -7894,7 +9316,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 96,
-          "seconds": 1.13,
+          "seconds": 0.98,
           "total": 97
         },
         {
@@ -7910,7 +9332,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 78,
-          "seconds": 1.25,
+          "seconds": 0.9,
           "total": 80
         }
       ],
@@ -7980,9 +9402,69 @@
       "detail": {
         "designated": {},
         "runtime": {
+          "attempt": 2,
+          "attempts": [
+            {
+              "attempt": 1,
+              "base_image": "python:3.10-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/x2cj7g6akwen1n4y0iu1cpski",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            },
+            {
+              "attempt": 2,
+              "base_image": "python:3.9-slim",
+              "error": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/pkmhy9fpbtrjtqcu1hkkf63me",
+              "install": [
+                "pip install -r requirements.txt"
+              ]
+            }
+          ],
+          "base_image": "python@sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b",
+          "build_log_tail": "  15 |     \n  16 | >>> RUN pip install -r requirements.txt\n  17 |     \n  18 |     CMD ['pytest', '-vv', '--doctest-modules', 'glom']\n--------------------\nERROR: failed to build: failed to solve: process \"/bin/sh -c pip install -r requirements.txt\" did not complete successfully: exit code: 1\n\nView build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/pkmhy9fpbtrjtqcu1hkkf63me",
+          "era": "23.1.1",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
-          "status": "head_image"
+          "reason": "runtime_image_build_failed",
+          "reused": true,
+          "spec": {
+            "base_image": "python:3.9-slim",
+            "evidence": {
+              "agent": {
+                "cited": [
+                  {
+                    "file": "tox.ini",
+                    "says": "tox.ini tests py37, py38, py39, py310 and uses pytest with command: coverage run --parallel --rcfile {toxinidir}/.tox-coveragerc -m pytest -vv --doctest-modules {envsitepackagesdir}/glom"
+                  },
+                  {
+                    "file": "requirements.txt",
+                    "says": "Lists project test and runtime dependencies including attrs, boltons, pytest, face, and PyYAML==5.4.1 (which has pre-built binary wheels for Python 3.9)."
+                  },
+                  {
+                    "file": "setup.py",
+                    "says": "Lists supported Python versions 2.7, 3.6-3.10 and install_requires."
+                  }
+                ],
+                "refused_generated": [],
+                "tool_calls": 7,
+                "turns": 6
+              }
+            },
+            "fingerprint": "84b57ee2d225",
+            "install": [
+              "pip install -r requirements.txt"
+            ],
+            "language": "python",
+            "shadowed": [],
+            "system_packages": [],
+            "test_command": [
+              "pytest",
+              "-vv",
+              "--doctest-modules",
+              "glom"
+            ]
+          },
+          "status": "fallback"
         },
         "screen": {
           "absent_before": [],
@@ -8027,7 +9509,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 175,
-          "seconds": 2.37,
+          "seconds": 1.92,
           "total": 194
         },
         {
@@ -8043,7 +9525,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 175,
-          "seconds": 1.55,
+          "seconds": 1.53,
           "total": 194
         }
       ],
@@ -8126,8 +9608,10 @@
         },
         "repeats": 2,
         "runtime": {
+          "era": "HEAD",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
+          "reason": "cut_from_head",
+          "reused": true,
           "status": "head_image"
         },
         "screen": {
@@ -8284,7 +9768,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 2.03,
+          "seconds": 1.87,
           "total": 202
         },
         {
@@ -8300,7 +9784,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 196,
-          "seconds": 2.13,
+          "seconds": 1.78,
           "total": 202
         },
         {
@@ -8316,7 +9800,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 196,
-          "seconds": 2.1,
+          "seconds": 1.93,
           "total": 202
         },
         {
@@ -8331,7 +9815,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.12,
+          "seconds": 1.58,
           "total": 6
         },
         {
@@ -8346,7 +9830,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 2.41,
+          "seconds": 2.62,
           "total": 6
         },
         {
@@ -8360,7 +9844,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 6,
-          "seconds": 1.38,
+          "seconds": 1.06,
           "total": 6
         },
         {
@@ -8374,7 +9858,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 6,
-          "seconds": 2.14,
+          "seconds": 2.62,
           "total": 6
         }
       ],
@@ -8392,7 +9876,7 @@
           "glom/test/test_grouping.py::test_limit",
           "glom/test/test_grouping.py::test_sample"
         ],
-        "focus_score": 0.9114,
+        "focus_score": 0.9107,
         "has_docstring": true,
         "kind": "function",
         "path": "glom/grouping.py",
@@ -8448,8 +9932,9 @@
         },
         "repeats": 2,
         "runtime": {
+          "era": "HEAD",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
+          "reason": "cut_from_head",
           "status": "head_image"
         },
         "screen": {
@@ -8599,7 +10084,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 2.09,
+          "seconds": 1.93,
           "total": 202
         },
         {
@@ -8615,7 +10100,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 199,
-          "seconds": 2.12,
+          "seconds": 1.93,
           "total": 202
         },
         {
@@ -8631,7 +10116,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 199,
-          "seconds": 2.29,
+          "seconds": 1.99,
           "total": 202
         },
         {
@@ -8646,7 +10131,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 2.08,
+          "seconds": 2.3,
           "total": 3
         },
         {
@@ -8661,7 +10146,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 2.54,
+          "seconds": 2.38,
           "total": 3
         },
         {
@@ -8675,7 +10160,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 3,
-          "seconds": 2.15,
+          "seconds": 2.42,
           "total": 3
         },
         {
@@ -8689,11 +10174,11 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 3,
-          "seconds": 2.35,
+          "seconds": 2.28,
           "total": 3
         }
       ],
-      "score": 0.895,
+      "score": 0.8956,
       "signals": {
         "body_lines": 8,
         "coverage_ratio": 0.75,
@@ -8704,7 +10189,7 @@
           "glom/test/test_mutation.py::test_s_assign",
           "glom/test/test_path_and_t.py::test_from_t_identity"
         ],
-        "focus_score": 0.8407,
+        "focus_score": 0.8405,
         "has_docstring": true,
         "kind": "method",
         "path": "glom/core.py",
@@ -8774,8 +10259,10 @@
         },
         "repeats": 2,
         "runtime": {
+          "era": "HEAD",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
+          "reason": "cut_from_head",
+          "reused": true,
           "status": "head_image"
         },
         "screen": {
@@ -8943,7 +10430,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 2.03,
+          "seconds": 1.84,
           "total": 202
         },
         {
@@ -8959,7 +10446,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 193,
-          "seconds": 2.31,
+          "seconds": 2.11,
           "total": 202
         },
         {
@@ -8975,7 +10462,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 193,
-          "seconds": 2.4,
+          "seconds": 2.15,
           "total": 202
         },
         {
@@ -8990,7 +10477,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 2.48,
+          "seconds": 2.54,
           "total": 9
         },
         {
@@ -9005,7 +10492,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 2.61,
+          "seconds": 2.55,
           "total": 9
         },
         {
@@ -9019,7 +10506,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 9,
-          "seconds": 2.51,
+          "seconds": 2.6,
           "total": 9
         },
         {
@@ -9033,11 +10520,11 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 9,
-          "seconds": 2.4,
+          "seconds": 2.36,
           "total": 9
         }
       ],
-      "score": 0.87,
+      "score": 0.8687,
       "signals": {
         "body_lines": 13,
         "coverage_ratio": 0.615,
@@ -9055,7 +10542,7 @@
           "glom/test/test_scope_vars.py::test_vars",
           "glom/test/test_snippets.py::test_snippet[358-glom({}, (A.t, T.update({1: 1}), S.t))\\n]"
         ],
-        "focus_score": 0.8239,
+        "focus_score": 0.8224,
         "has_docstring": true,
         "kind": "function",
         "path": "glom/core.py",
@@ -9123,8 +10610,10 @@
         },
         "repeats": 2,
         "runtime": {
+          "era": "HEAD",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
+          "reason": "cut_from_head",
+          "reused": true,
           "status": "head_image"
         },
         "screen": {
@@ -9274,7 +10763,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 2.18,
+          "seconds": 1.9,
           "total": 202
         },
         {
@@ -9289,7 +10778,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 199,
-          "seconds": 2.09,
+          "seconds": 1.84,
           "total": 202
         },
         {
@@ -9304,7 +10793,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 199,
-          "seconds": 2.2,
+          "seconds": 2.03,
           "total": 202
         },
         {
@@ -9318,7 +10807,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.24,
+          "seconds": 1.77,
           "total": 3
         },
         {
@@ -9332,7 +10821,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 2.78,
+          "seconds": 2.35,
           "total": 3
         },
         {
@@ -9346,7 +10835,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 3,
-          "seconds": 1.49,
+          "seconds": 1.3,
           "total": 3
         },
         {
@@ -9360,11 +10849,11 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 3,
-          "seconds": 2.47,
+          "seconds": 2.3,
           "total": 3
         }
       ],
-      "score": 0.8679,
+      "score": 0.8666,
       "signals": {
         "body_lines": 18,
         "coverage_ratio": 0.611,
@@ -9382,7 +10871,7 @@
           "glom/test/test_match.py::test_sample",
           "glom/test/test_snippets.py::test_snippet[323-glom(json.loads(data),\\n    Ref('json',\\n        Match(Switch({\\n            dict: {Ref('json'): Ref('json')},\\n            list: [Ref('json')],\\n            type(u''): Auto(str),\\n            object: T}))\\n        )\\n    )\\n]"
         ],
-        "focus_score": 0.8225,
+        "focus_score": 0.821,
         "has_docstring": true,
         "kind": "function",
         "path": "glom/matching.py",
@@ -9486,8 +10975,10 @@
         },
         "repeats": 2,
         "runtime": {
+          "era": "HEAD",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
+          "reason": "cut_from_head",
+          "reused": true,
           "status": "head_image"
         },
         "screen": {
@@ -9757,7 +11248,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 2.78,
+          "seconds": 2.12,
           "total": 202
         },
         {
@@ -9773,7 +11264,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 159,
-          "seconds": 3.2,
+          "seconds": 3.11,
           "total": 202
         },
         {
@@ -9789,7 +11280,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 159,
-          "seconds": 3.59,
+          "seconds": 3.24,
           "total": 202
         },
         {
@@ -9804,7 +11295,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 3.29,
+          "seconds": 2.72,
           "total": 43
         },
         {
@@ -9819,7 +11310,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 2.02,
+          "seconds": 2.01,
           "total": 43
         },
         {
@@ -9833,7 +11324,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 43,
-          "seconds": 1.71,
+          "seconds": 1.43,
           "total": 43
         },
         {
@@ -9847,11 +11338,11 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 43,
-          "seconds": 1.44,
+          "seconds": 1.25,
           "total": 43
         }
       ],
-      "score": 0.8655,
+      "score": 0.8636,
       "signals": {
         "body_lines": 33,
         "coverage_ratio": 0.636,
@@ -9871,7 +11362,7 @@
           "glom/test/test_target_types.py::test_types_bare",
           "glom/test/test_target_types.py::test_types_leave_one_out"
         ],
-        "focus_score": 0.8209,
+        "focus_score": 0.819,
         "has_docstring": true,
         "kind": "method",
         "path": "glom/core.py",
@@ -10015,8 +11506,10 @@
         },
         "repeats": 2,
         "runtime": {
+          "era": "HEAD",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
+          "reason": "cut_from_head",
+          "reused": true,
           "status": "head_image"
         },
         "screen": {
@@ -10244,7 +11737,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 1.96,
+          "seconds": 1.85,
           "total": 202
         },
         {
@@ -10260,7 +11753,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 173,
-          "seconds": 2.66,
+          "seconds": 2.6,
           "total": 202
         },
         {
@@ -10276,7 +11769,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 173,
-          "seconds": 3.12,
+          "seconds": 2.83,
           "total": 202
         },
         {
@@ -10291,7 +11784,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 2.63,
+          "seconds": 2.08,
           "total": 29
         },
         {
@@ -10306,7 +11799,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.92,
+          "seconds": 1.84,
           "total": 29
         },
         {
@@ -10320,7 +11813,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 29,
-          "seconds": 2.0,
+          "seconds": 1.73,
           "total": 29
         },
         {
@@ -10334,11 +11827,11 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 29,
-          "seconds": 1.33,
+          "seconds": 1.12,
           "total": 29
         }
       ],
-      "score": 0.847,
+      "score": 0.8446,
       "signals": {
         "body_lines": 46,
         "coverage_ratio": 0.63,
@@ -10360,7 +11853,7 @@
           "glom/test/test_target_types.py::test_types_bare",
           "glom/test/test_target_types.py::test_types_leave_one_out"
         ],
-        "focus_score": 0.8084,
+        "focus_score": 0.8062,
         "has_docstring": true,
         "kind": "method",
         "path": "glom/core.py",
@@ -10453,8 +11946,10 @@
         },
         "repeats": 2,
         "runtime": {
+          "era": "HEAD",
           "image": "stress-stack/glom:verify",
-          "reason": "tree_matches_head_runtime",
+          "reason": "cut_from_head",
+          "reused": true,
           "status": "head_image"
         },
         "screen": {
@@ -10607,7 +12102,7 @@
           "infrastructure_failure": null,
           "name": "after_full",
           "passing": 202,
-          "seconds": 1.92,
+          "seconds": 1.83,
           "total": 202
         },
         {
@@ -10623,7 +12118,7 @@
           "infrastructure_failure": null,
           "name": "before_full",
           "passing": 196,
-          "seconds": 1.79,
+          "seconds": 1.71,
           "total": 202
         },
         {
@@ -10639,7 +12134,7 @@
           "infrastructure_failure": null,
           "name": "baseline_full",
           "passing": 196,
-          "seconds": 1.9,
+          "seconds": 1.78,
           "total": 202
         },
         {
@@ -10654,7 +12149,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_1",
           "passing": 0,
-          "seconds": 1.09,
+          "seconds": 1.02,
           "total": 6
         },
         {
@@ -10669,7 +12164,7 @@
           "infrastructure_failure": null,
           "name": "before_targets_2",
           "passing": 0,
-          "seconds": 1.25,
+          "seconds": 1.11,
           "total": 6
         },
         {
@@ -10683,7 +12178,7 @@
           "infrastructure_failure": null,
           "name": "after_targets_1",
           "passing": 6,
-          "seconds": 1.04,
+          "seconds": 0.93,
           "total": 6
         },
         {
@@ -10697,11 +12192,11 @@
           "infrastructure_failure": null,
           "name": "after_targets_2",
           "passing": 6,
-          "seconds": 1.16,
+          "seconds": 1.09,
           "total": 6
         }
       ],
-      "score": 0.8443,
+      "score": 0.8438,
       "signals": {
         "body_lines": 20,
         "coverage_ratio": 0.95,
@@ -10716,7 +12211,7 @@
           "glom/test/test_mutation.py::test_star_broadcast",
           "glom/test/test_mutation.py::test_unregistered_delete"
         ],
-        "focus_score": 0.8066,
+        "focus_score": 0.8057,
         "has_docstring": false,
         "kind": "method",
         "path": "glom/mutation.py",

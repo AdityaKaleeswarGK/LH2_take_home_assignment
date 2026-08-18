@@ -1,10 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.130" timestamp="2026-08-18T07:11:14.221698+00:00" hostname="932b395c939e"><testcase classname="glom.test.test_error" name="test_pae_fallback_for_non_path" time="0.001"><failure message="IndexError: tuple index out of range">glom/test/test_error.py:68: in test_pae_fallback_for_non_path
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.117" timestamp="2026-08-18T16:24:33.312429+00:00" hostname="cb51e4fb7b76"><testcase classname="glom.test.test_error" name="test_pae_fallback_for_non_path" time="0.001"><failure message="IndexError: tuple index out of range">glom/test/test_error.py:68: in test_pae_fallback_for_non_path
     msg2 = exc2.get_message()
            ^^^^^^^^^^^^^^^^^^
 glom/core.py:348: in get_message
     path_part = Path(self.path).values()[self.part_idx]
                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-E   IndexError: tuple index out of range</failure></testcase><testcase classname="glom.test.test_error" name="test_pae_scope_printable" time="0.001"><failure message="ValueError: path segment must be path from T, not S">glom/test/test_error.py:51: in test_pae_scope_printable
+E   IndexError: tuple index out of range</failure></testcase><testcase classname="glom.test.test_error" name="test_pae_scope_printable" time="0.000"><failure message="ValueError: path segment must be path from T, not S">glom/test/test_error.py:51: in test_pae_scope_printable
     msg = exc.get_message()
           ^^^^^^^^^^^^^^^^^
 glom/core.py:348: in get_message

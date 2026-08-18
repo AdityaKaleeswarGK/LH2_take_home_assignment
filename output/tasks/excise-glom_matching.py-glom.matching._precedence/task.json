@@ -2,7 +2,7 @@
   "difficulty": {
     "agrees_with_measurement": false,
     "criteria": [
-      "local_and_self_describing"
+      "business_logic_knowledge"
     ],
     "dominant_factors": [
       "misleading_similarity",
@@ -23,7 +23,7 @@
       "misleading_similarity": 0.0,
       "scale": 21.0
     },
-    "justification": "The precedence ladder is not stated at the helper’s call site; it must be inferred from Optional, Required, dictionary matching dispatch, and surrounding test expectations.",
+    "justification": "The precedence values encode nonlocal matching rules across exact values, types, callables, Optional, Required, and match expressions, so the ordering must be reconstructed from surrounding semantics.",
     "measured_justification": "This task touches 18 lines with 3 tests that must end up passing.",
     "measured_tier": "easy",
     "score": 0.2147,
@@ -142,7 +142,7 @@
     }
   ],
   "generation": {
-    "cache_key": "1f8bbd1718c7be72d0abd98cb810c9aa662cae844a33694888bde829a1cc2a43",
+    "cache_key": "c02bfc73aaefab20fd8e146f54cfd86262efc8a28ffc079117a589a7cc8d0c6c",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -154,7 +154,7 @@
     "model": "google/gemini-3.7-flash"
   },
   "id": "excise-glom_matching.py-glom.matching._precedence",
-  "instruction": "Complete the implementation of `glom.matching._precedence(pattern)` so that pattern-matching specifications in dictionaries and structured specifiers (such as `Match`, `Check`, `Switch`, `Regex`, and logical combinators like `And`, `Or`, `Not`) evaluate candidate spec keys in the correct priority order.\n\nWhen a target key can match multiple spec keys (for example, the target `1` matching a literal `1`, type `int`, and predicate `M > 0`), `_precedence` must return an ordering score where lower values correspond to higher priority (tried earlier) and higher values correspond to lower priority (tried later).\n\nThe ordering must properly distinguish between literal exact values, specialized patterns/types/predicates, wrapped/nested combinators (e.g., `And`, `Or`, `Not`), and broad catch-all or fallback matchers, ensuring double-wrapped patterns, nested structures, and sample matching test suites pass consistently.",
+  "instruction": "Implement key precedence calculation in `glom.matching._precedence` for dictionary pattern matching specs.\n\nWhen matching dictionary keys against spec patterns, a given target key may match multiple candidate spec keys (such as an exact literal value, a type specifier, or a predicate matcher). To ensure deterministic and expected matching order, `_precedence` must return an ordering value (where lower values are tried earlier and higher values are tried later) according to the specificity of the spec key:\n\n1. Exact literal values (such as strings, numbers, booleans, and other non-spec objects) must take highest priority / lowest precedence rank.\n2. Spec types and pattern matchers (such as types/classes, `Match`, `Check`, `Regex`, and boolean matchers like `And`, `Or`, `Not`, or wrapped matchers) must be ordered appropriately so that more specific constraints are attempted before broader or catch-all matchers.\n3. Wrapped and nested matchers must correctly compute precedence based on their inner/underlying matchers or structure.\n\nAll existing `glom.matching` tests, including nested structure matching, sample cases, and wrapped matchers, must pass.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
@@ -183,7 +183,7 @@
     "symbol_id": "glom/matching.py::glom.matching._precedence"
   },
   "source": "excision",
-  "title": "Implement pattern precedence scoring in glom.matching",
+  "title": "Implement pattern key precedence in glom.matching",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_match::test_double_wrapping": "behavioral_exception",

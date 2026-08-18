@@ -1,8 +1,8 @@
 {
   "difficulty": {
-    "agrees_with_measurement": true,
+    "agrees_with_measurement": false,
     "criteria": [
-      "local_and_self_describing"
+      "cross_module_reasoning"
     ],
     "dominant_factors": [
       "misleading_similarity",
@@ -23,7 +23,7 @@
       "misleading_similarity": 0.0,
       "scale": 11.0
     },
-    "justification": "Path.from_t is a small, isolated Path helper with its identity and T-conversion contract directly demonstrated by the nearby test, without cross-module coupling.",
+    "justification": "Its correct root-preserving behavior is constrained by Path representation and mutation callers such as Assign and Delete, rather than being specified solely in the function body.",
     "measured_justification": "This task touches 8 lines with 3 tests that must end up passing.",
     "measured_tier": "easy",
     "score": 0.2065,
@@ -31,7 +31,7 @@
       0.2188,
       0.3969
     ],
-    "tier": "easy",
+    "tier": "medium",
     "tier_origin": "agent",
     "verification_state": "reasoning_unverified_label_only"
   },
@@ -142,7 +142,7 @@
     }
   ],
   "generation": {
-    "cache_key": "e4d9480d25634c354b1bf06b26a0c3ee69a79e4e4d244024c3afb70992f4b99c",
+    "cache_key": "b607a926ed1da109f15cc536633d79407e366045c315520d84dc7115bf34508e",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -154,7 +154,7 @@
     "model": "google/gemini-3.7-flash"
   },
   "id": "excise-glom_core.py-glom.core.Path.from_t",
-  "instruction": "Implement the `Path.from_t` method on `glom.core.Path`.\n\nThe method should convert a `Path` instance into an equivalent target-relative expression starting from `T` (the target placeholder). It must return a representation of the path rooted at `T` such that path navigation, assignment, and deletion operations that rely on target-relative paths function properly and preserve path identity.",
+  "instruction": "Implement the `Path.from_t` method on `Path` instances in `glom.core`.\n\n`Path.from_t()` must convert or return the path representation starting from the target-relative root (`T`). When called on a `Path` object, it should return an equivalent path rooted at `T` such that operations relying on `T`-rooted path evaluation (such as path assignment, deletion, and identity checking of target-relative expressions) resolve correctly against target data structures.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
@@ -183,7 +183,7 @@
     "symbol_id": "glom/core.py::glom.core.Path.from_t"
   },
   "source": "excision",
-  "title": "Implement Path.from_t in glom.core",
+  "title": "Implement `Path.from_t` method in `glom.core`",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_mutation::test_delete": "behavioral_exception",

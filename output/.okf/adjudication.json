@@ -1,65 +1,64 @@
 {
   "adjudicated": 10,
-  "agreed_with_measurement": 6,
+  "agreed_with_measurement": 7,
   "calibrated": true,
   "distribution": {
     "easy": 3,
-    "hard": 3,
-    "medium": 4
+    "hard": 2,
+    "medium": 5
   },
   "fell_back": 0,
   "note": "",
   "schema_version": "0.1.0",
   "tiers": {
-    "excise-glom_core.py-glom.core.Path.from_t": "easy",
+    "excise-glom_core.py-glom.core.Path.from_t": "medium",
     "excise-glom_grouping.py-glom.grouping.GROUP": "medium",
     "excise-glom_matching.py-glom.matching._precedence": "medium",
-    "excise-glom_mutation.py-glom.mutation.Delete._del_one": "medium",
+    "excise-glom_mutation.py-glom.mutation.Delete._del_one": "easy",
     "pr-117": "hard",
     "pr-196": "hard",
     "pr-262": "easy",
-    "pr-277": "hard",
+    "pr-277": "medium",
     "pr-280": "medium",
     "pr-298": "easy"
   },
   "usage": {
     "by_model": {
-      "google/gemini-3.7-flash": 79,
+      "google/gemini-3.7-flash": 83,
       "openai/gpt-5.6-luna-pro": 1
     },
     "cache_hits": 0,
-    "calls": 80,
-    "completion_tokens": 10505,
-    "cost_usd": 0.125202,
-    "live_calls": 80,
+    "calls": 84,
+    "completion_tokens": 9280,
+    "cost_usd": 0.122273,
+    "live_calls": 84,
     "live_calls_by_model": {
-      "google/gemini-3.7-flash": 79,
+      "google/gemini-3.7-flash": 83,
       "openai/gpt-5.6-luna-pro": 1
     },
     "mean_live_seconds_by_model": {
-      "google/gemini-3.7-flash": 4.08,
-      "openai/gpt-5.6-luna-pro": 35.43
+      "google/gemini-3.7-flash": 3.73,
+      "openai/gpt-5.6-luna-pro": 30.41
     },
-    "prompt_tokens": 308079,
-    "seconds": 357.41,
+    "prompt_tokens": 305444,
+    "seconds": 339.91,
     "seconds_by_model": {
-      "google/gemini-3.7-flash": 321.98,
-      "openai/gpt-5.6-luna-pro": 35.426
+      "google/gemini-3.7-flash": 309.501,
+      "openai/gpt-5.6-luna-pro": 30.412
     },
-    "total_tokens": 318584,
+    "total_tokens": 314724,
     "truncations": 0
   },
   "verdicts": [
     {
-      "agrees_with_measurement": true,
+      "agrees_with_measurement": false,
       "criteria": [
-        "local_and_self_describing"
+        "cross_module_reasoning"
       ],
       "exploration": {
         "calls": [
           {
             "arguments": {
-              "glob": "*.py",
               "pattern": "def from_t"
             },
             "outcome": "ok",
@@ -68,14 +67,13 @@
           {
             "arguments": {
               "path": "glom/core.py",
-              "start_line": 715
+              "start_line": 710
             },
             "outcome": "ok",
             "tool": "read_file"
           },
           {
             "arguments": {
-              "glob": "*test*.py",
               "pattern": "test_from_t_identity"
             },
             "outcome": "ok",
@@ -91,23 +89,6 @@
           },
           {
             "arguments": {
-              "glob": "*test*.py",
-              "pattern": "test_delete|test_s_assign"
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          },
-          {
-            "arguments": {
-              "path": "glom/test/test_mutation.py",
-              "start_line": 200
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "glob": "glom/core.py",
               "pattern": "from_t"
             },
             "outcome": "ok",
@@ -115,8 +96,24 @@
           },
           {
             "arguments": {
+              "path": "glom/mutation.py",
+              "start_line": 155
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
               "path": "glom/core.py",
-              "start_line": 715
+              "start_line": 600
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/core.py",
+              "start_line": 600
             },
             "outcome": "ok",
             "tool": "read_file"
@@ -129,17 +126,17 @@
           "read_file"
         ]
       },
-      "explored": "Looked at glom/core.py where Path.from_t is defined and glom/test/test_path_and_t.py and glom/test/test_mutation.py for test coverage. Examined Path class methods and how Path/T interacts with from_t returning self if it's already a Path or constructing from a T-expression.",
-      "justification": "Path.from_t is a small, isolated Path helper with its identity and T-conversion contract directly demonstrated by the nearby test, without cross-module coupling.",
+      "explored": "Checked `Path.from_t` in `glom/core.py`, tests in `glom/test/test_path_and_t.py` (`test_from_t_identity`), and usages in `glom/mutation.py` (`Assign` and `Delete` specifiers where `dest_path = self.path.from_t()` when `self.path.startswith(S)`).",
+      "justification": "Its correct root-preserving behavior is constrained by Path representation and mutation callers such as Assign and Delete, rather than being specified solely in the function body.",
       "measured_tier": "easy",
       "note": "",
       "origin": "agent",
       "task_id": "excise-glom_core.py-glom.core.Path.from_t",
-      "tier": "easy",
+      "tier": "medium",
       "usage": {
         "cached": false,
         "model": "google/gemini-3.7-flash",
-        "prompt_hash": "5dac29e6d97c82d91c7e8c99807df44549daf89ccb2ae48953374eff4f1d92e4",
+        "prompt_hash": "5c8a6dc2b03e07bf43519e65275c8a10419be27c3d08a5f2a022d8c452b0b0d7",
         "turns": 8
       },
       "verification_state": "reasoning_unverified_label_only"
@@ -153,8 +150,8 @@
         "calls": [
           {
             "arguments": {
-              "path": "glom/grouping.py",
-              "pattern": "class GROUP|def GROUP|GROUP\\b"
+              "glob": "*grouping.py",
+              "pattern": "GROUP"
             },
             "outcome": "ok",
             "tool": "grep"
@@ -169,6 +166,30 @@
           },
           {
             "arguments": {
+              "path": "glom/grouping.py",
+              "start_line": 190
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/grouping.py",
+              "start_line": 1
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "glob": "*test_grouping.py",
+              "pattern": "def test"
+            },
+            "outcome": "ok",
+            "tool": "grep"
+          },
+          {
+            "arguments": {
               "path": "glom/test/test_grouping.py",
               "start_line": 1
             },
@@ -177,46 +198,30 @@
           },
           {
             "arguments": {
-              "path": "glom/grouping.py",
-              "start_line": 1
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "path": "glom/core.py",
-              "pattern": "MODE"
+              "glob": "*",
+              "pattern": "def GROUP"
             },
             "outcome": "ok",
             "tool": "grep"
           },
           {
             "arguments": {
-              "path": "glom/core.py",
-              "start_line": 2530
+              "glob": "*core.py",
+              "pattern": "MODE"
             },
             "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "path": "glom/grouping.py",
-              "start_line": 220
-            },
-            "outcome": "ok",
-            "tool": "read_file"
+            "tool": "grep"
           }
         ],
         "refused": [],
-        "tool_calls": 7,
+        "tool_calls": 8,
         "tools_used": [
           "grep",
           "read_file"
         ]
       },
-      "explored": "Inspected glom/grouping.py, glom/core.py, glom/reduction.py, and glom/test/test_grouping.py to understand how Group mode dispatches specs, handles accumulators (.agg), manages ACC_TREE and CUR_AGG scope state, and validates spec structures.",
-      "justification": "GROUP has to implement recursive bucketing, list accumulation, and aggregation protocols whose correct scope and accumulator behavior is defined by neighboring grouping and reduction code.",
+      "explored": "I inspected `glom/grouping.py` where `GROUP(target, spec, scope)` is stubbed out as `return None`. I also examined the other symbols in `glom/grouping.py` (such as `Group`, `ACC_TREE`, `CUR_AGG`, `First`, `Avg`, `Limit`), `glom/core.py` (mode dispatching with `MODE` and `MIN_MODE`), and `glom/test/test_grouping.py` (which covers bucketing dict/list specs, aggregation handling via `.agg()`, `STOP`/`SKIP` semantics, nested groups, and bad spec error handling).",
+      "justification": "The evaluator must follow glom’s recursive spec and mode-dispatch conventions while handling accumulators and STOP/SKIP sentinels, requiring neighboring implementation knowledge.",
       "measured_tier": "medium",
       "note": "",
       "origin": "agent",
@@ -225,7 +230,7 @@
       "usage": {
         "cached": false,
         "model": "google/gemini-3.7-flash",
-        "prompt_hash": "666e079b33013b8b852bbc6f6bc80f4e3aeb52da37e5fa9d22fc4d1b9d16e69c",
+        "prompt_hash": "014b804e5461346fc627cd5d6204a00287b1563b327f49535fd8e6917b458dd6",
         "turns": 8
       },
       "verification_state": "reasoning_unverified_label_only"
@@ -233,7 +238,7 @@
     {
       "agrees_with_measurement": false,
       "criteria": [
-        "local_and_self_describing"
+        "business_logic_knowledge"
       ],
       "exploration": {
         "calls": [
@@ -255,16 +260,8 @@
           },
           {
             "arguments": {
-              "path": "glom/matching.py",
-              "start_line": 580
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "glob": "glom/test/test_match.py",
-              "pattern": "test_double_wrapping|test_nested_struct|test_sample"
+              "glob": "glom/matching.py",
+              "pattern": "Optional"
             },
             "outcome": "ok",
             "tool": "grep"
@@ -272,7 +269,15 @@
           {
             "arguments": {
               "path": "glom/test/test_match.py",
-              "start_line": 110
+              "start_line": 1
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/test/test_match.py",
+              "start_line": 121
             },
             "outcome": "ok",
             "tool": "read_file"
@@ -287,19 +292,19 @@
           },
           {
             "arguments": {
-              "glob": "glom/matching.py",
-              "pattern": "def "
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          },
-          {
-            "arguments": {
-              "path": "glom/test/test_match.py",
-              "start_line": 260
+              "path": "glom/matching.py",
+              "start_line": 560
             },
             "outcome": "ok",
             "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "glob": "glom/matching.py",
+              "pattern": "_glom_match"
+            },
+            "outcome": "ok",
+            "tool": "grep"
           }
         ],
         "refused": [],
@@ -309,8 +314,8 @@
           "read_file"
         ]
       },
-      "explored": "Looked at glom/matching.py where _precedence is defined (lines 657-664) and its callers in Optional.__init__, Required.__init__, and _handle_dict. Also inspected test cases in glom/test/test_match.py (test_double_wrapping, test_precedence, test_sample) to see how different match spec types/constants like exact values, types, tuples, and M expressions are evaluated for precedence order.",
-      "justification": "The precedence ladder is not stated at the helper’s call site; it must be inferred from Optional, Required, dictionary matching dispatch, and surrounding test expectations.",
+      "explored": "Read glom/matching.py around _precedence, Optional, Required, and _handle_dict, along with dict matching tests in test_match.py (test_double_wrapping, test_precedence).",
+      "justification": "The precedence values encode nonlocal matching rules across exact values, types, callables, Optional, Required, and match expressions, so the ordering must be reconstructed from surrounding semantics.",
       "measured_tier": "easy",
       "note": "",
       "origin": "agent",
@@ -319,22 +324,22 @@
       "usage": {
         "cached": false,
         "model": "google/gemini-3.7-flash",
-        "prompt_hash": "8a040a9743a12fa639605f3fc8771195ccd7465223733b25c2545670987854ed",
+        "prompt_hash": "1f7cbbd2a15c7000b52deab9c43593e8bee1252843de61931681339a7925c945",
         "turns": 8
       },
       "verification_state": "reasoning_unverified_label_only"
     },
     {
-      "agrees_with_measurement": false,
+      "agrees_with_measurement": true,
       "criteria": [
-        "cross_module_reasoning"
+        "local_and_self_describing"
       ],
       "exploration": {
         "calls": [
           {
             "arguments": {
-              "glob": "*mutation.py",
-              "pattern": "def _del_one"
+              "glob": "glom/mutation.py",
+              "pattern": "class Delete|_del_one"
             },
             "outcome": "ok",
             "tool": "grep"
@@ -342,7 +347,7 @@
           {
             "arguments": {
               "path": "glom/mutation.py",
-              "start_line": 260
+              "start_line": 240
             },
             "outcome": "ok",
             "tool": "read_file"
@@ -350,7 +355,7 @@
           {
             "arguments": {
               "path": "glom/mutation.py",
-              "start_line": 270
+              "start_line": 280
             },
             "outcome": "ok",
             "tool": "read_file"
@@ -365,35 +370,35 @@
           },
           {
             "arguments": {
-              "glob": "*mutation.py",
-              "pattern": "def _assign_op"
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          },
-          {
-            "arguments": {
-              "glob": "*mutation.py",
-              "pattern": "_assign_"
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          },
-          {
-            "arguments": {
-              "glob": "*.py",
-              "pattern": "def _assign_op"
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          },
-          {
-            "arguments": {
-              "path": "glom/core.py",
-              "start_line": 1660
+              "path": "glom/mutation.py",
+              "start_line": 100
             },
             "outcome": "ok",
             "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/mutation.py",
+              "start_line": 1
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/mutation.py",
+              "start_line": 20
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "glob": "glom/mutation.py",
+              "pattern": "def _assign_op"
+            },
+            "outcome": "ok",
+            "tool": "grep"
           }
         ],
         "refused": [],
@@ -403,17 +408,17 @@
           "read_file"
         ]
       },
-      "explored": "Looked at glom/mutation.py around Delete._del_one and Delete.glomit, as well as Assign, _assign_autodiscover, _delete_autodiscover, and the parallel implementation _assign_op in glom/core.py.",
-      "justification": "Correct deletion depends on TargetRegistry dispatch, ignore-missing behavior, and PathDeleteError wrapping, requiring comparison with the sibling assignment operation and its callers.",
+      "explored": "Read glom/mutation.py, specifically looking at Delete, Delete._del_one, Delete.glomit, _delete_autodiscover, Assign, and how mutation operations and error handling (PathDeleteError vs ignore_missing) work in this module.",
+      "justification": "The deletion operation is contained in glom.mutation and its dispatch, missing-path, and error behavior are established by nearby deletion mechanisms.",
       "measured_tier": "easy",
       "note": "",
       "origin": "agent",
       "task_id": "excise-glom_mutation.py-glom.mutation.Delete._del_one",
-      "tier": "medium",
+      "tier": "easy",
       "usage": {
         "cached": false,
         "model": "google/gemini-3.7-flash",
-        "prompt_hash": "18e7b734c2cafc439db648b70170f07bbb1bd24e0d4be6e59047e64113738257",
+        "prompt_hash": "f4d02da8c6015370dd7c61abc42d4de63cd921ea9e88c273c4da24921c608940",
         "turns": 8
       },
       "verification_state": "reasoning_unverified_label_only"
@@ -427,8 +432,7 @@
         "calls": [
           {
             "arguments": {
-              "glob": "glom/test/test_path_and_t.py",
-              "pattern": "test_path_t_roundtrip"
+              "pattern": "roundtrip"
             },
             "outcome": "ok",
             "tool": "grep"
@@ -436,38 +440,38 @@
           {
             "arguments": {
               "path": "glom/test/test_path_and_t.py",
-              "start_line": 20
+              "start_line": 25
             },
             "outcome": "ok",
             "tool": "read_file"
           },
           {
             "arguments": {
-              "glob": "glom/*.py",
-              "pattern": "__repr__"
+              "path": "glom/test/test_basic.py",
+              "start_line": 325
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/core.py",
+              "pattern": "class (Invoke|Coalesce|Check|Fill|Assign|Flatten|Fold|Filter)"
             },
             "outcome": "ok",
             "tool": "grep"
           },
           {
             "arguments": {
-              "path": "glom/mutation.py",
-              "start_line": 35
+              "path": "glom/core.py",
+              "start_line": 785
             },
             "outcome": "ok",
             "tool": "read_file"
           },
           {
             "arguments": {
-              "path": "glom/mutation.py",
-              "start_line": 200
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "glob": "glom/mutation.py",
+              "path": "glom/core.py",
               "pattern": "def __repr__"
             },
             "outcome": "ok",
@@ -475,19 +479,19 @@
           },
           {
             "arguments": {
-              "path": "glom/mutation.py",
-              "start_line": 195
+              "path": "glom/reduction.py",
+              "start_line": 90
             },
             "outcome": "ok",
             "tool": "read_file"
           },
           {
             "arguments": {
-              "glob": "glom/mutation.py",
-              "pattern": "class "
+              "path": "glom/core.py",
+              "start_line": 1960
             },
             "outcome": "ok",
-            "tool": "grep"
+            "tool": "read_file"
           }
         ],
         "refused": [],
@@ -497,8 +501,8 @@
           "read_file"
         ]
       },
-      "explored": "Looked at test_path_t_roundtrip in glom/test/test_path_and_t.py and grep searched across glom/core.py, glom/mutation.py, glom/reduction.py, and glom/streaming.py for __repr__ methods and specifier classes like Assign and Delete to check how builtin roundtripping and representation contracts are implemented across modules.",
-      "justification": "Builtin roundtripping requires coordinated representation changes across core, mutation, reduction, and streaming, with parallel specifier implementations that must remain consistent across the suite.",
+      "explored": "Looked at glom/core.py, glom/reduction.py, glom/mutation.py, glom/streaming.py, and test files test_path_and_t.py and test_basic.py to check how builtin specifiers (Invoke, Check, Fill, Assign, Flatten, Fold, Filter) handle __repr__ roundtripping and default argument formatting.",
+      "justification": "Builtin roundtripping requires coordinated repr and constructor-argument conventions across several distinct specifier modules, where consistency between parallel implementations is essential.",
       "measured_tier": "hard",
       "note": "",
       "origin": "agent",
@@ -507,7 +511,7 @@
       "usage": {
         "cached": false,
         "model": "google/gemini-3.7-flash",
-        "prompt_hash": "f041eaf1432da125ea8c55ca433653564f89f990aa224c8d54a4af36804a8f9a",
+        "prompt_hash": "74c445e2fb30af1c4f7336632da8278d7ba12ffce306c490726a5eba6651ca6d",
         "turns": 8
       },
       "verification_state": "reasoning_unverified_label_only"
@@ -522,32 +526,16 @@
         "calls": [
           {
             "arguments": {
-              "glob": "glom/test/*",
-              "pattern": "test_spec_and_recursion"
+              "glob": "glom/core.py",
+              "pattern": "class Spec"
             },
             "outcome": "ok",
             "tool": "grep"
           },
           {
             "arguments": {
-              "path": "glom/test/test_basic.py",
-              "start_line": 280
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "glob": "glom/*.py",
-              "pattern": "def _check_kwargs"
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          },
-          {
-            "arguments": {
-              "glob": "glom/*.py",
-              "pattern": "class Auto"
+              "glob": "glom/core.py",
+              "pattern": "Mode"
             },
             "outcome": "ok",
             "tool": "grep"
@@ -555,31 +543,47 @@
           {
             "arguments": {
               "path": "glom/core.py",
-              "start_line": 1875
+              "start_line": 770
             },
             "outcome": "ok",
             "tool": "read_file"
           },
           {
             "arguments": {
-              "glob": "glom/*.py",
-              "pattern": "class Spec\\("
+              "glob": "glom/mutation.py",
+              "pattern": "Spec|Val"
             },
             "outcome": "ok",
             "tool": "grep"
-          },
-          {
-            "arguments": {
-              "path": "glom/core.py",
-              "start_line": 777
-            },
-            "outcome": "ok",
-            "tool": "read_file"
           },
           {
             "arguments": {
               "glob": "glom/matching.py",
-              "pattern": "Match"
+              "pattern": "Spec|Val"
+            },
+            "outcome": "ok",
+            "tool": "grep"
+          },
+          {
+            "arguments": {
+              "glob": "glom/reprlib_backport.py",
+              "pattern": "repr"
+            },
+            "outcome": "ok",
+            "tool": "grep"
+          },
+          {
+            "arguments": {
+              "path": "glom/reprlib_backport.py",
+              "start_line": 1
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "glob": "glom/core.py",
+              "pattern": "MODE"
             },
             "outcome": "ok",
             "tool": "grep"
@@ -592,8 +596,8 @@
           "read_file"
         ]
       },
-      "explored": "Inspected glom/core.py (Spec, Auto, glom traversal handlers) and glom/matching.py (Match specifier and mode interactions), as well as test suites spanning test_basic.py, test_match.py, test_mutation.py, and test_scope_vars.py.",
-      "justification": "Mode and argument semantics must be changed consistently across core, matching, mutation, and related representation code; updating one dispatcher or spec handler without its counterparts leaves cross-module behavior inconsistent.",
+      "explored": "Inspected glom/core.py around Spec, MODE sentinel usage, and glom scope dispatching, as well as glom/mutation.py and glom/matching.py where Spec and MODE interact across target transformation and pattern matching.",
+      "justification": "Argument-mode semantics require coordinated changes across core evaluation, mutation, and matching modules, with shared MODE, Spec, and Val scope behavior that cannot be inferred locally.",
       "measured_tier": "hard",
       "note": "",
       "origin": "agent",
@@ -602,7 +606,7 @@
       "usage": {
         "cached": false,
         "model": "google/gemini-3.7-flash",
-        "prompt_hash": "ac40070a225f89224cbb430415807e09c468754a49d5911d72e38353a594c54c",
+        "prompt_hash": "08559f4f8451ce891b3ca563e852cdfca3baa7150795b2c6d3b76edc134688db",
         "turns": 8
       },
       "verification_state": "reasoning_unverified_label_only"
@@ -625,130 +629,15 @@
           {
             "arguments": {
               "path": "glom/cli.py",
-              "start_line": 115
+              "start_line": 110
             },
             "outcome": "ok",
             "tool": "read_file"
-          }
-        ],
-        "refused": [],
-        "tool_calls": 2,
-        "tools_used": [
-          "grep",
-          "read_file"
-        ]
-      },
-      "explored": "Inspected glom/cli.py around mw_handle_target where yaml is loaded and compared with glom/test/test_cli.py.",
-      "justification": "The change is confined to the YAML loading branch in glom.cli, and the safe-loading requirement is directly visible in the existing loader call and test context.",
-      "measured_tier": "easy",
-      "note": "",
-      "origin": "agent",
-      "task_id": "pr-262",
-      "tier": "easy",
-      "usage": {
-        "cached": false,
-        "model": "google/gemini-3.7-flash",
-        "prompt_hash": "b1fb29f86b9d122cd5d828c3c0808587d36d8ead18dcaee74809e5db519c1795",
-        "turns": 3
-      },
-      "verification_state": "reasoning_unverified_label_only"
-    },
-    {
-      "agrees_with_measurement": false,
-      "criteria": [
-        "local_and_self_describing"
-      ],
-      "exploration": {
-        "calls": [
-          {
-            "arguments": {
-              "path": "glom/cli.py",
-              "start_line": 1
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "path": "glom/cli.py",
-              "start_line": 121
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "path": "tests",
-              "pattern": "test_main"
-            },
-            "outcome": "ok",
-            "tool": "grep"
           },
           {
             "arguments": {
               "path": "glom/test/test_cli.py",
               "start_line": 115
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "path": "setup.py",
-              "pattern": "yaml|toml"
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          }
-        ],
-        "refused": [],
-        "tool_calls": 5,
-        "tools_used": [
-          "grep",
-          "read_file"
-        ]
-      },
-      "explored": "I inspected `glom/cli.py` (specifically `mw_handle_target` and CLI options), `setup.py` (extras_require), and `glom/test/test_cli.py`. YAML support already provides an exact blueprint for handling optional parser imports, error messages, and setup extras.",
-      "justification": "CLI parsing and TOML loading must be paired with the matching dependency metadata in setup; changing either module alone produces an incomplete feature, making this a coordinated cross-module edit.",
-      "measured_tier": "medium",
-      "note": "calibrated_from_easy",
-      "origin": "agent",
-      "task_id": "pr-277",
-      "tier": "hard",
-      "usage": {
-        "cached": false,
-        "model": "google/gemini-3.7-flash",
-        "prompt_hash": "3fcc7e644c12caeb09c93cad4a3757225caac40dc32c90ba662c3a0b68009af9",
-        "turns": 6
-      },
-      "verification_state": "reasoning_unverified_label_only"
-    },
-    {
-      "agrees_with_measurement": true,
-      "criteria": [
-        "local_and_self_describing"
-      ],
-      "exploration": {
-        "calls": [
-          {
-            "arguments": {
-              "path": "glom/cli.py",
-              "start_line": 1
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "pattern": "test_cli"
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          },
-          {
-            "arguments": {
-              "path": "glom/test/test_cli.py",
-              "start_line": 1
             },
             "outcome": "ok",
             "tool": "read_file"
@@ -761,8 +650,156 @@
           "read_file"
         ]
       },
-      "explored": "Read glom/cli.py (specifically glom_cli and get_command) and glom/test/test_cli.py. Looked at flag registration via Face and result formatting/printing in glom_cli.",
-      "justification": "The feature spans CLI option registration and scalar-output handling in separate functions, with output behavior requiring inspection of the existing command and formatting paths rather than a single self-contained symbol.",
+      "explored": "Checked `glom/cli.py` around line 125 where YAML formats are handled with `yaml.load`, and inspected `glom/test/test_cli.py::test_main_yaml_target` which tests parsing valid/invalid YAML targets.",
+      "justification": "The loader call and its safety behavior are localized in glom.cli, with the required PyYAML API change directly visible at the call site.",
+      "measured_tier": "easy",
+      "note": "",
+      "origin": "agent",
+      "task_id": "pr-262",
+      "tier": "easy",
+      "usage": {
+        "cached": false,
+        "model": "google/gemini-3.7-flash",
+        "prompt_hash": "74c6d4f139bada46d37054b271c53fdb9d6c70ba8f24e7712eb659cda33b1e5b",
+        "turns": 4
+      },
+      "verification_state": "reasoning_unverified_label_only"
+    },
+    {
+      "agrees_with_measurement": true,
+      "criteria": [
+        "local_and_self_describing"
+      ],
+      "exploration": {
+        "calls": [
+          {
+            "arguments": {
+              "glob": "glom/cli.py",
+              "pattern": "json|yaml|toml"
+            },
+            "outcome": "ok",
+            "tool": "grep"
+          },
+          {
+            "arguments": {
+              "path": "glom/cli.py",
+              "start_line": 110
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/cli.py",
+              "start_line": 100
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "glob": "glom/cli.py",
+              "pattern": "load_func"
+            },
+            "outcome": "ok",
+            "tool": "grep"
+          },
+          {
+            "arguments": {
+              "glob": "glom/cli.py",
+              "pattern": "def "
+            },
+            "outcome": "ok",
+            "tool": "grep"
+          },
+          {
+            "arguments": {
+              "glob": "glom/test/test_cli.py",
+              "pattern": "yaml|toml"
+            },
+            "outcome": "ok",
+            "tool": "grep"
+          }
+        ],
+        "refused": [],
+        "tool_calls": 6,
+        "tools_used": [
+          "grep",
+          "read_file"
+        ]
+      },
+      "explored": "Looked at `glom/cli.py` around `mw_handle_target` (lines 110-140) and CLI argument definitions to see how YAML and JSON target formats and optional imports are handled, as well as `glom/test/test_cli.py` for CLI test patterns.",
+      "justification": "TOML support crosses CLI dispatch and project setup/dependency configuration; correctness depends on matching the existing format-loading pattern and its optional-import behavior.",
+      "measured_tier": "medium",
+      "note": "calibrated_from_easy",
+      "origin": "agent",
+      "task_id": "pr-277",
+      "tier": "medium",
+      "usage": {
+        "cached": false,
+        "model": "google/gemini-3.7-flash",
+        "prompt_hash": "2ee030ab76d6a3312600c28d6516eee1e8210e339d24e37edeaa64580fcd4b3d",
+        "turns": 7
+      },
+      "verification_state": "reasoning_unverified_label_only"
+    },
+    {
+      "agrees_with_measurement": true,
+      "criteria": [
+        "local_and_self_describing"
+      ],
+      "exploration": {
+        "calls": [
+          {
+            "arguments": {
+              "glob": "*cli*",
+              "pattern": "scalar"
+            },
+            "outcome": "ok",
+            "tool": "grep"
+          },
+          {
+            "arguments": {
+              "path": "glom/cli.py",
+              "start_line": 30
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/test/test_cli.py",
+              "start_line": 1
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/cli.py",
+              "start_line": 50
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/cli.py",
+              "start_line": 160
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          }
+        ],
+        "refused": [],
+        "tool_calls": 5,
+        "tools_used": [
+          "grep",
+          "read_file"
+        ]
+      },
+      "explored": "Inspected glom/cli.py (glom_cli, get_command, mw_handle_target, mw_get_target) and glom/test/test_cli.py. The cli command setup uses the face library to declare arguments and middleware, with output handling directly in glom_cli.",
+      "justification": "The CLI behavior spans option registration and output rendering, so the agent must keep parser state and presentation semantics consistent rather than changing one isolated symbol.",
       "measured_tier": "medium",
       "note": "calibrated_from_easy",
       "origin": "agent",
@@ -771,8 +808,8 @@
       "usage": {
         "cached": false,
         "model": "google/gemini-3.7-flash",
-        "prompt_hash": "b0f1bb45aabb833b3b098ba5e010b6dcd89c638abced686187cd246aecb5e185",
-        "turns": 4
+        "prompt_hash": "54e9f9fdc8632be98992e5a8a02f092de30e14ef8b82d5ed03002fe30d312372",
+        "turns": 6
       },
       "verification_state": "reasoning_unverified_label_only"
     },
@@ -785,8 +822,32 @@
         "calls": [
           {
             "arguments": {
-              "glob": "glom/core.py",
+              "path": "glom/core.py",
               "pattern": "PathAccessError"
+            },
+            "outcome": "ok",
+            "tool": "grep"
+          },
+          {
+            "arguments": {
+              "path": "glom/core.py",
+              "start_line": 1530
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/core.py",
+              "start_line": 1980
+            },
+            "outcome": "ok",
+            "tool": "read_file"
+          },
+          {
+            "arguments": {
+              "path": "glom/core.py",
+              "pattern": "class PathAccessError"
             },
             "outcome": "ok",
             "tool": "grep"
@@ -801,32 +862,8 @@
           },
           {
             "arguments": {
-              "glob": "glom/test/*",
-              "pattern": "test_pae"
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          },
-          {
-            "arguments": {
-              "path": "glom/test/test_error.py",
-              "start_line": 25
-            },
-            "outcome": "ok",
-            "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "glob": "glom/core.py",
-              "pattern": "class (Path|TType|SType)"
-            },
-            "outcome": "ok",
-            "tool": "grep"
-          },
-          {
-            "arguments": {
-              "glob": "glom/core.py",
-              "pattern": "class S"
+              "path": "glom/",
+              "pattern": "Path.*values\\(\\)"
             },
             "outcome": "ok",
             "tool": "grep"
@@ -834,29 +871,21 @@
           {
             "arguments": {
               "path": "glom/core.py",
-              "start_line": 1870
+              "start_line": 685
             },
             "outcome": "ok",
             "tool": "read_file"
-          },
-          {
-            "arguments": {
-              "glob": "glom/core.py",
-              "pattern": "\\bS = "
-            },
-            "outcome": "ok",
-            "tool": "grep"
           }
         ],
         "refused": [],
-        "tool_calls": 8,
+        "tool_calls": 7,
         "tools_used": [
           "grep",
           "read_file"
         ]
       },
-      "explored": "Looked at `glom/core.py` where `PathAccessError` is defined, specifically its `get_message()` method which constructs path parts using `Path(self.path).values()[self.part_idx]`, as well as how `S` (an instance of `TType`) and scope paths interact with `PathAccessError`.",
-      "justification": "The failure is localized to PathAccessError.get_message(), and the required printable behavior is exposed by the failing path-formatting case without requiring coordinated changes or hidden domain rules.",
+      "explored": "Inspected `PathAccessError.get_message` and formatting logic in `glom/core.py`, specifically how `self.path` is converted to `Path` and indexed via `.values()[self.part_idx]` when `self.path` is an `S`/`Scope` or non-standard path object.",
+      "justification": "The behavior is localized to path-based error formatting in glom.core, and the expected printable output is exposed directly by the failing tests without hidden coupling.",
       "measured_tier": "hard",
       "note": "",
       "origin": "agent",
@@ -865,7 +894,7 @@
       "usage": {
         "cached": false,
         "model": "google/gemini-3.7-flash",
-        "prompt_hash": "260279e875d03f3105225cf18667cdb8568ac4c90315503e2d7b0fc8ac9983d2",
+        "prompt_hash": "afc2f4c38944a4563abd4283ad850edc30604ec20feb746b50a1981ba991fa51",
         "turns": 8
       },
       "verification_state": "reasoning_unverified_label_only"

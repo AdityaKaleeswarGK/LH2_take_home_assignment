@@ -1,6 +1,6 @@
 {
   "difficulty": {
-    "agrees_with_measurement": false,
+    "agrees_with_measurement": true,
     "criteria": [
       "local_and_self_describing"
     ],
@@ -10,7 +10,7 @@
     ],
     "exploration": {
       "refused": [],
-      "tool_calls": 5,
+      "tool_calls": 6,
       "tools_used": [
         "grep",
         "read_file"
@@ -23,7 +23,7 @@
       "misleading_similarity": 0.0,
       "scale": 43.0
     },
-    "justification": "CLI parsing and TOML loading must be paired with the matching dependency metadata in setup; changing either module alone produces an incomplete feature, making this a coordinated cross-module edit.",
+    "justification": "TOML support crosses CLI dispatch and project setup/dependency configuration; correctness depends on matching the existing format-loading pattern and its optional-import behavior.",
     "measured_justification": "This task requires coordinated edits across 2 source files; and it spans 2 modules, so the change cannot be reasoned about locally.",
     "measured_tier": "medium",
     "score": 0.3969,
@@ -31,7 +31,7 @@
       0.2188,
       0.3969
     ],
-    "tier": "hard",
+    "tier": "medium",
     "tier_origin": "agent",
     "verification_state": "reasoning_unverified_label_only"
   },
@@ -130,7 +130,7 @@
     }
   ],
   "generation": {
-    "cache_key": "ec5ee2045cdc162fd03ac80dc41d34079092ce0dab41f71fa65213dc669c7353",
+    "cache_key": "f9994dd444a181ceb5edf9c5637f55ff32943e85956a326085def86a7eb0a675",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -138,20 +138,20 @@
       "copied_spans": [],
       "private_names_leaked": [],
       "public_names_mentioned": [
-        "toml"
+        "missing"
       ]
     },
     "model": "google/gemini-3.7-flash"
   },
   "id": "pr-277",
-  "instruction": "Extend the glom command-line interface (`glom.cli`) to support reading and querying TOML-formatted input data.\n\nRequired behaviors:\n- Support a `--toml` input format flag alongside existing format options (such as `--yaml`, `--json`, and `--python`).\n- When the `--toml` flag is provided, glom should parse input data (provided via arguments, files, or standard input) as TOML before applying the glom spec/query.\n- Ensure proper CLI argument validation and error handling: passing conflicting format flags (or invalid flag combinations) must trigger appropriate usage errors consistent with existing format flags.",
+  "instruction": "Add support for TOML format targets when executing glom transformations from the command-line interface (CLI).\n\nRequirements:\n- The CLI should support loading and querying TOML target data from files or standard input, consistent with existing format options (such as JSON, YAML, and Python literal formats).\n- Add CLI options/flags to specify TOML input formatting.\n- For parsing TOML data, use Python's built-in `tomllib` on Python 3.11+, falling back to `tomli` on earlier Python versions.\n- Proper error handling and usage messages should be provided when invalid format options, invalid TOML data, or missing parsing dependencies are encountered.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
     "copied_spans": [],
     "private_names_leaked": [],
     "public_names_mentioned": [
-      "toml"
+      "missing"
     ]
   },
   "modules": [

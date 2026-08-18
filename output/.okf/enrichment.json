@@ -1,8 +1,8 @@
 {
   "blueprint": {
     "cached": false,
-    "cost": 0.002579,
-    "files_cited": 9,
+    "cost": 0.00479,
+    "files_cited": 10,
     "model": "google/gemini-3.7-flash",
     "status": "grounded",
     "unknown_files": [],
@@ -10,45 +10,45 @@
   },
   "cards": {
     "by_status": {
-      "described": 34
+      "described": 32
     },
-    "cost_usd": 0.062895,
-    "files": 34,
-    "grounded": 34,
-    "mean_entity_coverage": 0.626
+    "cost_usd": 0.004776,
+    "files": 32,
+    "grounded": 32,
+    "mean_entity_coverage": 0.603
   },
   "coverage": "available (loaded)",
   "coverage_statistics": {
-    "covering_ceiling": 31,
-    "excision_candidates": 303,
+    "covering_ceiling": 30,
+    "excision_candidates": 301,
     "excision_preferred": 8,
-    "mean_tests_per_covered_symbol": 7.86,
-    "symbols_covered": 555,
-    "symbols_total": 638,
-    "tests_observed": 206
+    "mean_tests_per_covered_symbol": 7.83,
+    "symbols_covered": 549,
+    "symbols_total": 634,
+    "tests_observed": 202
   },
   "knowledge_root": "/Users/adityagk/Desktop/projects/stress_stack/glom/.stress_stack/knowledge",
   "usage": {
     "by_model": {
-      "google/gemini-3.7-flash": 35
+      "google/gemini-3.7-flash": 33
     },
-    "cache_hits": 0,
-    "calls": 35,
-    "completion_tokens": 25344,
-    "cost_usd": 0.065475,
-    "live_calls": 35,
+    "cache_hits": 28,
+    "calls": 33,
+    "completion_tokens": 24575,
+    "cost_usd": 0.009565,
+    "live_calls": 5,
     "live_calls_by_model": {
-      "google/gemini-3.7-flash": 35
+      "google/gemini-3.7-flash": 5
     },
     "mean_live_seconds_by_model": {
-      "google/gemini-3.7-flash": 7.99
+      "google/gemini-3.7-flash": 8.17
     },
-    "prompt_tokens": 46780,
-    "seconds": 279.55,
+    "prompt_tokens": 45055,
+    "seconds": 40.86,
     "seconds_by_model": {
-      "google/gemini-3.7-flash": 279.553
+      "google/gemini-3.7-flash": 40.862
     },
-    "total_tokens": 72124,
+    "total_tokens": 69630,
     "truncations": 0
   }
 }

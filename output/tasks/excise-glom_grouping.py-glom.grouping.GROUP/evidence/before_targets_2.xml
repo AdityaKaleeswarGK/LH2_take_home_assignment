@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="6" time="0.124" timestamp="2026-08-18T07:12:17.004069+00:00" hostname="662a199a4bb0"><testcase classname="glom.test.test_error" name="test_all_public_errors" time="0.005"><failure message="Failed: DID NOT RAISE BadSpec">glom/test/test_error.py:490: in test_all_public_errors
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="6" time="0.100" timestamp="2026-08-18T16:32:03.117326+00:00" hostname="c5e89a52c48f"><testcase classname="glom.test.test_error" name="test_all_public_errors" time="0.005"><failure message="Failed: DID NOT RAISE BadSpec">glom/test/test_error.py:490: in test_all_public_errors
     _test_exc(glom.BadSpec, range(5), glom.grouping.Group([{T: T}]))
 glom/test/test_error.py:481: in _test_exc
     with pytest.raises(exc_type) as exc_info:
          ^^^^^^^^^^^^^^^^^^^^^^^
-E   Failed: DID NOT RAISE BadSpec</failure></testcase><testcase classname="glom.test.test_grouping" name="test_agg" time="0.002"><failure message="assert None == 0&#10; +  where None = glom([0, 1, 2, 3, 4, 5, ...], Group(First()))&#10; +    where Group(First()) = Group(First())&#10; +      where First() = First()">glom/test/test_grouping.py:59: in test_agg
+E   Failed: DID NOT RAISE BadSpec</failure></testcase><testcase classname="glom.test.test_grouping" name="test_agg" time="0.000"><failure message="assert None == 0&#10; +  where None = glom([0, 1, 2, 3, 4, 5, ...], Group(First()))&#10; +    where Group(First()) = Group(First())&#10; +      where First() = First()">glom/test/test_grouping.py:59: in test_agg
     assert glom(t, Group(First())) == 0
 E   assert None == 0
 E    +  where None = glom([0, 1, 2, 3, 4, 5, ...], Group(First()))

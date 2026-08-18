@@ -10,7 +10,7 @@
     ],
     "exploration": {
       "refused": [],
-      "tool_calls": 7,
+      "tool_calls": 8,
       "tools_used": [
         "grep",
         "read_file"
@@ -23,7 +23,7 @@
       "misleading_similarity": 0.0,
       "scale": 68.0
     },
-    "justification": "GROUP has to implement recursive bucketing, list accumulation, and aggregation protocols whose correct scope and accumulator behavior is defined by neighboring grouping and reduction code.",
+    "justification": "The evaluator must follow glom’s recursive spec and mode-dispatch conventions while handling accumulators and STOP/SKIP sentinels, requiring neighboring implementation knowledge.",
     "measured_justification": "This task touches 62 lines with 6 tests that must end up passing.",
     "measured_tier": "medium",
     "score": 0.2531,
@@ -146,7 +146,7 @@
     }
   ],
   "generation": {
-    "cache_key": "925a35964b74ae905f78249097d7834550a337bf0a2503e6570ab5e6fe2328fd",
+    "cache_key": "1c957d4ad5ed9a95502fbdaa3e028ac76a837cc6918e81a98a2ae253230811c9",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -158,7 +158,7 @@
     "model": "google/gemini-3.7-flash"
   },
   "id": "excise-glom_grouping.py-glom.grouping.GROUP",
-  "instruction": "Implement the `glom.grouping.GROUP` function to handle data grouping, partitioning, hierarchical bucketing, and aggregation over iterable target data in `glom`.\n\nThe `GROUP(target, spec, scope)` function acts as the grouping dispatcher and should support:\n- Grouping iterable targets into nested/hierarchical buckets according to grouping specifications.\n- Applying aggregate functions and accumulators (such as `First`, `Avg`, `Max`, `Min`, `Sample`, etc.) over grouped elements.\n- Respecting grouping parameters such as limits, ordering, bucketing rules, and nested sub-specs.\n- Raising appropriate errors on invalid targets or grouping specs in accordance with `glom` grouping conventions.\n- Functioning correctly as the group-mode handler within `glom`'s evaluation scope.",
+  "instruction": "Implement the `GROUP(target, spec, scope)` function in `glom.grouping` to support grouping, bucketing, aggregation, folding, flattening, and sampling over iterable targets.\n\nWhen `GROUP` is called during spec evaluation:\n- It should inspect the grouping specifier and the iterable target data to dispatch and compute the expected grouped or aggregated data structure according to `glom` grouping conventions.\n- It should properly support `Group`, `Fold`, `Flatten`, bucketing specs, limit constraints, and accumulators (e.g. `First`, `Avg`, `Max`, `Min`, `Sample`).\n- It should handle corner cases including empty iterables, nested grouping specs, and invalid/unsupported target or spec configurations by raising the appropriate standard `glom` grouping errors.\n- The function must work seamlessly with the existing scope and spec evaluation machinery across all grouping and aggregation tests.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
@@ -187,7 +187,7 @@
     "symbol_id": "glom/grouping.py::glom.grouping.GROUP"
   },
   "source": "excision",
-  "title": "Implement grouping dispatcher `GROUP` in `glom.grouping`",
+  "title": "Implement grouping and aggregation dispatcher `glom.grouping.GROUP`",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_error::test_all_public_errors": "behavioral_exception",

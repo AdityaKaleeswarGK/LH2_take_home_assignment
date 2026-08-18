@@ -158,10 +158,10 @@ def source_roots(tree: Path, *, mount: str | None = "/work") -> str:
 
     ``mount`` names where the tree appears to the process being launched. The
     default is the container's read-only mount; passing ``None`` asks for host
-    absolute paths instead, which is what the coverage, hygiene and testgen
-    runs need. Both callers want the same answer to the same question, and
-    keeping two derivations meant the host ones measured the installed copy
-    while the container ones measured the source tree.
+    absolute paths instead, which is what the coverage and hygiene runs need.
+    Both callers want the same answer to the same question, and keeping two
+    derivations meant the host ones measured the installed copy while the
+    container ones measured the source tree.
 
     Cached per resolved tree: a candidate runs eight times against at most four
     trees, and each call walks the whole tree. See ``forget_source_roots`` for

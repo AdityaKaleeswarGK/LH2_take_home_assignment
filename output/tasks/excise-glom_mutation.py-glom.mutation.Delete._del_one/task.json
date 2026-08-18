@@ -1,8 +1,8 @@
 {
   "difficulty": {
-    "agrees_with_measurement": false,
+    "agrees_with_measurement": true,
     "criteria": [
-      "cross_module_reasoning"
+      "local_and_self_describing"
     ],
     "dominant_factors": [
       "misleading_similarity",
@@ -23,7 +23,7 @@
       "misleading_similarity": 0.0,
       "scale": 26.0
     },
-    "justification": "Correct deletion depends on TargetRegistry dispatch, ignore-missing behavior, and PathDeleteError wrapping, requiring comparison with the sibling assignment operation and its callers.",
+    "justification": "The deletion operation is contained in glom.mutation and its dispatch, missing-path, and error behavior are established by nearby deletion mechanisms.",
     "measured_justification": "This task touches 20 lines with 6 tests that must end up passing.",
     "measured_tier": "easy",
     "score": 0.2188,
@@ -31,7 +31,7 @@
       0.2188,
       0.3969
     ],
-    "tier": "medium",
+    "tier": "easy",
     "tier_origin": "agent",
     "verification_state": "reasoning_unverified_label_only"
   },
@@ -142,7 +142,7 @@
     }
   ],
   "generation": {
-    "cache_key": "b878b812aee5a2c538cb298ca196a81d7e69a1ca2517ef5ead334527c7ab65b8",
+    "cache_key": "6c438fe3498d27a87beece9a1760c1d866e10ba84708f665360a072797a9db3a",
     "cached": false,
     "fell_back": null,
     "leak_check": {
@@ -154,7 +154,7 @@
     "model": "google/gemini-3.7-flash"
   },
   "id": "excise-glom_mutation.py-glom.mutation.Delete._del_one",
-  "instruction": "Implement the missing `_del_one` method on `glom.mutation.Delete` to perform in-place deletion operations on target data structures and objects.\n\nThe method should execute single-target deletion on the given destination (`dest`) using the operation (`op`) and argument (`arg`) within the provided `scope`. It must properly handle deletion across various object types supported by `glom` (such as dictionary keys, sequence elements, attributes, and custom objects registered with deletion handlers), raise the appropriate glom public errors for invalid delete targets or unregistered operations, and integrate with sequence/star broadcast deletions as expected by glom's mutation suite.",
+  "instruction": "Implement the deletion handling in `glom.mutation.Delete._del_one` so that deep deletion operations work correctly across nested target data structures.\n\nRequired behaviour:\n- Perform key, index, or attribute deletion from a given target container (`dest`) according to the operation type (`op`), target argument (`arg`), and glom `scope`.\n- Support standard Python mappings (key deletion), sequences (index/slice deletion), and generic objects (attribute deletion), as well as types registered for custom deletion handling.\n- When a deletion target does not support deletion, or the specified key, index, or attribute cannot be deleted (or is invalid / out of range), raise the appropriate glom mutation error (e.g. `PathDeleteError` or registered mutation error) consistent with glom's error handling.\n- Support sequence/iterable deletion and star broadcast operations when deletion is performed across collections.",
   "instruction_origin": "generated",
   "leak_check": {
     "clean": true,
@@ -183,7 +183,7 @@
     "symbol_id": "glom/mutation.py::glom.mutation.Delete._del_one"
   },
   "source": "excision",
-  "title": "Implement in-place deletion in `glom.mutation.Delete._del_one`",
+  "title": "Implement single-target deletion handling in glom.mutation.Delete",
   "validation": {
     "fail_before_classes": {
       "glom.test.test_error::test_all_public_errors": "behavioral_exception",

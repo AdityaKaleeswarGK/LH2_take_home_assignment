@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.141" timestamp="2026-08-18T07:12:05.153779+00:00" hostname="8eaf23ab2008"><testcase classname="glom.test.test_cli" name="test_main_yaml_target" time="0.016"><failure message="face.errors.UsageError: could not load target data, got: TypeError: load() missing 1 required positional argument: 'Loader'">glom/cli.py:138: in mw_handle_target
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.106" timestamp="2026-08-18T16:30:42.576707+00:00" hostname="fea8cc39f41f"><testcase classname="glom.test.test_cli" name="test_main_yaml_target" time="0.010"><failure message="face.errors.UsageError: could not load target data, got: TypeError: load() missing 1 required positional argument: 'Loader'">glom/cli.py:138: in mw_handle_target
     target = load_func(target_text)
              ^^^^^^^^^^^^^^^^^^^^^^
 E   TypeError: load() missing 1 required positional argument: 'Loader'

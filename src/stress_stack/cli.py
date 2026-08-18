@@ -21,7 +21,6 @@ from stress_stack.graph import (
     build_mining_artifacts,
     build_adjudication_artifacts,
     build_selection_artifacts,
-    build_test_generation_artifacts,
     build_validation_artifacts,
 )
 from stress_stack.hygiene import HygieneResult, run_hygiene
@@ -78,11 +77,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Measure per-test coverage and attribute covered lines to symbols",
     )
     coverage_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
-    testgen_parser = subparsers.add_parser(
-        "testgen", help="Generate and mutation-check tests for uncovered public behavior"
-    )
-    testgen_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
-    testgen_parser.add_argument("--limit", type=int, default=3)
     index_parser = subparsers.add_parser(
         "index",
         help="Project the knowledge artifacts into a queryable SQLite index",
@@ -210,7 +204,6 @@ STAGES: tuple[tuple[str, str], ...] = (
     ("deps", "Pin every dependency to an exact, hashed version"),
     ("graph", "Build the verified symbol graph"),
     ("coverage", "Measure which tests execute which symbols"),
-    ("testgen", "Generate tests for uncovered behaviour, gated on mutation"),
     ("container", "Build the image and prove it runs the suite twice identically"),
     ("enrich", "Describe each file and synthesise the repository blueprint"),
     ("index", "Load the graph, coverage and history into a queryable index"),
@@ -238,7 +231,7 @@ def _print_commands(source: str) -> int:
 
 # Commands that take long enough that silence reads as a hang.
 _LIVE = frozenset(
-    {"run", "orchestrate", "validate", "adjudicate", "emit", "enrich", "testgen", "container", "mine"}
+    {"run", "orchestrate", "validate", "adjudicate", "emit", "enrich", "container", "mine"}
 )
 
 
@@ -270,12 +263,6 @@ def _dispatch(parser: argparse.ArgumentParser, namespace: argparse.Namespace) ->
         elif namespace.command == "coverage":
             return _print_coverage_result(
                 build_coverage_artifacts(namespace.source, cwd=Path.cwd())
-            )
-        elif namespace.command == "testgen":
-            return _print_testgen_result(
-                build_test_generation_artifacts(
-                    namespace.source, cwd=Path.cwd(), limit=namespace.limit
-                )
             )
         elif namespace.command == "index":
             return _print_index_result(build_index_artifacts(namespace.source, cwd=Path.cwd()))
@@ -468,22 +455,6 @@ def _print_coverage_result(report: dict) -> int:
         )
     print(f"Knowledge: {report['knowledge_root']}")
     return 0 if report["coverage"] == "available" else 1
-
-
-def _print_testgen_result(report: dict) -> int:
-    print(f"Repository: {report['repository_root']}")
-    print(f"Test generation: {report['status']}")
-    if report.get("reason"):
-        print(f"  reason: {report['reason']}")
-    for path in report.get("files") or []:
-        print(f"  + {path}")
-    mutation = report.get("mutation") or {}
-    if mutation:
-        print(
-            f"Mutation caught: {mutation.get('caught')} "
-            f"({mutation.get('failed', 0)} failing tests)"
-        )
-    return 0 if report["status"] in {"generated", "not_needed"} else 1
 
 
 def _print_index_result(report: dict) -> int:

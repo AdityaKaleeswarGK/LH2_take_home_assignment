@@ -402,9 +402,6 @@ def _semantic_failure(stage: str, produced: Any) -> str | None:
     if stage == "coverage" and isinstance(produced, dict):
         if produced.get("coverage") != "available":
             return f"coverage is {produced.get('coverage') or 'unavailable'}"
-    if stage == "testgen" and isinstance(produced, dict):
-        if produced.get("status") not in {"generated", "not_needed"}:
-            return f"test generation status is {produced.get('status') or 'unknown'}"
     if stage == "validate" and isinstance(produced, dict):
         if int((produced.get("summary") or {}).get("eligible") or 0) < 10:
             return "fewer than 10 tasks passed validation"

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.128" timestamp="2026-08-18T07:11:13.223406+00:00" hostname="574589ed6fc6"><testcase classname="glom.test.test_error" name="test_pae_fallback_for_non_path" time="0.001"><failure message="IndexError: tuple index out of range">glom/test/test_error.py:68: in test_pae_fallback_for_non_path
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.117" timestamp="2026-08-18T16:24:32.535774+00:00" hostname="23e4204e4418"><testcase classname="glom.test.test_error" name="test_pae_fallback_for_non_path" time="0.001"><failure message="IndexError: tuple index out of range">glom/test/test_error.py:68: in test_pae_fallback_for_non_path
     msg2 = exc2.get_message()
            ^^^^^^^^^^^^^^^^^^
 glom/core.py:348: in get_message
