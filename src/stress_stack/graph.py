@@ -934,7 +934,14 @@ def build_validation_artifacts(
         # Planned before anything is staged: one `git describe` per distinct
         # base commit tells us how many environments this pool needs, which is
         # what makes an image ceiling a measurement instead of a guess.
-        planned = [c for name in (HISTORY, EXCISION) for c in pool.get(name, [])]
+        # The slice validate_pool will actually take, per source — planning over
+        # the whole ranked pool counted eras for candidates the limits mean we
+        # never reach, which is the same imprecision the budget had.
+        planned = []
+        for name, limit in ((HISTORY, history_limit), (EXCISION, excision_limit)):
+            if only and only != name:
+                continue
+            planned.extend(pool.get(name, [])[:limit])
         eras = plan_eras(repository, planned)
         runtime = RuntimeImages(
             repository_name=repository.root.name,
