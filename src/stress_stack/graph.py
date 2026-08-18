@@ -907,6 +907,11 @@ def build_validation_artifacts(
         stamp_path=metadata_root / "container" / "runtime_images.json",
         expected_eras=max(1, era_count(eras)),
     )
+    # Every era's environment is settled here, before a single candidate is
+    # staged. Doing it lazily meant the validate pool's worker threads raced for
+    # the same answer, and two eras could each pay for a build to discover the
+    # same broken base image.
+    runtime.resolve_all(repository, eras, workers=max_workers)
 
     graph = build_graph(repository.root)
     built: list[Any] = []

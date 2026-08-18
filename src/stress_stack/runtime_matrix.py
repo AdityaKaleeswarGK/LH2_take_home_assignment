@@ -86,6 +86,9 @@ class Era:
 
     key: str
     version_hint: str | None = None
+    # A commit whose tree stands for the whole era. Every candidate in a release
+    # window reads the same manifests, so one of them answers for all of them.
+    revision: str = ""
 
 
 def plan_eras(repository: Any, candidates: list[Any]) -> dict[str, Era]:
@@ -115,7 +118,9 @@ def plan_eras(repository: Any, candidates: list[Any]) -> dict[str, Era]:
                 tag = ""
             described[revision] = tag.lstrip("v") or revision[:12]
         key = described[revision]
-        eras[candidate.candidate_id] = Era(key=key, version_hint=key or None)
+        eras[candidate.candidate_id] = Era(
+            key=key, version_hint=key or None, revision=revision
+        )
     return eras
 
 
@@ -372,16 +377,129 @@ class RuntimeImages:
     # Resolution is per era, not per candidate: every candidate in a release
     # window reads the same manifests and reaches the same answer.
     by_era: dict[str, tuple[str, dict[str, Any]]] = field(default_factory=dict)
+    # Filled by `resolve_all` before validation begins; read-only thereafter,
+    # which is what makes concurrent candidate lookups safe.
+    resolved: dict[str, tuple[str, dict[str, Any]]] = field(default_factory=dict)
+    # base image -> the error it failed with, shared across eras so the same
+    # build is not paid for twice.
+    known_bad: dict[str, str] = field(default_factory=dict)
+
+    def resolve_all(
+        self, repository: Any, eras: dict[str, Era], *, workers: int = 4
+    ) -> dict[str, Any]:
+        """Work out every era's environment before a single candidate is staged.
+
+        One agent per era, all at once, then one place that decides what to
+        build. Three things follow from doing it here rather than lazily, and
+        the third is why it is worth the refactor:
+
+        * **No duplicate work.** ``runtime_for`` used to be called from the
+          validate pool's worker threads with nothing guarding the caches, so
+          two candidates of the same era could each spend a proposal and a build
+          discovering the same answer.
+        * **Deduplication becomes a decision.** Fifteen glom eras collapse to
+          three images because their resolved specs are identical. That already
+          happened by fingerprint collision; now it is visible.
+        * **Failures are shared.** ``python:3.6-slim`` failed to build twice in
+          one glom run — two eras, minutes apart, each paying to learn the same
+          fact in isolation. An era that proposes a base another era has already
+          failed on is told so before it spends a build.
+
+        Proposals run concurrently; results are consumed in sorted era order.
+        That ordering is not cosmetic — it is what keeps the run replayable, the
+        same rule ``validate_pool`` follows by blocking on ``futures[cursor]``
+        rather than taking whichever finished first. A ledger applied in
+        completion order would give two runs two different sets of prompts.
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        from stress_stack.progress import reporter
+
+        live = reporter()
+        by_key: dict[str, Era] = {}
+        for era in eras.values():
+            if era.key != "HEAD" and era.key not in by_key:
+                by_key[era.key] = era
+        ordered = sorted(by_key)
+        if not ordered:
+            return self.summary()
+
+        live.step(f"resolving {len(ordered)} era environments")
+        proposals: dict[str, Any] = {}
+        with tempfile.TemporaryDirectory(prefix="stress-stack-eras-") as directory:
+            root = Path(directory)
+
+            def _propose(key: str) -> Any:
+                tree = root / key.replace("/", "_")
+                try:
+                    from stress_stack.snapshot import materialize_tree
+
+                    materialize_tree(repository, by_key[key].revision, tree)
+                except Exception as exc:  # noqa: BLE001 — one bad era is not a run
+                    return exc
+                try:
+                    return resolve_runtime(
+                        tree,
+                        self.head.language,
+                        self.head,
+                        client=self.client,
+                        era=by_key[key],
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    return exc
+
+            with ThreadPoolExecutor(
+                max_workers=max(1, min(workers, len(ordered))), thread_name_prefix="era"
+            ) as pool:
+                futures = {key: pool.submit(_propose, key) for key in ordered}
+                # Sorted, not as-completed: see the docstring.
+                for key in ordered:
+                    proposals[key] = futures[key].result()
+
+            for key in ordered:
+                outcome = proposals[key]
+                era = by_key[key]
+                if isinstance(outcome, Exception):
+                    self.resolved[key] = (
+                        self.head.image,
+                        {
+                            "status": "fallback",
+                            "reason": f"resolution_failed: {type(outcome).__name__}: {outcome}",
+                            "image": self.head.image,
+                            "era": key,
+                        },
+                    )
+                    continue
+                if outcome is None:
+                    self.resolved[key] = (
+                        self.head.image,
+                        {"status": "head_image", "reason": "cut_from_head", "era": key,
+                         "image": self.head.image},
+                    )
+                    continue
+                image, record = self._build_with_repair(root / key.replace("/", "_"), era, outcome)
+                record = {**record, "era": key}
+                if record.get("status") == "per_candidate_image":
+                    self.built[record["image"]] = image
+                    self.records[record["image"]] = record
+                self.resolved[key] = (image, record)
+                live.step(f"era {key}: {record.get('reason')}")
+
+        self._persist()
+        return self.summary()
 
     def runtime_for(
         self, tree: Path, *, era: Era | None = None
     ) -> tuple[str, dict[str, Any]]:
         """The image this tree should be judged in, and why.
 
-        Answered once per era. Every candidate in a release window reads the
-        same manifests and reaches the same answer, so resolving per candidate
-        re-walked the tree and re-read the same files for each one.
+        A lookup, not a resolution: ``resolve_all`` has already answered for
+        every era before any candidate was staged. The lazy path below remains
+        for callers that never planned eras, and is the one that used to race.
         """
+        if era is not None and era.key in self.resolved:
+            image, record = self.resolved[era.key]
+            return image, {**record, "reused": True}
         if era is not None:
             cached = self.by_era.get(era.key)
             if cached is not None:
@@ -450,42 +568,74 @@ class RuntimeImages:
         spec, proposal = resolved
         attempts: list[dict[str, Any]] = []
         for attempt in range(1, self.max_attempts + 1):
+            # Another era may already have paid to learn this base does not
+            # build. Spending a second build to rediscover it is the waste the
+            # orchestrator exists to remove.
+            learned = self.known_bad.get(spec.base_image)
+            if learned is not None:
+                attempts.append(
+                    {
+                        "attempt": attempt,
+                        "base_image": spec.base_image,
+                        "install": list(spec.install),
+                        "error": learned,
+                        "from_another_era": True,
+                    }
+                )
+                repaired = self._repropose(tree, era, proposal, learned)
+                if repaired is None or attempt == self.max_attempts:
+                    return self.head.image, {
+                        "status": "fallback",
+                        "reason": "known_bad_base_image",
+                        "image": self.head.image,
+                        "attempts": attempts,
+                    }
+                spec, proposal = repaired
+                continue
+
             image, record = self._build(spec, spec.tag(self.repository_name))
             record["attempt"] = attempt
             if record.get("status") == "per_candidate_image":
                 if attempts:
                     record["repaired_after"] = attempts
                 return image, record
+            failure = str(record.get("build_log_tail", ""))[-400:]
+            # Recorded for every other era, not just this one's next attempt.
+            self.known_bad.setdefault(spec.base_image, failure)
             attempts.append(
                 {
                     "attempt": attempt,
                     "base_image": spec.base_image,
                     "install": list(spec.install),
-                    "error": str(record.get("build_log_tail", ""))[-400:],
+                    "error": failure,
                 }
             )
             if attempt == self.max_attempts:
                 record["attempts"] = attempts
                 return image, record
-            try:
-                retried = resolve_runtime(
-                    tree,
-                    self.head.language,
-                    self.head,
-                    client=self.client,
-                    era=era,
-                    previous=proposal,
-                    failure=str(record.get("build_log_tail", "")),
-                )
-            except Exception as exc:  # noqa: BLE001 — a failed repair is a fallback
-                record["attempts"] = attempts
-                record["repair_failed"] = f"{type(exc).__name__}: {exc}"
-                return image, record
+            retried = self._repropose(tree, era, proposal, failure)
             if retried is None:
                 record["attempts"] = attempts
                 return image, record
             spec, proposal = retried
         return self.head.image, {"status": "fallback", "reason": "unreachable"}
+
+    def _repropose(
+        self, tree: Path, era: "Era | None", proposal: Any, failure: str
+    ) -> tuple[RuntimeSpec, Any] | None:
+        """Ask again, carrying the error. A repair that forgets it is a re-ask."""
+        try:
+            return resolve_runtime(
+                tree,
+                self.head.language,
+                self.head,
+                client=self.client,
+                era=era,
+                previous=proposal,
+                failure=failure,
+            )
+        except Exception:  # noqa: BLE001 — a failed repair degrades, it does not raise
+            return None
 
     def _build(self, spec: RuntimeSpec, tag: str) -> tuple[str, dict[str, Any]]:
         from stress_stack.container import pin_image_by_digest

@@ -280,12 +280,48 @@ def test_the_era_ceiling_falls_back_rather_than_building_forever(
 def test_a_failed_build_degrades_visibly(tmp_path: Path, monkeypatch) -> None:
     """Falling back is acceptable; falling back silently is not."""
     images = make_images(monkeypatch, ok=False)
+    propose, _ = _proposals(
+        Proposal(base_image="python:3.5-slim", install=("pip install x",), test_command=("pytest",)),
+        Proposal(base_image="python:3.4-slim", install=("pip install x",), test_command=("pytest",)),
+    )
+    monkeypatch.setattr("stress_stack.environment_agent.propose_environment", propose)
 
     image, record = images.runtime_for(pluggy_tree(tmp_path), era=Era("0.6.0"))
 
     assert image == HEAD_PY.image
     assert record["reason"] == "runtime_image_build_failed"
     assert "build blew up" in record["build_log_tail"]
+
+
+def test_a_base_another_era_already_failed_on_is_not_rebuilt(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """The waste the orchestrator exists to remove.
+
+    Measured on glom: python:3.6-slim failed to build twice in one run, two eras
+    minutes apart, each paying to learn the same fact alone.
+    """
+    images = make_images(monkeypatch, ok=False)
+    builds: list[str] = []
+    monkeypatch.setattr(
+        rm, "run", lambda *a, **k: (builds.append("x"), _FakeResult(False))[1]
+    )
+    same = Proposal(
+        base_image="python:3.6-slim", install=("pip install x",), test_command=("pytest",)
+    )
+    monkeypatch.setattr(
+        "stress_stack.environment_agent.propose_environment", lambda *a, **k: same
+    )
+
+    images.runtime_for(pluggy_tree(tmp_path / "a"), era=Era("0.6.0"))
+    after_first = len(builds)
+    forget_source_roots()
+    _, record = images.runtime_for(pluggy_tree(tmp_path / "b"), era=Era("0.7.0"))
+
+    assert images.known_bad["python:3.6-slim"]
+    assert len(builds) == after_first, "the second era rebuilt a known-bad base"
+    assert record["reason"] == "known_bad_base_image"
+    assert record["attempts"][0]["from_another_era"] is True
 
 
 def test_an_unusable_proposal_stops_the_candidate_rather_than_guessing(
@@ -391,3 +427,90 @@ def test_a_first_time_success_never_calls_the_agent_twice(tmp_path: Path, monkey
     assert record["attempt"] == 1
     assert "repaired_after" not in record
     assert len(calls) == 1
+
+
+# --------------------------------------------------------------------------
+# The swarm: every era resolved before a candidate is staged
+# --------------------------------------------------------------------------
+
+
+class _ArchiveRepository(_FakeRepository):
+    def run_bytes(self, arguments, record=True):
+        # `git archive --output=<path> <sha>` — write a tar the caller can open.
+        import tarfile
+
+        output = next(a for a in arguments if a.startswith("--output=")).split("=", 1)[1]
+        with tarfile.open(output, "w"):
+            pass
+        return b""
+
+
+def test_every_era_is_resolved_once_before_validation(tmp_path: Path, monkeypatch) -> None:
+    """The lazy path let two candidates of one era each pay for the same answer."""
+    images = make_images(monkeypatch)
+    seen: list[str] = []
+    monkeypatch.setattr(
+        "stress_stack.environment_agent.propose_environment",
+        lambda client, tree, **k: (
+            seen.append(k["era_key"]),
+            Proposal(
+                base_image=f"python:3.{7 + len(seen)}-slim",
+                install=("pip install x",),
+                test_command=("pytest",),
+            ),
+        )[1],
+    )
+    eras = {
+        "pr-1": Era("1.0.0", "1.0.0", "aaa"),
+        "pr-2": Era("1.0.0", "1.0.0", "aaa"),
+        "pr-3": Era("2.0.0", "2.0.0", "bbb"),
+        "ex-1": Era("HEAD"),
+    }
+
+    images.resolve_all(_ArchiveRepository({}), eras, workers=4)
+
+    assert sorted(seen) == ["1.0.0", "2.0.0"], "one proposal per era, not per candidate"
+    assert set(images.resolved) == {"1.0.0", "2.0.0"}
+
+
+def test_a_resolved_era_is_a_lookup_not_a_second_resolution(
+    tmp_path: Path, monkeypatch
+) -> None:
+    images = make_images(monkeypatch)
+    images.resolved["1.0.0"] = ("stress-stack/repo:era", {"status": "per_candidate_image"})
+    monkeypatch.setattr(
+        "stress_stack.environment_agent.propose_environment",
+        lambda *a, **k: pytest.fail("resolution ran again during validation"),
+    )
+
+    image, record = images.runtime_for(tmp_path, era=Era("1.0.0"))
+
+    assert image == "stress-stack/repo:era"
+    assert record["reused"] is True
+
+
+def test_heads_era_costs_no_proposal(tmp_path: Path, monkeypatch) -> None:
+    images = make_images(monkeypatch)
+    monkeypatch.setattr(
+        "stress_stack.environment_agent.propose_environment",
+        lambda *a, **k: pytest.fail("HEAD's image was already built and proved"),
+    )
+
+    images.resolve_all(_ArchiveRepository({}), {"ex-1": Era("HEAD")}, workers=2)
+
+    assert images.resolved == {}
+
+
+def test_a_broken_era_does_not_end_the_run(tmp_path: Path, monkeypatch) -> None:
+    """One unarchivable revision is one degraded era, not a failed pipeline."""
+    images = make_images(monkeypatch)
+
+    class _Broken(_FakeRepository):
+        def run_bytes(self, arguments, record=True):
+            raise RuntimeError("archive exploded")
+
+    images.resolve_all(_Broken({}), {"pr-1": Era("1.0.0", "1.0.0", "aaa")}, workers=2)
+
+    image, record = images.resolved["1.0.0"]
+    assert image == HEAD_PY.image
+    assert record["reason"].startswith("resolution_failed")
