@@ -19,22 +19,24 @@ under a 2025 interpreter fails its own suite, which the gates catch correctly
 and expensively.
 
 Both are the same question — *what runtime does this particular tree need?* — so
-they get one answer, and the answer is read out of the tree rather than
-configured. Each resolver in ``_RESOLVERS`` explores a candidate's own manifests
-and CI files and reports what it found; adding an ecosystem is adding a resolver,
-in the same shape as ``test_runners._PLANS`` and ``linters._DISPATCH``.
+they get one answer, and it is read out of the tree by an agent rather than
+encoded here. This module used to answer it with a table of per-ecosystem
+resolvers, about two hundred and fifty lines of manifest readers and CI parsers
+that generalised no further than the four ecosystems someone had written a
+branch for. Deleting them is the point: a fifth ecosystem is now free, and the
+agent already finds things those readers could not — on pluggy 0.7.1 it installs
+``pytest-benchmark`` because a test file uses the fixture, which no manifest in
+that revision declares.
 
-Two things this deliberately does not do:
+What stays mechanical, and why:
 
-* **It does not ask a model.** Which command runs the suite decides which tasks
-  pass, and the whole point of this pipeline is that no model decides that. Every
-  field below is read from a file in the tree, and ``evidence`` records which
-  file it came from.
-* **It does not guess compatibility.** When a tree owns a package the runner also
-  needs, that package is pinned to the tree's own version and the runner is left
-  unpinned, so the ecosystem's own resolver picks a runner that accepts it. The
-  knowledge lives in the index, where it is correct, instead of in this file,
-  where it would rot.
+* **The shadow.** Whether the mounted tree will replace part of the test runner
+  is a fact about this harness's mount, not about the repository, so it is
+  computed here and handed to the agent as a premise.
+* **The checking.** Nothing the agent proposes reaches a shell unvalidated, and a
+  test command that narrows collection is refused outright — see
+  :mod:`stress_stack.environment_agent`.
+* **The verdicts.** No model decides whether a test passed or a task ships.
 """
 
 from __future__ import annotations
@@ -46,9 +48,10 @@ import re
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from stress_stack.atomic import atomic_write_json
+from stress_stack.errors import StressStackError
 from stress_stack.tooling import run
 
 # Packages the Python test runner itself imports. A repository that *is* one of
@@ -65,10 +68,6 @@ _SAFETY_CEILING = 64
 # Top-level import names whose distribution is not the same string.
 _DISTRIBUTION_OF = {"_pytest": "pytest"}
 
-_SAFE_REQUIREMENT = re.compile(r"^[A-Za-z0-9._\-]+(\[[A-Za-z0-9,._\-]+\])?[<>=!~ 0-9.,*]*$")
-_SAFE_PACKAGE = re.compile(r"^[a-z0-9][a-z0-9+.\-]*$")
-_SETUP_NAME_RE = re.compile(r"""\bname\s*=\s*['"]([^'"]+)['"]""")
-_SETUP_VERSION_RE = re.compile(r"""\bversion\s*=\s*['"]([0-9][^'"]*)['"]""")
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,56 +178,13 @@ class RuntimeSpec:
 # --------------------------------------------------------------------------
 
 
-def _read(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return ""
-
-
-def _toml(path: Path) -> dict[str, Any]:
-    if not path.is_file():
-        return {}
-    try:
-        import tomllib
-
-        return tomllib.loads(_read(path))
-    except (ValueError, ImportError):
-        return {}
-
-
-def ci_facts(tree: Path) -> Any:
-    """The tree's own CI configuration, or empty facts when it has none."""
-    from stress_stack.ci_parser import CIParsedFacts, parse_ci_facts
-
-    try:
-        return parse_ci_facts(tree)
-    except Exception:  # noqa: BLE001 — a malformed workflow must not end a run
-        return CIParsedFacts()
-
-
-def system_packages_from_ci(tree: Path) -> tuple[str, ...]:
-    """apt packages the project's own CI installs before running its suite.
-
-    A historical suite that needs libxml2 fails in an image that does not have
-    it, and the project already wrote down that it needs it. Filtered to plain
-    package names — nothing from a CI file reaches a shell unchecked.
-    """
-    found = {
-        package
-        for package in getattr(ci_facts(tree), "system_packages", [])
-        if isinstance(package, str) and _SAFE_PACKAGE.match(package)
-    }
-    return tuple(sorted(found))
-
-
 def shadowed_distributions(tree: Path) -> tuple[str, ...]:
     """Runner dependencies this tree provides its own copy of.
 
     Derived from the same ``source_roots`` the run itself will use, so the answer
     is about what will actually be importable rather than what the layout looks
-    like. Python-only by nature: no other ecosystem here resolves its test runner
-    through a path the task tree is mounted onto.
+    like. Kept mechanical rather than asked of the agent: it is a fact about the
+    harness's mount, not about the repository, and the agent is told it.
     """
     from stress_stack.runner import source_roots
 
@@ -249,246 +205,74 @@ def shadowed_distributions(tree: Path) -> tuple[str, ...]:
     return tuple(sorted(found))
 
 
-def project_metadata(tree: Path) -> tuple[str | None, str | None, str | None]:
-    """The tree's own distribution name, version and source file.
-
-    Read from the *candidate's* manifest rather than HEAD's, because that is the
-    whole point: a 2018 commit declares the version a 2018-compatible runner has
-    to agree with.
-    """
-    project = _toml(tree / "pyproject.toml").get("project")
-    if isinstance(project, dict) and isinstance(project.get("name"), str):
-        version = project.get("version")
-        return project["name"], version if isinstance(version, str) else None, "pyproject.toml"
-
-    config = tree / "setup.cfg"
-    if config.is_file():
-        text = _read(config)
-        name = re.search(r"^\s*name\s*=\s*(\S+)", text, re.MULTILINE)
-        version = re.search(r"^\s*version\s*=\s*([0-9]\S*)", text, re.MULTILINE)
-        if name:
-            return name.group(1).strip(), version.group(1).strip() if version else None, "setup.cfg"
-
-    setup = tree / "setup.py"
-    if setup.is_file():
-        text = _read(setup)
-        name = _SETUP_NAME_RE.search(text)
-        version = _SETUP_VERSION_RE.search(text)
-        if name:
-            return name.group(1), version.group(1) if version else None, "setup.py"
-    return None, None, None
-
-
-def declared_requires_python(tree: Path) -> tuple[str | None, str | None]:
-    project = _toml(tree / "pyproject.toml").get("project")
-    if isinstance(project, dict) and isinstance(project.get("requires-python"), str):
-        return project["requires-python"], "pyproject.toml"
-    config = tree / "setup.cfg"
-    if config.is_file():
-        match = re.search(r"^\s*python_requires\s*=\s*(.+)$", _read(config), re.MULTILINE)
-        if match:
-            return match.group(1).strip(), "setup.cfg"
-    setup = tree / "setup.py"
-    if setup.is_file():
-        match = re.search(r"""python_requires\s*=\s*['"]([^'"]+)['"]""", _read(setup))
-        if match:
-            return match.group(1), "setup.py"
-    return None, None
-
-
-def declared_dependencies(tree: Path) -> tuple[str, ...]:
-    """The tree's own runtime dependencies, as declared, unpinned.
-
-    Best effort and deliberately unresolved: these exist so that importing the
-    package under test does not fail for want of a third-party module. Anything
-    that does not look like a plain requirement is dropped rather than passed to
-    a shell.
-    """
-    declared = (_toml(tree / "pyproject.toml").get("project") or {}).get("dependencies")
-    if not isinstance(declared, list):
-        return ()
-    return tuple(
-        sorted(
-            item for item in declared if isinstance(item, str) and _SAFE_REQUIREMENT.match(item)
-        )
-    )
-
-
 # --------------------------------------------------------------------------
-# Per-ecosystem resolvers
+# Resolution
 # --------------------------------------------------------------------------
-
-
-def _resolve_python(
-    tree: Path, head: "HeadRuntime", version_hint: str | None = None
-) -> RuntimeSpec | None:
-    from stress_stack.container import _CANDIDATE_PYTHONS, _satisfies, select_python_version
-
-    evidence: dict[str, Any] = {}
-    declared, declared_from = declared_requires_python(tree)
-    version = select_python_version(declared) if declared else head.toolchain_version
-    if declared:
-        evidence["requires_python"] = {"value": declared, "from": declared_from}
-
-    # CI is an independent second opinion, and a more concrete one: a matrix
-    # names versions the project actually ran on, where requires-python only
-    # names a floor.
-    matrix = [v for v in getattr(ci_facts(tree), "matrix_versions", []) if v in _CANDIDATE_PYTHONS]
-    agreed = [
-        candidate
-        for candidate in _CANDIDATE_PYTHONS
-        if candidate in matrix and (not declared or _satisfies(candidate, declared))
-    ]
-    if agreed:
-        version = agreed[0]
-        evidence["ci_matrix"] = {"value": sorted(matrix), "chose": version}
-
-    shadowed = shadowed_distributions(tree)
-    pins: list[str] = []
-    if shadowed:
-        name, own_version, source = project_metadata(tree)
-        # A project using setuptools-scm declares `dynamic = ["version"]` and no
-        # version at all — pluggy is one. The version still exists, in the place
-        # setuptools-scm reads it from, so the caller supplies it from git rather
-        # than this giving up. Without it the shadow is detected and then does
-        # nothing, which is how the first pluggy run still lost sixteen
-        # candidates after the detection was already working.
-        if not own_version and version_hint:
-            own_version, source = version_hint, "git_describe"
-        normalized = (name or "").replace("_", "-").lower()
-        if normalized and own_version and normalized in {s.replace("_", "-") for s in shadowed}:
-            pins.append(f"{name}=={own_version}")
-            evidence["self_hosted"] = {
-                "distribution": name,
-                "version": own_version,
-                "from": source,
-            }
-        else:
-            evidence["unpinnable_shadow"] = {
-                "distributions": list(shadowed),
-                "reason": "no_version_for_the_shadowed_distribution",
-            }
-
-    if not pins and version == head.toolchain_version:
-        # Nothing about this tree differs from the image that already exists —
-        # and that image carries the real pinned lock, which a synthesized one
-        # cannot.
-        return None
-
-    requirements = [*pins, "pytest", *declared_dependencies(tree)]
-    return RuntimeSpec(
-        language="python",
-        base_image=f"python:{version}-slim",
-        install=(f"pip install {' '.join(_quote(item) for item in requirements)}",),
-        system_packages=system_packages_from_ci(tree),
-        shadowed=shadowed,
-        test_command=("python", "-m", "pytest"),
-        evidence=evidence,
-    )
-
-
-def _resolve_go(tree: Path, head: "HeadRuntime") -> RuntimeSpec | None:
-    """Go's toolchain version is declared in go.mod and nowhere else that matters.
-
-    No dependency step: Go resolves modules from the network, which validation
-    does not have, so a candidate whose module set differs from HEAD's still has
-    to use HEAD's image. The toolchain is what this can honestly move.
-    """
-    match = re.search(r"^go\s+(\d+\.\d+)", _read(tree / "go.mod"), re.MULTILINE)
-    if not match or match.group(1) == head.toolchain_version:
-        return None
-    return RuntimeSpec(
-        language="go",
-        base_image=f"golang:{match.group(1)}-bookworm",
-        system_packages=system_packages_from_ci(tree),
-        test_command=("go", "test", "./..."),
-        evidence={"go_directive": {"value": match.group(1), "from": "go.mod"}},
-    )
-
-
-def _resolve_rust(tree: Path, head: "HeadRuntime") -> RuntimeSpec | None:
-    toolchain = _toml(tree / "rust-toolchain.toml").get("toolchain")
-    version = toolchain.get("channel") if isinstance(toolchain, dict) else None
-    source = "rust-toolchain.toml"
-    if not isinstance(version, str):
-        package = _toml(tree / "Cargo.toml").get("package")
-        version = package.get("rust-version") if isinstance(package, dict) else None
-        source = "Cargo.toml"
-    if not isinstance(version, str) or version == head.toolchain_version:
-        return None
-    if not re.fullmatch(r"[0-9][0-9.]*|stable|beta|nightly", version):
-        return None
-    return RuntimeSpec(
-        language="rust",
-        base_image=f"rust:{version}-bookworm",
-        system_packages=system_packages_from_ci(tree),
-        test_command=("cargo", "test"),
-        evidence={"toolchain": {"value": version, "from": source}},
-    )
-
-
-def _resolve_node(tree: Path, head: "HeadRuntime") -> RuntimeSpec | None:
-    version = _read(tree / ".nvmrc").strip().lstrip("v")
-    source = ".nvmrc"
-    if not version:
-        try:
-            engines = json.loads(_read(tree / "package.json") or "{}").get("engines") or {}
-        except ValueError:
-            engines = {}
-        declared = str(engines.get("node") or "")
-        match = re.search(r"(\d+)", declared)
-        version = match.group(1) if match else ""
-        source = "package.json"
-    if not version or not re.fullmatch(r"\d+(\.\d+)*", version):
-        return None
-    if version.split(".")[0] == head.toolchain_version.split(".")[0]:
-        return None
-    return RuntimeSpec(
-        language="typescript",
-        base_image=f"node:{version.split('.')[0]}-slim",
-        system_packages=system_packages_from_ci(tree),
-        test_command=("npm", "test"),
-        evidence={"node_version": {"value": version, "from": source}},
-    )
-
-
-# Adding an ecosystem is adding a row, in the same shape as
-# `test_runners._PLANS` and `linters._DISPATCH`. A resolver returns None to mean
-# "the image the container stage already proved is right for this tree", which
-# is the correct answer far more often than not.
-_RESOLVERS: dict[str, Callable[..., RuntimeSpec | None]] = {
-    "python": _resolve_python,
-    "go": _resolve_go,
-    "rust": _resolve_rust,
-    "typescript": _resolve_node,
-    "javascript": _resolve_node,
-}
-
-
-def supported_languages() -> frozenset[str]:
-    return frozenset(_RESOLVERS)
 
 
 def resolve_runtime(
-    tree: Path, language: str, head: "HeadRuntime", *, version_hint: str | None = None
+    tree: Path,
+    language: str,
+    head: "HeadRuntime",
+    *,
+    client: Any,
+    era: "Era | None" = None,
 ) -> RuntimeSpec | None:
-    """What runtime this tree needs, or None to keep the image HEAD already proved.
+    """What runtime this tree needs, read out of the tree by an agent.
 
-    ``version_hint`` is the version the tree would publish as, for the ecosystems
-    where a manifest does not carry one — a repository using setuptools-scm
-    declares its version dynamically, and the answer lives in git. Resolvers that
-    do not need it ignore it.
+    This replaced about two hundred and fifty lines of per-ecosystem branching —
+    manifest readers, CI-matrix parsers, a table of resolvers — none of which
+    generalised past the four ecosystems someone had written a branch for. The
+    agent reads the same files and reaches the same kind of answer without the
+    table, which is what makes a fifth ecosystem free.
+
+    It also reaches better answers. On pluggy 0.7.1 it installed
+    ``pytest-benchmark`` because a test file uses the ``benchmark`` fixture — a
+    dependency no manifest in that revision declares, and one no reader written
+    against manifests could have found.
+
+    HEAD's era is exempt: the container stage already built and proved an image
+    for it, carrying the real hash-pinned lock that a synthesized environment
+    cannot.
     """
-    resolver = _RESOLVERS.get(language)
-    if resolver is None:
+    if era is not None and era.key == "HEAD":
         return None
-    if language in {"python"}:
-        return resolver(tree, head, version_hint)
-    return resolver(tree, head)
+
+    from stress_stack.environment_agent import propose_environment
+
+    proposal = propose_environment(
+        client,
+        tree,
+        language=language,
+        era_key=era.key if era else "unknown",
+        shadowed=shadowed_distributions(tree) if language == "python" else (),
+        version_hint=era.version_hint if era else None,
+    )
+    if not proposal.usable:
+        raise EnvironmentProposalError(
+            f"the environment proposed for era {era.key if era else '?'} did not pass "
+            f"checking: {'; '.join(proposal.rejections) or 'no answer'}"
+        )
+    return RuntimeSpec(
+        language=language,
+        base_image=proposal.base_image,
+        install=proposal.install,
+        system_packages=proposal.system_packages,
+        shadowed=shadowed_distributions(tree) if language == "python" else (),
+        test_command=proposal.test_command,
+        evidence={
+            "agent": {
+                "turns": proposal.turns,
+                "tool_calls": proposal.tool_calls,
+                "cited": proposal.evidence,
+                "refused_generated": list(proposal.refused_generated),
+            }
+        },
+    )
 
 
-def _quote(value: str) -> str:
-    return '"' + value.replace('"', "") + '"'
+class EnvironmentProposalError(StressStackError):
+    """The agent's answer did not survive checking, and there is no second guess."""
 
 
 # --------------------------------------------------------------------------
@@ -568,6 +352,10 @@ class RuntimeImages:
 
     repository_name: str
     head: HeadRuntime
+    # Required. There is no deterministic second path: an environment nobody
+    # can work out is a run that should stop, not one that quietly uses the
+    # wrong image and reports verdicts from it.
+    client: Any = None
     stamp_path: Path | None = None
     expected_eras: int = 1
     built: dict[str, str] = field(default_factory=dict)
@@ -577,7 +365,7 @@ class RuntimeImages:
     by_era: dict[str, tuple[str, dict[str, Any]]] = field(default_factory=dict)
 
     def runtime_for(
-        self, tree: Path, *, era: Era | None = None, version_hint: str | None = None
+        self, tree: Path, *, era: Era | None = None
     ) -> tuple[str, dict[str, Any]]:
         """The image this tree should be judged in, and why.
 
@@ -590,10 +378,9 @@ class RuntimeImages:
             if cached is not None:
                 image, record = cached
                 return image, {**record, "era": era.key, "reused": True}
-            version_hint = version_hint or era.version_hint
         try:
             spec = resolve_runtime(
-                tree, self.head.language, self.head, version_hint=version_hint
+                tree, self.head.language, self.head, client=self.client, era=era
             )
         except Exception as exc:  # noqa: BLE001 — resolution must never end a run
             return self.head.image, {
@@ -607,14 +394,10 @@ class RuntimeImages:
             # as a tree with nothing to do, even though both end up on the HEAD
             # image. Saying so is the difference between a known limitation and
             # sixteen candidates failing for no recorded reason.
-            shadowed = shadowed_distributions(tree) if self.head.language == "python" else ()
             record = {
                 "status": "head_image",
-                "reason": (
-                    "shadowed_but_version_unknown" if shadowed else "tree_matches_head_runtime"
-                ),
+                "reason": "cut_from_head",
                 "image": self.head.image,
-                **({"shadowed": list(shadowed)} if shadowed else {}),
             }
             if era is not None:
                 record["era"] = era.key

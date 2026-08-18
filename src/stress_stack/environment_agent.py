@@ -315,12 +315,45 @@ def check_proposal(payload: dict[str, Any]) -> Proposal:
     return proposal
 
 
+def harness_facts(shadowed: tuple[str, ...], version_hint: str | None) -> str:
+    """What the agent cannot learn from the tree, because it is about the harness.
+
+    The mount is the load-bearing one. A model reading a repository has no way to
+    know that its source will be placed ahead of installed packages at run time,
+    and for a repository that is itself a dependency of the test runner that
+    single fact decides the whole environment: install a modern runner and the
+    mounted copy replaces the runner's own, which is how pluggy lost sixteen
+    candidates. Told the fact, the agent can reason to the pin on its own.
+    """
+    lines = [
+        "Facts about the harness, which you cannot see from the tree:",
+        "- This revision's source is mounted read-only at /work and placed on the "
+        "interpreter's path AHEAD of anything you install. The mounted copy is what "
+        "runs, so do not install the project itself.",
+    ]
+    if shadowed:
+        named = ", ".join(shadowed)
+        version = f"=={version_hint}" if version_hint else " (version unknown)"
+        lines += [
+            f"- IMPORTANT: this repository provides {named}, which the test runner "
+            "itself imports. At run time the mounted copy will REPLACE the runner's "
+            "own copy, and a runner built for a different version of it will fail to "
+            "start.",
+            f"- So pin {shadowed[0]}{version} and leave the test runner unpinned, and "
+            "let the package manager resolve a runner that accepts that version. Do "
+            "not pin the runner yourself.",
+        ]
+    return "\n".join(lines)
+
+
 def propose_environment(
     client: Any,
     tree: Path,
     *,
     language: str,
     era_key: str,
+    shadowed: tuple[str, ...] = (),
+    version_hint: str | None = None,
     max_turns: int = 6,
     role: str = "worker",
 ) -> Proposal:
@@ -340,7 +373,8 @@ def propose_environment(
         {
             "role": "user",
             "content": (
-                f"Repository revision: era {era_key}. Detected ecosystem: {language}.\n"
+                f"Repository revision: era {era_key}. Detected ecosystem: {language}.\n\n"
+                f"{harness_facts(shadowed, version_hint)}\n\n"
                 f"Top level of the tree:\n{listing}\n\n"
                 "Read what you need, then return the environment this revision "
                 "requires."

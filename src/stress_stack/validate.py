@@ -121,7 +121,7 @@ def build_and_validate(
     built.verifier_files = _files_in(task_root / "verifier")
     built.files_in_scope = scope_files(graph, changed)
 
-    runner = _resolve_runner(built, runner, runtime, repository, era)
+    runner = _resolve_runner(built, runner, runtime, era)
 
     evaluation_tree = work_root / task_id
     build_evaluation_tree(task_root, evaluation_tree)
@@ -317,7 +317,6 @@ def _resolve_runner(
     built: BuiltTask,
     default: Runner,
     runtime: RuntimeImages | None,
-    repository: GitRepository | None = None,
     era: Era | None = None,
 ) -> Runner:
     """Pick the environment this candidate is judged in, and record the choice.
@@ -330,36 +329,11 @@ def _resolve_runner(
         return default
     from stress_stack.runner import select_runner
 
-    image, provenance = runtime.runtime_for(
-        built.task_root / "input",
-        era=era,
-        version_hint=None if era else _version_hint(built, repository),
-    )
+    image, provenance = runtime.runtime_for(built.task_root / "input", era=era)
     built.detail["runtime"] = provenance
     if image == getattr(default, "image", None):
         return default
     return select_runner(image=image)
-
-
-def _version_hint(built: BuiltTask, repository: GitRepository | None) -> str | None:
-    """The version this tree would publish as, for manifests that do not say.
-
-    setuptools-scm projects declare ``dynamic = ["version"]`` and keep the answer
-    in git tags — so that is where this looks, at the commit the input tree was
-    taken from. The nearest reachable tag is the last release before the tree,
-    which is the closest published version a runner can be resolved against.
-    """
-    if repository is None:
-        return None
-    transition = built.detail.get("transition") or {}
-    revision = str(transition.get("base_sha") or "HEAD")
-    try:
-        described = repository.run(
-            ["describe", "--tags", "--abbrev=0", revision], record=False
-        ).strip()
-    except StressStackError:
-        return None
-    return described.lstrip("v") or None
 
 
 def _first_failed_gate(built: BuiltTask) -> str:

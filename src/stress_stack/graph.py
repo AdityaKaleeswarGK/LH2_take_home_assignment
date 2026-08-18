@@ -889,12 +889,12 @@ def build_validation_artifacts(
     """Stage the ranked candidates and put each through every gate."""
     from stress_stack.candidates import EXCISION, HISTORY, load_candidates
     from stress_stack.runner import select_runner
+    from stress_stack.openrouter import OpenRouterClient
     from stress_stack.runtime_matrix import (
         HeadRuntime,
         RuntimeImages,
         era_count,
         plan_eras,
-        supported_languages as supported_runtime_languages,
     )
     from stress_stack.validate import validate_pool, write_validation
 
@@ -925,34 +925,40 @@ def build_validation_artifacts(
     head_image = f"stress-stack/{repository.root.name.lower()}:verify"
     runner = select_runner(image=head_image, language=language)
 
-    # Which environment a candidate is judged in is a property of the candidate,
-    # not of HEAD. A resolver that has nothing to say about a tree returns the
-    # HEAD image, so an ecosystem without one behaves exactly as it did before.
-    runtime = None
-    eras: dict[str, Any] = {}
-    if language in supported_runtime_languages():
-        # Planned before anything is staged: one `git describe` per distinct
-        # base commit tells us how many environments this pool needs, which is
-        # what makes an image ceiling a measurement instead of a guess.
-        # The slice validate_pool will actually take, per source — planning over
-        # the whole ranked pool counted eras for candidates the limits mean we
-        # never reach, which is the same imprecision the budget had.
-        planned = []
-        for name, limit in ((HISTORY, history_limit), (EXCISION, excision_limit)):
-            if only and only != name:
-                continue
-            planned.extend(pool.get(name, [])[:limit])
-        eras = plan_eras(repository, planned)
-        runtime = RuntimeImages(
-            repository_name=repository.root.name,
-            head=HeadRuntime(
-                image=head_image,
-                language=language,
-                toolchain_version=_head_toolchain(metadata_root, language),
-            ),
-            stamp_path=metadata_root / "container" / "runtime_images.json",
-            expected_eras=max(1, era_count(eras)),
+    # Every era's environment is worked out by an agent reading that era's own
+    # tree, so validation cannot start without a model. There is deliberately no
+    # deterministic second path: an environment nobody could work out is a run
+    # that should stop, not one that quietly judges tasks in the wrong image.
+    environment_client = OpenRouterClient(cache_dir=metadata_root / "cache" / "llm")
+    if not environment_client.configured:
+        raise MetadataError(
+            "Validation needs an OpenRouter key: each candidate's environment is "
+            "worked out by an agent reading that revision's own tree. Set "
+            "OPENROUTER_API_KEY, or run `stress-stack model --set-key`."
         )
+
+    # Which environment a candidate is judged in is a property of the candidate,
+    # not of HEAD. Eras are planned before anything is staged: one `git describe`
+    # per distinct base commit says how many environments this pool needs, over
+    # exactly the slice validate_pool will take — planning over the whole ranked
+    # pool counted eras for candidates the limits mean we never reach.
+    planned = []
+    for name, limit in ((HISTORY, history_limit), (EXCISION, excision_limit)):
+        if only and only != name:
+            continue
+        planned.extend(pool.get(name, [])[:limit])
+    eras = plan_eras(repository, planned)
+    runtime = RuntimeImages(
+        repository_name=repository.root.name,
+        head=HeadRuntime(
+            image=head_image,
+            language=language,
+            toolchain_version=_head_toolchain(metadata_root, language),
+        ),
+        client=environment_client,
+        stamp_path=metadata_root / "container" / "runtime_images.json",
+        expected_eras=max(1, era_count(eras)),
+    )
 
     graph = build_graph(repository.root)
     built: list[Any] = []
