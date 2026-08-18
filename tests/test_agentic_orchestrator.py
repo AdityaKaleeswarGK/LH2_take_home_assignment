@@ -1006,3 +1006,59 @@ def test_the_detected_go_base_is_not_alpine() -> None:
 
     assert profile.primary_language == "go"
     assert "alpine" not in profile.base_image
+
+
+def test_parallel_test_interleaving_is_not_a_regression() -> None:
+    """Two runs of an unchanged suite must compare equal.
+
+    Go's `-v` output orders lines by goroutine scheduling, so a suite using
+    t.Parallel() emits the same lines in a different sequence every run.
+    Measured on spf13/cast: 32233 identical lines, different order, and hygiene
+    reverted its own formatting and failed the pipeline over it.
+    """
+    from stress_stack.hygiene_verify import AVAILABLE, SuiteSnapshot, compare
+
+    first = (
+        "=== RUN   TestBool/#01\n=== PAUSE TestBool/#01\n"
+        "=== CONT  TestBool/#57\n--- PASS: TestBool (0.00s)\nPASS\n"
+    )
+    shuffled = (
+        "=== CONT  TestBool/#57\n=== RUN   TestBool/#01\n"
+        "--- PASS: TestBool (0.00s)\n=== PAUSE TestBool/#01\nPASS\n"
+    )
+
+    def snap(text: str) -> SuiteSnapshot:
+        from stress_stack.hygiene_verify import _normalize
+
+        return SuiteSnapshot(status=AVAILABLE, exit_code=0, normalized=_normalize(text))
+
+    regressed, reason = compare(snap(first), snap(shuffled))
+
+    assert not regressed, reason
+
+
+def test_a_test_that_starts_failing_is_still_a_regression() -> None:
+    """The exemption is for order alone; content must still be compared."""
+    from stress_stack.hygiene_verify import AVAILABLE, SuiteSnapshot, _normalize, compare
+
+    def snap(text: str, exit_code: int = 0) -> SuiteSnapshot:
+        return SuiteSnapshot(status=AVAILABLE, exit_code=exit_code, normalized=_normalize(text))
+
+    passing = snap("--- PASS: TestBool (0.00s)\n--- PASS: TestInt (0.00s)\nPASS\n")
+    failing = snap("--- PASS: TestBool (0.00s)\n--- FAIL: TestInt (0.00s)\nFAIL\n")
+
+    regressed, _ = compare(passing, failing)
+    assert regressed
+
+
+def test_a_disappearing_test_is_still_a_regression() -> None:
+    from stress_stack.hygiene_verify import AVAILABLE, SuiteSnapshot, _normalize, compare
+
+    def snap(text: str) -> SuiteSnapshot:
+        return SuiteSnapshot(status=AVAILABLE, exit_code=0, normalized=_normalize(text))
+
+    before = snap("--- PASS: TestBool (0.00s)\n--- PASS: TestInt (0.00s)\nPASS\n")
+    after = snap("--- PASS: TestBool (0.00s)\nPASS\n")
+
+    regressed, _ = compare(before, after)
+    assert regressed

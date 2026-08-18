@@ -67,9 +67,23 @@ class SuiteSnapshot:
 
 
 def _normalize(text: str) -> str:
+    """Strip what varies between two runs of an unchanged suite.
+
+    Order is one of those things. A suite using parallel tests emits its lines
+    in scheduling order — Go's `-v` output interleaves `=== RUN` / `=== PAUSE` /
+    `=== CONT` differently every time — so an ordered comparison reports a
+    regression for a tree nobody touched. Measured on spf13/cast: two runs of
+    the same image produced 32233 identical lines in a different sequence, and
+    hygiene reverted its own formatting over it.
+
+    Comparing the multiset of lines still catches every change that matters —
+    a test that starts failing, an assertion message that moves, a line that
+    appears or disappears. It only stops catching pure reordering, which is
+    exactly the thing that is not evidence.
+    """
     for pattern, replacement in _VOLATILE:
         text = pattern.sub(replacement, text)
-    return text.strip()
+    return "\n".join(sorted(text.strip().splitlines()))
 
 
 def build_probe_image(root: Path, profile: Any) -> tuple[str | None, str]:
