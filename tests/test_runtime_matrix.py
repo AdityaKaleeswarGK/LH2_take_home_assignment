@@ -314,3 +314,80 @@ def test_a_resolver_crash_never_ends_the_run(tmp_path: Path, monkeypatch) -> Non
 
     assert image == HEAD_PY.image
     assert record["reason"].startswith("resolution_failed: RuntimeError")
+
+
+# --------------------------------------------------------------------------
+# Repair: a build error is information, not a dead end
+# --------------------------------------------------------------------------
+
+
+def _proposals(*specs):
+    """A propose_environment that answers differently on each successive call."""
+    calls: list[dict] = []
+    answers = iter(specs)
+
+    def propose(*a, **k):
+        calls.append({"previous": k.get("previous"), "failure": k.get("failure")})
+        return next(answers)
+
+    return propose, calls
+
+
+def test_a_failed_build_is_handed_back_to_the_agent(tmp_path: Path, monkeypatch) -> None:
+    """pluggy 0.4.0 really does target 3.5; only the build knows 3.5 cannot install."""
+    images = make_images(monkeypatch)
+    builds: list[str] = []
+
+    def build(arguments, **kwargs):
+        builds.append("x")
+        # The first build fails, the second succeeds.
+        return _FakeResult(len(builds) > 1)
+
+    monkeypatch.setattr(rm, "run", build)
+    propose, calls = _proposals(
+        Proposal(base_image="python:3.5-slim", install=("pip install pluggy==0.4.0 pytest",),
+                 test_command=("pytest",)),
+        Proposal(base_image="python:3.6-slim", install=("pip install pluggy==0.4.0 pytest",),
+                 test_command=("pytest",)),
+    )
+    monkeypatch.setattr("stress_stack.environment_agent.propose_environment", propose)
+
+    image, record = images.runtime_for(pluggy_tree(tmp_path), era=Era("0.4.0", "0.4.0"))
+
+    assert record["status"] == "per_candidate_image"
+    assert record["attempt"] == 2
+    assert record["repaired_after"][0]["base_image"] == "python:3.5-slim"
+    # The retry must actually carry the error, or it re-derives the same answer.
+    assert calls[1]["previous"].base_image == "python:3.5-slim"
+    assert "build blew up" in calls[1]["failure"]
+
+
+def test_repair_is_bounded_and_records_what_it_tried(tmp_path: Path, monkeypatch) -> None:
+    images = make_images(monkeypatch, ok=False)
+    propose, calls = _proposals(
+        Proposal(base_image="python:3.5-slim", install=("pip install x",), test_command=("pytest",)),
+        Proposal(base_image="python:3.4-slim", install=("pip install x",), test_command=("pytest",)),
+    )
+    monkeypatch.setattr("stress_stack.environment_agent.propose_environment", propose)
+
+    image, record = images.runtime_for(pluggy_tree(tmp_path), era=Era("0.4.0"))
+
+    assert image == HEAD_PY.image
+    assert len(record["attempts"]) == 2
+    assert [a["base_image"] for a in record["attempts"]] == [
+        "python:3.5-slim", "python:3.4-slim"
+    ]
+
+
+def test_a_first_time_success_never_calls_the_agent_twice(tmp_path: Path, monkeypatch) -> None:
+    images = make_images(monkeypatch)
+    propose, calls = _proposals(
+        Proposal(base_image="python:3.9-slim", install=("pip install x",), test_command=("pytest",)),
+    )
+    monkeypatch.setattr("stress_stack.environment_agent.propose_environment", propose)
+
+    _, record = images.runtime_for(pluggy_tree(tmp_path), era=Era("0.6.0"))
+
+    assert record["attempt"] == 1
+    assert "repaired_after" not in record
+    assert len(calls) == 1

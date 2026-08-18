@@ -64,3 +64,36 @@ def test_model_failure_falls_back_without_crashing(monkeypatch, tmp_path) -> Non
     assert record["instruction_origin"] == "mechanical_model_fallback"
     assert record["generation"]["fell_back"] == "model_error"
 
+
+
+def test_the_manifest_reads_easiest_first() -> None:
+    """The shipped set is a curriculum, so it is ordered like one."""
+    from stress_stack.emit import _order_by_tier
+
+    entries = [
+        {"id": "a", "difficulty": {"tier": "hard"}},
+        {"id": "b", "difficulty": {"tier": "easy"}},
+        {"id": "c", "difficulty": {"tier": "medium"}},
+        {"id": "d", "difficulty": {"tier": "easy"}},
+    ]
+
+    assert [e["id"] for e in _order_by_tier(entries)] == ["b", "d", "c", "a"]
+
+
+def test_ties_keep_selections_own_ranked_order() -> None:
+    from stress_stack.emit import _order_by_tier
+
+    entries = [{"id": x, "difficulty": {"tier": "easy"}} for x in "abc"]
+    assert [e["id"] for e in _order_by_tier(entries)] == ["a", "b", "c"]
+
+
+def test_a_task_with_no_tier_is_not_dropped() -> None:
+    """A run without a model still ships ten tasks; they just sort as medium."""
+    from stress_stack.emit import _order_by_tier
+
+    entries = [
+        {"id": "a", "difficulty": {"tier": "hard"}},
+        {"id": "b"},
+        {"id": "c", "difficulty": {"tier": "easy"}},
+    ]
+    assert [e["id"] for e in _order_by_tier(entries)] == ["c", "b", "a"]

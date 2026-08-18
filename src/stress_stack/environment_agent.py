@@ -354,6 +354,8 @@ def propose_environment(
     era_key: str,
     shadowed: tuple[str, ...] = (),
     version_hint: str | None = None,
+    previous: Proposal | None = None,
+    failure: str | None = None,
     max_turns: int = 6,
     role: str = "worker",
 ) -> Proposal:
@@ -368,6 +370,23 @@ def propose_environment(
 
     reader = _EraReader(Explorer(tree=tree))
     listing = reader.run("list_dir", {"path": "."})
+    correction = ""
+    if previous is not None and failure:
+        # The error is the whole point of a second attempt. A retry that re-sent
+        # the same prompt would re-derive the same answer — measured on the
+        # enrichment retry, which did exactly that at temperature zero and
+        # produced an identical result every time.
+        correction = (
+            "\n\nA previous attempt FAILED and you must not repeat it.\n"
+            f"  base image : {previous.base_image}\n"
+            f"  install    : {'; '.join(previous.install) or '(none)'}\n"
+            f"  test       : {' '.join(previous.test_command) or '(none)'}\n"
+            f"The build failed with:\n{failure[-1200:]}\n"
+            "Read that error and propose something that avoids it. A base image "
+            "too old for its own package manager is a common cause — a slightly "
+            "newer interpreter that still satisfies this revision is usually "
+            "better than one it cannot install on.\n"
+        )
     messages = [
         {"role": "system", "content": _SYSTEM},
         {
@@ -375,7 +394,8 @@ def propose_environment(
             "content": (
                 f"Repository revision: era {era_key}. Detected ecosystem: {language}.\n\n"
                 f"{harness_facts(shadowed, version_hint)}\n\n"
-                f"Top level of the tree:\n{listing}\n\n"
+                f"Top level of the tree:\n{listing}\n"
+                f"{correction}\n"
                 "Read what you need, then return the environment this revision "
                 "requires."
             ),

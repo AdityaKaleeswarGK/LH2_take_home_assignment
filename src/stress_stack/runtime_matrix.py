@@ -217,7 +217,9 @@ def resolve_runtime(
     *,
     client: Any,
     era: "Era | None" = None,
-) -> RuntimeSpec | None:
+    previous: Any = None,
+    failure: str | None = None,
+) -> tuple[RuntimeSpec, Any] | None:
     """What runtime this tree needs, read out of the tree by an agent.
 
     This replaced about two hundred and fifty lines of per-ecosystem branching —
@@ -247,13 +249,15 @@ def resolve_runtime(
         era_key=era.key if era else "unknown",
         shadowed=shadowed_distributions(tree) if language == "python" else (),
         version_hint=era.version_hint if era else None,
+        previous=previous,
+        failure=failure,
     )
     if not proposal.usable:
         raise EnvironmentProposalError(
             f"the environment proposed for era {era.key if era else '?'} did not pass "
             f"checking: {'; '.join(proposal.rejections) or 'no answer'}"
         )
-    return RuntimeSpec(
+    spec = RuntimeSpec(
         language=language,
         base_image=proposal.base_image,
         install=proposal.install,
@@ -269,6 +273,7 @@ def resolve_runtime(
             }
         },
     )
+    return spec, proposal
 
 
 class EnvironmentProposalError(StressStackError):
@@ -358,6 +363,10 @@ class RuntimeImages:
     client: Any = None
     stamp_path: Path | None = None
     expected_eras: int = 1
+    # How many times a failing build may be handed back to the agent. Two,
+    # because the first correction is where nearly all the value is and an
+    # agent still wrong after seeing its own error twice is not converging.
+    max_attempts: int = 2
     built: dict[str, str] = field(default_factory=dict)
     records: dict[str, dict[str, Any]] = field(default_factory=dict)
     # Resolution is per era, not per candidate: every candidate in a release
@@ -379,7 +388,7 @@ class RuntimeImages:
                 image, record = cached
                 return image, {**record, "era": era.key, "reused": True}
         try:
-            spec = resolve_runtime(
+            resolved = resolve_runtime(
                 tree, self.head.language, self.head, client=self.client, era=era
             )
         except Exception as exc:  # noqa: BLE001 — resolution must never end a run
@@ -389,7 +398,7 @@ class RuntimeImages:
                 "image": self.head.image,
             }
 
-        if spec is None:
+        if resolved is None:
             # A tree that shadows the runner and cannot be pinned is not the same
             # as a tree with nothing to do, even though both end up on the HEAD
             # image. Saying so is the difference between a known limitation and
@@ -404,7 +413,7 @@ class RuntimeImages:
                 self.by_era[era.key] = (self.head.image, record)
             return self.head.image, record
 
-        tag = spec.tag(self.repository_name)
+        tag = resolved[0].tag(self.repository_name)
         if tag in self.built:
             return self.built[tag], {**self.records[tag], "reused": True}
         if len(self.built) >= max(1, min(self.expected_eras, _SAFETY_CEILING)):
@@ -412,17 +421,71 @@ class RuntimeImages:
                 "status": "fallback",
                 "reason": "era_ceiling_reached",
                 "image": self.head.image,
-                "spec": spec.to_dict(),
+                "spec": resolved[0].to_dict(),
             }
 
-        image, record = self._build(spec, tag)
-        self.built[tag] = image
-        self.records[tag] = record
+        image, record = self._build_with_repair(tree, era, resolved)
+        if record.get("status") == "per_candidate_image":
+            self.built[record["image"]] = image
+            self.records[record["image"]] = record
         if era is not None:
             record = {**record, "era": era.key}
             self.by_era[era.key] = (image, record)
         self._persist()
         return image, record
+
+    def _build_with_repair(
+        self, tree: Path, era: "Era | None", resolved: tuple[RuntimeSpec, Any]
+    ) -> tuple[str, dict[str, Any]]:
+        """Build the proposed environment; on failure, hand the error back.
+
+        This is the difference between an agent and a call. A build error is not
+        a dead end, it is the most specific information anyone has about what
+        this revision actually needs — pluggy 0.4.0 genuinely targets Python 3.5,
+        and the agent is right to say so and wrong about whether that image can
+        still install a test runner. Only the build can tell it that.
+
+        Bounded, and the last failure is recorded rather than retried forever.
+        """
+        spec, proposal = resolved
+        attempts: list[dict[str, Any]] = []
+        for attempt in range(1, self.max_attempts + 1):
+            image, record = self._build(spec, spec.tag(self.repository_name))
+            record["attempt"] = attempt
+            if record.get("status") == "per_candidate_image":
+                if attempts:
+                    record["repaired_after"] = attempts
+                return image, record
+            attempts.append(
+                {
+                    "attempt": attempt,
+                    "base_image": spec.base_image,
+                    "install": list(spec.install),
+                    "error": str(record.get("build_log_tail", ""))[-400:],
+                }
+            )
+            if attempt == self.max_attempts:
+                record["attempts"] = attempts
+                return image, record
+            try:
+                retried = resolve_runtime(
+                    tree,
+                    self.head.language,
+                    self.head,
+                    client=self.client,
+                    era=era,
+                    previous=proposal,
+                    failure=str(record.get("build_log_tail", "")),
+                )
+            except Exception as exc:  # noqa: BLE001 — a failed repair is a fallback
+                record["attempts"] = attempts
+                record["repair_failed"] = f"{type(exc).__name__}: {exc}"
+                return image, record
+            if retried is None:
+                record["attempts"] = attempts
+                return image, record
+            spec, proposal = retried
+        return self.head.image, {"status": "fallback", "reason": "unreachable"}
 
     def _build(self, spec: RuntimeSpec, tag: str) -> tuple[str, dict[str, Any]]:
         from stress_stack.container import pin_image_by_digest

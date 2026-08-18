@@ -646,6 +646,8 @@ def emit_bundle(
                 statement.unlink()
                 withdrawn.append(candidate.name)
 
+    entries = _order_by_tier(entries)
+
     ledger = selection["ledger"]
     manifest = {
         "schema_version": SCHEMA_VERSION,
@@ -669,6 +671,26 @@ def emit_bundle(
     }
     atomic_write_json(manifest_path, manifest)
     return manifest
+
+
+_TIER_ORDER = {"easy": 0, "medium": 1, "hard": 2}
+
+
+def _order_by_tier(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Easiest first, hardest last.
+
+    The manifest is what a reader opens first, and the shipped set is a
+    curriculum rather than a bag. Sorting is stable, so ties keep selection's own
+    ranked order — the ordering adds information without discarding any. A task
+    with no tier sorts as medium rather than vanishing: a run without a model
+    still ships ten.
+    """
+    return sorted(
+        entries,
+        key=lambda entry: _TIER_ORDER.get(
+            str((entry.get("difficulty") or {}).get("tier") or "medium"), 1
+        ),
+    )
 
 
 def _spread(difficulty: dict[str, dict[str, Any]]) -> dict[str, int]:
