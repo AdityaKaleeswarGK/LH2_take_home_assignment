@@ -512,6 +512,12 @@ def _print_mining_result(report: dict) -> int:
             f"Unparsed history: {unparsed} test file(s) across {affected} candidate(s) "
             "could not be parsed by this interpreter; their added-test counts are floors"
         )
+    shadow = report.get("runner_shadow") or []
+    if shadow:
+        print(
+            f"Runner shadow: this repository provides {', '.join(shadow)}, which the "
+            "test runner also imports — candidates get their own runtime image"
+        )
     for name in ("history", "excision"):
         funnel = report[f"{name}_funnel"]
         print(
@@ -531,6 +537,9 @@ def _print_mining_result(report: dict) -> int:
 def _print_validation_result(report: dict) -> int:
     print(f"Repository: {report['repository_root']}")
     print(f"Runner: {report['backend']} ({report['image']})")
+    runtime = report.get("runtime") or {}
+    for tag, record in (runtime.get("images") or {}).items():
+        print(f"  runtime {tag}  {record.get('reason', '')}")
     print(f"Import policy: {report['policy']}")
     for name, entry in report["by_source"].items():
         print(

@@ -48,7 +48,10 @@ def make_task(candidate: Candidate, *, eligible: bool, reason: str = "collateral
 def install_stub(monkeypatch: pytest.MonkeyPatch, decide, *, record: list[str] | None = None):
     """Replace the expensive part of the pool with a pure function of the candidate."""
 
-    def fake(repository, graph, candidate, tasks_root, work_root, runner, *, repeats, policy):
+    def fake(
+        repository, graph, candidate, tasks_root, work_root, runner,
+        *, repeats, policy, runtime=None,
+    ):
         if record is not None:
             record.append(candidate.candidate_id)
         return decide(candidate)

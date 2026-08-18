@@ -93,9 +93,30 @@ def parse_ci_facts(root: Path) -> CIParsedFacts:
     return facts
 
 
+_VERSION_KEYS = ("python-version:", "node-version:", "rust:", "go-version:")
+_VERSION_RE = re.compile(r"""['"]?(\d+(?:\.\d+)*)['"]?""")
+_LIST_ITEM_RE = re.compile(r"^-\s*['\"]?(\d+(?:\.\d+)*)['\"]?\s*$")
+
+
 def _extract_workflow_facts(content: str, facts: CIParsedFacts) -> None:
+    # A matrix is the most concrete statement a project makes about which
+    # toolchains it actually runs on, and it is written two ways: inline
+    # (`python-version: ["3.9", "3.10"]`) and as an indented block list. Reading
+    # only the first match on the key line saw one version of either, which made
+    # a matrix indistinguishable from a single pinned version.
+    version_key_indent: int | None = None
+
     for line in content.splitlines():
         stripped = line.strip()
+
+        if version_key_indent is not None:
+            item = _LIST_ITEM_RE.match(stripped)
+            indent = len(line) - len(line.lstrip())
+            if item and indent > version_key_indent:
+                facts.matrix_versions.append(item.group(1))
+                continue
+            if stripped and not stripped.startswith("#"):
+                version_key_indent = None
         # Match "run: ...", "- run: ...", or "run: |"
         if stripped.startswith("- run:"):
             cmd = stripped[6:].strip().strip('"').strip("'")
@@ -112,10 +133,13 @@ def _extract_workflow_facts(content: str, facts: CIParsedFacts) -> None:
             facts.system_packages.extend(p for p in pkgs if not p.startswith("-"))
 
         # Look for node/python/rust/go versions in matrix
-        if any(key in line for key in ("python-version:", "node-version:", "rust:", "go-version:")):
-            version_match = re.search(r"""['"]?(\d+(?:\.\d+)*)['"]?""", line)
-            if version_match:
-                facts.matrix_versions.append(version_match.group(1))
+        matched_key = next((key for key in _VERSION_KEYS if key in line), None)
+        if matched_key:
+            after = line.split(matched_key, 1)[1]
+            found = _VERSION_RE.findall(after)
+            facts.matrix_versions.extend(found)
+            # An empty tail means the versions are on the following lines.
+            version_key_indent = None if found else len(line) - len(line.lstrip())
 
 
 def _extract_makefile_facts(content: str, facts: CIParsedFacts, filename: str) -> None:

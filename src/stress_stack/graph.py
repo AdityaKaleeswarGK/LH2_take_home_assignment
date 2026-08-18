@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import builtins
 import json
+import re
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -791,10 +792,20 @@ def build_mining_artifacts(source_value: str, *, cwd: Path | None = None) -> dic
     )
     excision, excision_funnel = mine_excision(coverage, graph)
 
+    from stress_stack.runtime_matrix import shadowed_distributions
+
+    # A repository-level fact, established once from HEAD and before any
+    # container runs. It says the trees of this repository will replace part of
+    # the test runner when they are mounted — which decides whether validation
+    # can use one image for everything, and which used to be discovered eight
+    # container runs per candidate too late.
+    runner_shadow = shadowed_distributions(repository.root)
+
     payload = {
         "schema_version": "0.1.0",
         "coverage_status": coverage.status,
         "thresholds": thresholds,
+        "runner_shadow": list(runner_shadow),
         "history": {
             "funnel": history_funnel.to_dict(),
             "module_distribution": module_distribution(history),
@@ -812,6 +823,7 @@ def build_mining_artifacts(source_value: str, *, cwd: Path | None = None) -> dic
     return {
         "repository_root": str(repository.root),
         "coverage_status": coverage.status,
+        "runner_shadow": list(runner_shadow),
         "history_count": len(history),
         "history_funnel": history_funnel.to_dict(),
         "history_modules": module_distribution(history),
@@ -838,6 +850,11 @@ def build_validation_artifacts(
     """Stage the ranked candidates and put each through every gate."""
     from stress_stack.candidates import EXCISION, HISTORY, load_candidates
     from stress_stack.runner import select_runner
+    from stress_stack.runtime_matrix import (
+        HeadRuntime,
+        RuntimeImages,
+        supported_languages as supported_runtime_languages,
+    )
     from stress_stack.validate import validate_pool, write_validation
 
     working_directory = (cwd or Path.cwd()).resolve()
@@ -864,10 +881,23 @@ def build_validation_artifacts(
     from stress_stack.project_detector import detect_project_profile
 
     language = detect_project_profile(repository.root).primary_language
-    runner = select_runner(
-        image=f"stress-stack/{repository.root.name.lower()}:verify",
-        language=language,
-    )
+    head_image = f"stress-stack/{repository.root.name.lower()}:verify"
+    runner = select_runner(image=head_image, language=language)
+
+    # Which environment a candidate is judged in is a property of the candidate,
+    # not of HEAD. A resolver that has nothing to say about a tree returns the
+    # HEAD image, so an ecosystem without one behaves exactly as it did before.
+    runtime = None
+    if language in supported_runtime_languages():
+        runtime = RuntimeImages(
+            repository_name=repository.root.name,
+            head=HeadRuntime(
+                image=head_image,
+                language=language,
+                toolchain_version=_head_toolchain(metadata_root, language),
+            ),
+            stamp_path=metadata_root / "container" / "runtime_images.json",
+        )
 
     graph = build_graph(repository.root)
     built: list[Any] = []
@@ -899,6 +929,7 @@ def build_validation_artifacts(
             minimum_modules=4,
             existing_modules=eligible_modules,
             max_workers=max_workers,
+            runtime=runtime,
         )
         built.extend(results)
         summaries[name] = summary.to_dict()
@@ -927,6 +958,7 @@ def build_validation_artifacts(
         "repository_root": str(repository.root),
         "backend": runner.backend,
         "image": runner.image,
+        "runtime": runtime.summary() if runtime is not None else None,
         "policy": policy,
         "by_source": summaries,
         "summary": combined.to_dict(),
@@ -934,6 +966,33 @@ def build_validation_artifacts(
         "tasks_root": str(tasks_root),
         "knowledge_root": str(knowledge_root),
     }
+
+
+def _head_toolchain(metadata_root: Path, language: str) -> str:
+    """The toolchain version the container stage actually built HEAD's image on.
+
+    Read from what that stage recorded rather than resolved a second time: a
+    resolver comparing a candidate against a freshly computed answer could
+    conclude "same as HEAD" about an image HEAD is not running.
+    """
+    record_path = metadata_root / "container" / "container.json"
+    recorded: dict[str, Any] = {}
+    if record_path.is_file():
+        try:
+            recorded = json.loads(record_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            recorded = {}
+    if language == "python":
+        from stress_stack.container import select_python_version
+
+        version = str(recorded.get("python_version") or select_python_version(None))
+        # container.json carries the full patch version; images are keyed by minor.
+        return ".".join(version.split(".")[:2])
+    # Other ecosystems record their base image rather than a bare version; the
+    # tag's version segment is the comparable part.
+    base = str(recorded.get("base_image") or "")
+    match = re.search(r":(\d+(?:\.\d+)*)", base)
+    return match.group(1) if match else ""
 
 
 def build_selection_artifacts(source_value: str, *, cwd: Path | None = None) -> dict[str, Any]:

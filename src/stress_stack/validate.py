@@ -23,6 +23,7 @@ from stress_stack.excision import NEUTRAL, EXPLICIT
 from stress_stack.git_repository import GitRepository
 from stress_stack.graph import RepositoryGraph
 from stress_stack.runner import Runner
+from stress_stack.runtime_matrix import RuntimeImages
 from stress_stack.tasks import (
     STRICT,
     BuiltTask,
@@ -76,6 +77,7 @@ def build_and_validate(
     *,
     repeats: int,
     policy: str = STRICT,
+    runtime: RuntimeImages | None = None,
 ) -> BuiltTask:
     """Stage one candidate and put it through every gate.
 
@@ -84,6 +86,11 @@ def build_and_validate(
     evidence available — the test pins behaviour, not the shape of an exception
     — so the stronger stub is preferred and the explicit one is the fallback
     rather than the default.
+
+    ``runtime`` decides *where* that happens. When supplied, the runner is
+    chosen from the candidate's own tree rather than from HEAD — see
+    :mod:`stress_stack.runtime_matrix` for why a repository the test runner
+    depends on cannot be judged in HEAD's image at all.
     """
     task_id = task_identifier(candidate)
     task_root = tasks_root / task_id
@@ -112,6 +119,8 @@ def build_and_validate(
 
     built.verifier_files = _files_in(task_root / "verifier")
     built.files_in_scope = scope_files(graph, changed)
+
+    runner = _resolve_runner(built, runner, runtime)
 
     evaluation_tree = work_root / task_id
     build_evaluation_tree(task_root, evaluation_tree)
@@ -148,6 +157,7 @@ def validate_pool(
     minimum_modules: int = 0,
     existing_modules: set[str] | None = None,
     max_workers: int = 1,
+    runtime: RuntimeImages | None = None,
 ) -> tuple[list[BuiltTask], ValidationSummary]:
     """Validate down the ranked pool until enough survive, or the budget runs out.
 
@@ -179,7 +189,7 @@ def validate_pool(
     def _validate(candidate: Candidate) -> BuiltTask:
         return build_and_validate(
             repository, graph, candidate, tasks_root, work_root, runner,
-            repeats=repeats, policy=policy,
+            repeats=repeats, policy=policy, runtime=runtime,
         )
 
     def _record(result: BuiltTask) -> None:
@@ -298,6 +308,24 @@ def _retry_with_explicit_stub(
     finally:
         shutil.rmtree(evaluation_tree, ignore_errors=True)
     return built
+
+
+def _resolve_runner(built: BuiltTask, default: Runner, runtime: RuntimeImages | None) -> Runner:
+    """Pick the environment this candidate is judged in, and record the choice.
+
+    Recorded on the task rather than only in the run log, because "which image
+    was this verdict reached in" is part of the verdict when the answer is no
+    longer the same for every task.
+    """
+    if runtime is None:
+        return default
+    from stress_stack.runner import select_runner
+
+    image, provenance = runtime.runtime_for(built.task_root / "input")
+    built.detail["runtime"] = provenance
+    if image == getattr(default, "image", None):
+        return default
+    return select_runner(image=image)
 
 
 def _first_failed_gate(built: BuiltTask) -> str:

@@ -39,6 +39,7 @@ from stress_stack.excision import EXPLICIT, ExcisionError, excise, plan_excision
 from stress_stack.git_repository import GitRepository
 from stress_stack.graph import RepositoryGraph, blast_radius
 from stress_stack.runner import RunOutcome, Runner, forget_source_roots, pytest_argument
+from stress_stack.runtime_matrix import RUNNER_DEPENDENCIES
 from stress_stack.snapshot import (
     OVERLAY_FILES,
     synthesize_version_modules,
@@ -590,16 +591,6 @@ def validate_task(
     return built
 
 
-# Packages the test runner itself imports. A repository that *is* one of these
-# cannot be verified by putting its tree on PYTHONPATH: doing so shadows the
-# copy pytest is running on, and a historical version of it will not satisfy a
-# modern pytest. pluggy's pre-src-layout commits fail exactly this way, and the
-# generic "reference run failed" hid why.
-_RUNNER_DEPENDENCIES = frozenset(
-    {"pluggy", "iniconfig", "packaging", "exceptiongroup", "tomli", "pytest", "_pytest"}
-)
-
-
 def _reference_failure(built: BuiltTask, outcome: RunOutcome) -> str:
     """Name the cause when the reference tree cannot even be collected."""
     # `usable` is False for an empty run while `infrastructure_failure` stays
@@ -616,7 +607,7 @@ def _reference_failure(built: BuiltTask, outcome: RunOutcome) -> str:
                 continue
             for entry in directory.iterdir():
                 name = entry.name.removesuffix(".py")
-                if name in _RUNNER_DEPENDENCIES and (
+                if name in RUNNER_DEPENDENCIES and (
                     entry.is_dir() or entry.suffix == ".py"
                 ):
                     return (
