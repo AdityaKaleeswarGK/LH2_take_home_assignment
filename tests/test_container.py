@@ -115,3 +115,43 @@ def test_missing_system_library_is_named_or_admitted() -> None:
 def test_verified_requires_identical_all_green_runs() -> None:
     assert _container_status("built", True, "matches", True) == "verified"
     assert _container_status("built", True, "matches", False) == "tests_failed"
+
+
+def test_a_regenerated_test_disappearing_is_not_a_broken_image() -> None:
+    """testgen rewrites its own output between the baseline and the image.
+
+    Only reachable on a re-run, where the tree still holds the previous run's
+    generated files — which is exactly when it fired, and why a fresh clone
+    never saw it.
+    """
+    from stress_stack.container import compare_to_baseline
+
+    baseline = {
+        "tests/test_real.py::test_a": "passed",
+        "tests.stress_stack_generated.test_generated_2::test_old": "passed",
+    }
+    container = {
+        "tests/test_real.py::test_a": "passed",
+        "tests.stress_stack_generated.test_generated_2::test_new": "passed",
+    }
+
+    assert compare_to_baseline(container, baseline) == "matches_with_additions"
+
+
+def test_a_real_test_disappearing_is_still_a_broken_image() -> None:
+    """The check the baseline exists for must survive the exemption."""
+    from stress_stack.container import compare_to_baseline
+
+    baseline = {"tests/test_real.py::test_a": "passed", "tests/test_real.py::test_b": "passed"}
+    container = {"tests/test_real.py::test_a": "passed"}
+
+    assert compare_to_baseline(container, baseline) == "tests_missing_in_container"
+
+
+def test_a_real_test_regressing_is_still_a_difference() -> None:
+    from stress_stack.container import compare_to_baseline
+
+    baseline = {"tests/test_real.py::test_a": "passed"}
+    container = {"tests/test_real.py::test_a": "failed"}
+
+    assert compare_to_baseline(container, baseline) == "differs"

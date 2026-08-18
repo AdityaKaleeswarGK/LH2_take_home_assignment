@@ -173,6 +173,11 @@ def resolve_base_image(python_version: str) -> tuple[str, str]:
 
 _PYTEST_REQUIREMENT = "pytest>=8,<9"
 
+# The directory testgen writes into. Its contents are this pipeline's output,
+# not the repository's suite, and they are regenerated between the host baseline
+# and the image.
+_GENERATED_MARKER = "stress_stack_generated"
+
 
 def render_dockerfile(
     base_image: str,
@@ -309,7 +314,15 @@ def compare_to_baseline(outcomes: dict[str, str], baseline: dict[str, str] | Non
     # successful generation stage look like a broken image. A test the *host*
     # ran and the container did not is the real fault: something failed to
     # collect.
-    disappeared = set(baseline) - set(outcomes)
+    # Tests this pipeline generated are not part of the repository's suite, and
+    # testgen rewrites them wholesale between the baseline and the image. On a
+    # re-run against a tree that still holds the previous run's generated files,
+    # a regenerated test disappearing from the baseline is the generator working,
+    # not the image failing to collect. A fresh clone never sees this, which is
+    # why it survived the first glom run.
+    disappeared = {
+        test for test in set(baseline) - set(outcomes) if _GENERATED_MARKER not in test
+    }
     if disappeared:
         return "tests_missing_in_container"
     # A platform-specific skip becoming a pass is harmless. A host pass
@@ -319,7 +332,9 @@ def compare_to_baseline(outcomes: dict[str, str], baseline: dict[str, str] | Non
     regressions = {
         key
         for key, value in baseline.items()
-        if value == "passed" and outcomes.get(key) != "passed"
+        if value == "passed"
+        and outcomes.get(key) != "passed"
+        and _GENERATED_MARKER not in key
     }
     if regressions:
         return "differs"
