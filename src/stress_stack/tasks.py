@@ -494,9 +494,13 @@ def validate_task(
 
     # Candidates whose proving test pre-dates the fix still need a non-empty,
     # explicit verifier folder in the deliverable. Materialise those target
-    # files now, then rebuild the evaluation tree before the repeated runs.
+    # files now, and rebuild the evaluation tree only if that actually added
+    # any — the rebuild is a full copy of the repository, and for most
+    # candidates the verifier already carries every target file.
+    verifier_before = list(built.verifier_files)
     _ensure_target_verifier_files(built, resolved)
-    build_evaluation_tree(built.task_root, evaluation_tree)
+    if built.verifier_files != verifier_before:
+        build_evaluation_tree(built.task_root, evaluation_tree)
 
     # Collateral is a question about the *unmodified* pre-change tree: did the
     # reference solution break something that was passing before? Measuring it
