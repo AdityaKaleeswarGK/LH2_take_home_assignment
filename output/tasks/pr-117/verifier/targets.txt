@@ -1,9 +1,0 @@
-glom.test.test_basic::test_invoke
-glom.test.test_check::test_check_basic
-glom.test.test_fill::test
-glom.test.test_mutation::test_assign
-glom.test.test_path_and_t::test_path_t_roundtrip
-glom.test.test_reduction::test_flatten
-glom.test.test_reduction::test_fold
-glom.test.test_reduction::test_sum_integers
-glom.test.test_streaming::test_filter

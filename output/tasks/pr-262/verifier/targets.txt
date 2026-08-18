@@ -1,1 +1,0 @@
-glom.test.test_cli::test_main_yaml_target
