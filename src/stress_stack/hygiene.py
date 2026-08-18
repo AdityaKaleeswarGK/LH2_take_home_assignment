@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
+import sys
 import time
 from dataclasses import dataclass
 from datetime import date
@@ -190,14 +192,68 @@ def _run_repository_tests(
     return run_pytest(root, python, report_path)
 
 
-def provision_test_environment(root: Path, environment_root: Path) -> dict[str, Any]:
+_PROVISION_SCHEMA = "1"
+
+# The files whose contents decide what gets installed. Deliberately not every
+# `.py`: a source edit changes nothing about the environment, because every
+# runtime path puts the source tree on PYTHONPATH ahead of site-packages. Hashing
+# sources would also let testgen's freshly written tests invalidate the stamp,
+# which is exactly the reinstall this exists to avoid.
+_INSTALL_MANIFESTS = ("pyproject.toml", "setup.py", "setup.cfg", "tox.ini")
+
+
+def _provision_fingerprint(root: Path, environment_root: Path) -> str:
+    material: dict[str, Any] = {
+        "schema": _PROVISION_SCHEMA,
+        "interpreter": list(sys.version_info[:2]),
+        "test_extras": sorted(_TEST_EXTRA_NAMES),
+    }
+    manifests = [root / name for name in _INSTALL_MANIFESTS]
+    manifests += sorted(root.glob("requirements*.txt"))
+    # The venv's own identity, without paying for a subprocess to ask it.
+    manifests.append(environment_root / "pyvenv.cfg")
+    for path in manifests:
+        try:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            digest = None
+        material[path.name] = digest
+    return hashlib.sha256(
+        json.dumps(material, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+
+
+def provision_test_environment(
+    root: Path, environment_root: Path, *, force: bool = False
+) -> dict[str, Any]:
     """Install the repository plus any test extras it declares.
 
     Extras are read from the installed distribution's own metadata rather than
     guessed, so a repository that declares its test dependencies (PyYAML, tomli,
     ...) under an extra gets them without any repository-specific knowledge.
+
+    Idempotent, because it is called seven times per pipeline run and only the
+    first call has anything to do. Each of the other six re-resolved the whole
+    dependency set over the network — on glom that is the dominant term in the
+    deps, coverage, testgen and container stages, all of which measure a few
+    seconds of their own work. The stamp follows ``tooling.ensure_ruff``: check
+    what is installed, skip if it is current.
     """
     python = ensure_environment(environment_root)
+    stamp_path = environment_root / "provision_stamp.json"
+    fingerprint = _provision_fingerprint(root, environment_root)
+    if not force and python.exists() and stamp_path.is_file():
+        try:
+            stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            stamp = {}
+        if (
+            stamp.get("schema") == _PROVISION_SCHEMA
+            and stamp.get("fingerprint") == fingerprint
+            and isinstance(stamp.get("record"), dict)
+        ):
+            return dict(stamp["record"])
+
     record: dict[str, Any] = {
         "python": str(python),
         "installed": False,
@@ -260,6 +316,13 @@ def provision_test_environment(root: Path, environment_root: Path) -> dict[str, 
             record["reason"] = f"test_group_install_failed: {group_install.failure_detail()}"
             return record
         record["installed_groups"].append(group)
+
+    # Only a complete install is stamped. Every failure path above returns
+    # before this, so a broken environment is retried rather than remembered.
+    atomic_write_json(
+        stamp_path,
+        {"schema": _PROVISION_SCHEMA, "fingerprint": fingerprint, "record": record},
+    )
     return record
 
 

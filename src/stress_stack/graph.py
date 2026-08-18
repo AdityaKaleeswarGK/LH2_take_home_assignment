@@ -641,17 +641,54 @@ def build_dependency_artifacts(
     )
 
 
-def measure_coverage(repository_root: Path, graph: RepositoryGraph, knowledge_root: Path):
+def _source_fingerprint(repository_root: Path) -> str:
+    """What the suite would be measured against, as a content hash."""
+    import hashlib
+
+    from stress_stack.symbols import discover_python_files
+
+    digest = hashlib.sha256()
+    for path in discover_python_files(repository_root):
+        digest.update(str(path.relative_to(repository_root)).encode("utf-8"))
+        try:
+            digest.update(hashlib.sha256(path.read_bytes()).digest())
+        except OSError:
+            digest.update(b"unreadable")
+    return digest.hexdigest()
+
+
+def measure_coverage(
+    repository_root: Path, graph: RepositoryGraph, knowledge_root: Path, *, force: bool = False
+):
     """Run the suite with per-test contexts and attribute lines to symbols.
 
     Kept separate from enrichment because coverage is measured and enrichment is
     generated: candidate mining depends on the first and must not be blocked by
     the availability of a model.
+
+    Memoized on the content of the sources it would measure. This is a guard
+    rather than the fix — the callers that had no business re-measuring now load
+    the map instead — but it means a future caller cannot silently reintroduce a
+    whole extra suite run. testgen's post-generation refresh still re-measures
+    correctly and needs no flag: it runs after new test files have been written,
+    so the fingerprint has already changed.
     """
     from stress_stack import coverage_map as cm
     from stress_stack.hygiene import provision_test_environment
 
     metadata_root = repository_root / ".stress_stack"
+    stamp_path = knowledge_root / "coverage_map.stamp.json"
+    fingerprint = _source_fingerprint(repository_root)
+    if not force and stamp_path.is_file():
+        try:
+            stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            stamp = {}
+        if stamp.get("fingerprint") == fingerprint:
+            cached = cm.load(knowledge_root / "coverage_map.json")
+            if cached.status == "available":
+                return cached, "available"
+
     environment = provision_test_environment(repository_root, metadata_root / "tools" / "test")
     if not environment["installed"]:
         return None, f"unavailable: {environment.get('reason') or 'no_test_environment'}"
@@ -666,6 +703,8 @@ def measure_coverage(repository_root: Path, graph: RepositoryGraph, knowledge_ro
         return None, f"{status}: {reason}"
     coverage = cm.build(graph, lines)
     atomic_write_json(knowledge_root / "coverage_map.json", coverage.to_dict())
+    # A sibling file, so `cm.load`'s schema stays exactly what it was.
+    atomic_write_json(stamp_path, {"fingerprint": fingerprint})
     return coverage, "available"
 
 
@@ -1146,6 +1185,7 @@ def build_bundle_artifacts(
 
 def build_enrichment_artifacts(source_value: str, *, cwd: Path | None = None, workers: int = 20):
     """graph + coverage -> file cards -> blueprint, all written under knowledge/."""
+    from stress_stack import coverage_map as cm
     from stress_stack.enrich import (
         enrich_repository, summarize, synthesize_blueprint, write_cards,
     )
@@ -1160,7 +1200,16 @@ def build_enrichment_artifacts(source_value: str, *, cwd: Path | None = None, wo
     knowledge_root.mkdir(parents=True, exist_ok=True)
 
     graph = build_graph(repository.root)
-    coverage, coverage_note = measure_coverage(repository.root, graph, knowledge_root)
+    # Loaded, not re-measured. Enrichment only *reads* coverage to build file
+    # cards, and cm.load's own docstring makes the case: "Reloading rather than
+    # re-measuring is what keeps mining a seconds-long operation against a suite
+    # that takes minutes." This stage was the one caller that ignored it, and on
+    # glom the duplicate run was 128s of a 306s stage.
+    loaded = cm.load(knowledge_root / "coverage_map.json")
+    coverage = loaded if loaded.status == "available" else None
+    coverage_note = (
+        "available (loaded)" if coverage else f"{loaded.status}: {loaded.reason or 'not_measured'}"
+    )
 
     client = OpenRouterClient(cache_dir=metadata_root / "cache" / "llm")
     results = enrich_repository(graph, coverage, client, max_workers=workers)

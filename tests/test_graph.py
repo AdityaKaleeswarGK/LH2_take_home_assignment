@@ -206,3 +206,64 @@ def test_stdlib_imports_are_not_reported_as_external(tmp_path: Path) -> None:
     reasons = {i.expression: i.reason for i in graph.unresolved if i.kind == "import"}
     assert reasons["import os"] == "stdlib_module"
     assert reasons["import requests"] == "external_module"
+
+
+# --------------------------------------------------------------------------
+# Coverage was measured three times per run against one unchanged tree
+# --------------------------------------------------------------------------
+
+
+def _coverage_counter(monkeypatch, tmp_path: Path):
+    """measure_coverage with the suite run replaced by a counter."""
+    from stress_stack import coverage_map as cm
+    from stress_stack import graph as graph_module
+    from stress_stack import hygiene
+
+    runs: list[int] = []
+    python = tmp_path / "py"
+    python.write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(
+        hygiene,
+        "provision_test_environment",
+        lambda root, env, **k: {"installed": True, "python": str(python)},
+    )
+
+    def fake_collect(root, py, knowledge_root, packages=None):
+        runs.append(1)
+        return {}, "available", None
+
+    monkeypatch.setattr(cm, "collect", fake_collect)
+    monkeypatch.setattr(cm, "build", lambda g, lines: cm.CoverageMap(status="available"))
+    return graph_module, runs
+
+
+def test_coverage_is_not_remeasured_when_sources_are_unchanged(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = tmp_path / "repo"
+    sample_repository(root)
+    knowledge = root / ".stress_stack" / "knowledge"
+    knowledge.mkdir(parents=True)
+    graph_module, runs = _coverage_counter(monkeypatch, tmp_path)
+    graph = build_graph(root)
+
+    graph_module.measure_coverage(root, graph, knowledge)
+    graph_module.measure_coverage(root, graph, knowledge)
+
+    assert len(runs) == 1
+
+
+def test_a_new_test_file_forces_a_remeasure(tmp_path: Path, monkeypatch) -> None:
+    """testgen writes tests and then refreshes coverage; that must still work."""
+    root = tmp_path / "repo"
+    sample_repository(root)
+    knowledge = root / ".stress_stack" / "knowledge"
+    knowledge.mkdir(parents=True)
+    graph_module, runs = _coverage_counter(monkeypatch, tmp_path)
+
+    graph_module.measure_coverage(root, build_graph(root), knowledge)
+    write(root, "tests/stress_stack_generated/test_new.py", "def test_x():\n    assert True\n")
+    graph_module.measure_coverage(root, build_graph(root), knowledge)
+
+    assert len(runs) == 2
