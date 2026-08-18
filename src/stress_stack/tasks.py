@@ -37,7 +37,7 @@ from stress_stack.errors import GitError, StressStackError
 from stress_stack.excision import EXPLICIT, ExcisionError, excise, plan_excision
 from stress_stack.git_repository import GitRepository
 from stress_stack.graph import RepositoryGraph, blast_radius
-from stress_stack.runner import RunOutcome, Runner, pytest_argument
+from stress_stack.runner import RunOutcome, Runner, forget_source_roots, pytest_argument
 from stress_stack.snapshot import (
     OVERLAY_FILES,
     synthesize_version_modules,
@@ -350,6 +350,10 @@ def build_evaluation_tree(task_root: Path, destination: Path) -> Path:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
     purge_bytecode(destination)
+    # This is the only place a tree is rewritten at a path that may already have
+    # been run against, so it is the only place the PYTHONPATH cache can go
+    # stale.
+    forget_source_roots()
     return destination
 
 

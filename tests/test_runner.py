@@ -12,7 +12,20 @@ from pathlib import Path
 
 import pytest
 
-from stress_stack.runner import pytest_argument, pytest_arguments
+from stress_stack.runner import (
+    forget_source_roots,
+    pytest_argument,
+    pytest_arguments,
+    source_roots,
+)
+
+
+@pytest.fixture(autouse=True)
+def _clean_source_roots_cache():
+    """The cache is process-wide; no test may inherit another's entries."""
+    forget_source_roots()
+    yield
+    forget_source_roots()
 
 
 @pytest.fixture
@@ -68,3 +81,66 @@ def test_arguments_translate_as_a_batch(tree: Path) -> None:
         tree, ["glom.test.test_basic::a", "glom/test/test_basic.py::b"]
     ) == ["glom/test/test_basic.py::a", "glom/test/test_basic.py::b"]
     assert pytest_arguments(tree, None) == []
+
+
+# --------------------------------------------------------------------------
+# PYTHONPATH derivation, and the cache in front of it
+# --------------------------------------------------------------------------
+
+
+def test_a_flat_layout_resolves_to_the_mount_alone(tree: Path) -> None:
+    assert source_roots(tree) == "/work"
+
+
+def test_a_src_layout_outranks_the_repository_root(tmp_path: Path) -> None:
+    for relative in ("src/pkg/__init__.py", "src/pkg/core.py", "tests/test_core.py"):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("", encoding="utf-8")
+
+    assert source_roots(tmp_path) == "/work/src:/work"
+
+
+def test_a_rewritten_tree_is_not_served_from_the_cache(tmp_path: Path) -> None:
+    """The evaluation tree is rebuilt in place after its first run.
+
+    Without invalidation the second run would be handed the PYTHONPATH of a
+    tree that no longer exists, which is the silent-wrong-answer failure the
+    src-layout comment in `source_roots` describes.
+    """
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+    assert source_roots(tmp_path) == "/work"
+
+    # Re-lay the same tree as a src layout, exactly as `build_evaluation_tree`
+    # would when the verifier overlay adds files.
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "pkg").mkdir()
+    (tmp_path / "src" / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+
+    assert source_roots(tmp_path) == "/work", "expected the stale cached value"
+    forget_source_roots()
+    assert source_roots(tmp_path) == "/work/src:/work"
+
+
+def test_the_cache_returns_the_same_answer_for_the_same_tree(tmp_path: Path) -> None:
+    for relative in ("src/pkg/__init__.py", "src/pkg/core.py"):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("", encoding="utf-8")
+
+    first = source_roots(tmp_path)
+    assert source_roots(tmp_path) == first
+    # An unresolved path must hit the same entry, or a candidate's eight runs
+    # would each pay for the walk.
+    assert source_roots(tmp_path / "." ) == first
+
+
+def test_a_host_mount_is_still_a_mount(tmp_path: Path) -> None:
+    """The mount is a parameter, so the same derivation can serve a host run."""
+    for relative in ("src/pkg/__init__.py", "src/pkg/core.py"):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("", encoding="utf-8")
+
+    assert source_roots(tmp_path, mount="/mnt") == "/mnt/src:/mnt"

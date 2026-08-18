@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -122,6 +123,24 @@ def pytest_arguments(tree: Path, targets: list[str] | None) -> list[str]:
     return [pytest_argument(tree, target) for target in targets or []]
 
 
+def forget_source_roots() -> None:
+    """Invalidate the cache after a tree has been rewritten in place.
+
+    Only ``build_evaluation_tree`` rewrites a tree that has already been run
+    against, so it is the only caller. Clearing every entry rather than one
+    keeps this correct under the validate pool, where several candidates hold
+    entries at once: the cost of another candidate recomputing its roots is a
+    directory walk, and the cost of getting this wrong is a task measured
+    against the wrong copy of its own package.
+    """
+    _cached_source_roots.cache_clear()
+
+
+@lru_cache(maxsize=64)
+def _cached_source_roots(resolved_tree: str, mount: str) -> str:
+    return _compute_source_roots(Path(resolved_tree), mount)
+
+
 def source_roots(tree: Path, *, mount: str = "/work") -> str:
     """The PYTHONPATH under which the mounted tree's own packages win.
 
@@ -135,7 +154,15 @@ def source_roots(tree: Path, *, mount: str = "/work") -> str:
 
     The roots are derived with the same ``package_root`` the graph uses to name
     modules, so a layout this tool can parse is a layout it can also run.
+
+    Cached per resolved tree: a candidate runs eight times against at most four
+    trees, and each call walks the whole tree. See ``forget_source_roots`` for
+    the one case where a tree changes underneath the cache.
     """
+    return _cached_source_roots(str(tree.resolve()), mount)
+
+
+def _compute_source_roots(tree: Path, mount: str) -> str:
     from stress_stack.symbols import discover_python_files, package_root
 
     directories: set[Path] = set()
