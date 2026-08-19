@@ -57,8 +57,8 @@ def orchestrate_repository(
     source_path: str,
     *,
     max_workers: int = 4,
-    history_limit: int = 30,
-    excision_limit: int = 12,
+    history_limit: int | None = None,
+    excision_limit: int | None = None,
     repeats: int = 2,
     output_dir: str = "output",
 ) -> OrchestratorRunResult:

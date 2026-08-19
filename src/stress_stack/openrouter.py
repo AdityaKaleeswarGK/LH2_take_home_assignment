@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import random
 import time
 import urllib.error
 import urllib.request
@@ -152,6 +153,10 @@ class OpenRouterClient:
         api_key: str | None = None,
         cache_dir: Path | None = None,
         timeout: float = 180.0,
+        # Total wall clock across every attempt of one call. Five minutes is
+        # long enough to ride out a rate limit and short enough that a stuck
+        # call surfaces as an error rather than as a stalled stage.
+        retry_deadline: float = 300.0,
         max_attempts: int = 5,
         prompt_version: str = PROMPT_VERSION,
     ) -> None:
@@ -159,6 +164,7 @@ class OpenRouterClient:
         self._api_key = api_key or resolve_api_key()
         self.cache_dir = cache_dir
         self.timeout = timeout
+        self.retry_deadline = retry_deadline
         self.max_attempts = max_attempts
         self.prompt_version = prompt_version
         self.usage = UsageLedger()
@@ -286,8 +292,18 @@ class OpenRouterClient:
         return conversation, completions
 
     def _request_with_retry(self, payload: dict[str, Any], key: str) -> Completion:
+        """Retry with full jitter, under a deadline the caller can survive.
+
+        Two properties this lacked, both of which cost a pool slot rather than a
+        call. Backoff without jitter makes a pool of workers that hit the same
+        rate limit retry in lockstep, so they collide again on every attempt.
+        And an unbounded retry budget on top of a 180s request timeout means one
+        hung call could hold a slot for roughly fifteen minutes — long enough
+        that the stage looks stalled rather than slow.
+        """
         delay = 1.0
         last_error = ""
+        began = time.monotonic()
         for attempt in range(1, self.max_attempts + 1):
             started = time.monotonic()
             status, body = self._post(payload)
@@ -297,11 +313,25 @@ class OpenRouterClient:
                 return self._completion_from(body, payload, key, elapsed, attempt)
 
             last_error = redact(_error_message(body) or f"HTTP {status}")
-            if status not in _RETRY_STATUS or attempt == self.max_attempts:
-                raise ModelError(
-                    f"OpenRouter call failed ({status}) for {payload['model']}: {last_error}"
+            spent = time.monotonic() - began
+            if (
+                status not in _RETRY_STATUS
+                or attempt == self.max_attempts
+                or spent >= self.retry_deadline
+            ):
+                reason = (
+                    f" after {spent:.0f}s"
+                    if spent >= self.retry_deadline
+                    else ""
                 )
-            time.sleep(delay)
+                raise ModelError(
+                    f"OpenRouter call failed ({status}) for {payload['model']}"
+                    f"{reason}: {last_error}"
+                )
+            # Full jitter: sleep anywhere in [0, delay). Sleeping exactly `delay`
+            # keeps a pool synchronised on the limit that rejected it.
+            remaining = self.retry_deadline - spent
+            time.sleep(min(random.uniform(0.0, delay), max(remaining, 0.0)))
             delay = min(delay * 2, 30.0)
         raise ModelError(f"OpenRouter call exhausted retries: {last_error}")
 

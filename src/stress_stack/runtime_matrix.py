@@ -343,6 +343,152 @@ def render_dockerfile(spec: RuntimeSpec, base_image: str) -> str:
     return "\n".join(lines)
 
 
+# How to ask a runner what it *would* run, without running it. A collection
+# count is the whole oracle for an environment: an image that builds and
+# collects nothing is indistinguishable, to every gate downstream, from an image
+# where nothing failed. Keyed on the runner program, because that is what
+# decides the flag.
+_COLLECT_ONLY: dict[str, list[str]] = {
+    "pytest": ["--collect-only", "-q"],
+    "py.test": ["--collect-only", "-q"],
+    "go": ["-list", ".*"],
+    "cargo": ["--", "--list"],
+}
+
+# Lines a collect-only run prints that are not tests.
+_NOT_A_TEST = (
+    "no tests ran", "error", "warning", "=====", "-----", "Compiling", "Finished",
+    "ok ", "?", "FAIL", "0 tests", "collected 0",
+)
+
+
+def collect_only_command(test_command: tuple[str, ...]) -> list[str] | None:
+    """The listing form of a suite command, or None when there is not one."""
+    if not test_command:
+        return None
+    parts = list(test_command)
+    program = Path(parts[0]).name
+    if program in {"python", "python3"} and len(parts) > 2 and parts[1] == "-m":
+        program = parts[2]
+    flags = _COLLECT_ONLY.get(program)
+    if flags is None:
+        return None
+    if program == "go":
+        # `go test -list .* ./...` — the package selector has to stay last.
+        head = [part for part in parts if part != "./..."]
+        return [*head, *flags, "./..."]
+    return [*parts, *flags]
+
+
+def probe_collection(image: str, tree: Path, spec: "RuntimeSpec") -> tuple[bool, str]:
+    """Does this image actually collect anything in this tree?
+
+    This is the oracle the module's own docstring calls the safety net, and it
+    was the one thing not implemented: `_build` accepted an image the moment
+    `docker build` exited zero. A build succeeding says the *toolchain*
+    installed. It says nothing about whether the suite can be imported under it,
+    which is the failure a wrong interpreter or a missing third-party package
+    actually produces — and that failure then reaches the gates as "no tests
+    failed", which reads as success.
+
+    A run that cannot be asked to list its tests is reported as unprobed rather
+    than as passing, so an ecosystem this does not cover stays visible.
+    """
+    from stress_stack.sandbox import SandboxPolicy, run_sandboxed
+
+    command = collect_only_command(spec.test_command)
+    if command is None:
+        return True, "unprobed: no collect-only form for this runner"
+
+    with tempfile.TemporaryDirectory(prefix="stress-stack-collect-") as evidence:
+        result = run_sandboxed(
+            image,
+            command,
+            code_dir=tree,
+            evidence_dir=Path(evidence),
+            # Compiled ecosystems build a listing binary into /tmp and run it.
+            policy=SandboxPolicy(
+                timeout_seconds=600.0,
+                allow_tmp_exec=spec.language in {"go", "rust", "c", "cpp"},
+            ),
+            environment={} if spec.language != "python" else None,
+        )
+    collected = _count_collected(result.stdout + result.stderr)
+    if collected > 0:
+        return True, f"collected {collected}"
+    tail = "\n".join((result.stdout + result.stderr).strip().splitlines()[-8:])
+    return False, f"collected nothing:\n{tail}"
+
+
+def _count_collected(output: str) -> int:
+    """How many tests a listing run named. Conservative on purpose."""
+    match = re.search(r"(\d+)\s+tests?\s+collected", output)
+    if match:
+        return int(match.group(1))
+    count = 0
+    for line in output.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(_NOT_A_TEST):
+            continue
+        if stripped.endswith(": test") or stripped.startswith(
+            ("Test", "Benchmark", "Fuzz", "Example")
+        ):
+            count += 1
+        elif "::" in stripped and not stripped.startswith("<"):
+            count += 1
+    return count
+
+
+def _ledger_path() -> Path:
+    """Where the known-bad base images live, outside any one repository.
+
+    A base image that will not build is a fact about that image, not about the
+    repository that discovered it. `python:3.6-slim` failed twice in one glom
+    run before the in-process ledger caught it, and then again the next day, and
+    the day after — each time paying a full `docker build` to relearn it.
+
+    ``STRESS_STACK_HOME`` redirects it. That is not a convenience: a ledger
+    keyed on the user's home directory is global mutable state, and the test
+    suite writing fake failures into it made a later test read them back and
+    fail depending on what had run before it.
+    """
+    home = os.environ.get("STRESS_STACK_HOME")
+    return (Path(home) if home else Path.home()) / ".stress_stack" / "known_bad_images.json"
+
+
+def load_known_bad() -> dict[str, str]:
+    path = _ledger_path()
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    images = payload.get("images")
+    return {str(k): str(v) for k, v in images.items()} if isinstance(images, dict) else {}
+
+
+def save_known_bad(images: dict[str, str]) -> None:
+    """Merge this run's findings into the shared ledger.
+
+    Merged rather than overwritten: two runs can be in flight, and the second
+    finishing must not erase what the first learned. Bounded, because a ledger
+    that grows without limit is a cache nobody can reason about.
+    """
+    if not images:
+        return
+    path = _ledger_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    merged = {**load_known_bad(), **images}
+    if len(merged) > 200:
+        merged = dict(sorted(merged.items())[-200:])
+    try:
+        atomic_write_json(path, {"schema_version": "0.1.0", "images": merged})
+    except OSError:
+        # A ledger that cannot be written is a lost optimisation, not a failure.
+        pass
+
+
 @dataclass
 class RuntimeImages:
     """Builds and reuses one image per distinct runtime, under a budget.
@@ -380,8 +526,17 @@ class RuntimeImages:
     # Filled by `resolve_all` before validation begins; read-only thereafter,
     # which is what makes concurrent candidate lookups safe.
     resolved: dict[str, tuple[str, dict[str, Any]]] = field(default_factory=dict)
-    # base image -> the error it failed with, shared across eras so the same
-    # build is not paid for twice.
+    # What failed to build -> the error. Keyed on the spec's fingerprint, which
+    # covers the base image *and* the install steps, because those are what a
+    # build actually is.
+    #
+    # It used to be keyed on the base image alone, which reads as "python:3.10
+    # -slim will not build" when the truth is "that base with *those* install
+    # commands failed". Measured on glom: five sound Python base images were
+    # recorded as bad because `pip install -r requirements.txt` failed under
+    # each, and every later era proposing any of them was refused before it
+    # could try a different install. Within one run that is a bad heuristic;
+    # persisted across runs it is a permanent wrong answer.
     known_bad: dict[str, str] = field(default_factory=dict)
 
     def resolve_all(
@@ -416,12 +571,25 @@ class RuntimeImages:
         from stress_stack.progress import reporter
 
         live = reporter()
+        # Two ledgers, both of which existed and neither of which was read.
+        # `runtime_images.json` is written after every resolution and was never
+        # loaded, so each run re-resolved and rebuilt every era from scratch;
+        # the known-bad map died with the process, so each run also rediscovered
+        # which base images will not build.
+        self.known_bad = {**load_known_bad(), **self.known_bad}
+        self._adopt_stamp()
+
         by_key: dict[str, Era] = {}
         for era in eras.values():
             if era.key != "HEAD" and era.key not in by_key:
                 by_key[era.key] = era
         ordered = sorted(by_key)
+        reused = [key for key in ordered if key in self.resolved]
+        if reused:
+            live.step(f"reusing {len(reused)} era image(s) from a previous run")
+        ordered = [key for key in ordered if key not in self.resolved]
         if not ordered:
+            self._persist()
             return self.summary()
 
         live.step(f"resolving {len(ordered)} era environments")
@@ -485,8 +653,39 @@ class RuntimeImages:
                 self.resolved[key] = (image, record)
                 live.step(f"era {key}: {record.get('reason')}")
 
+        save_known_bad(self.known_bad)
         self._persist()
         return self.summary()
+
+    def _adopt_stamp(self) -> None:
+        """Reuse images a previous run resolved, where they still exist.
+
+        The tag is checked against the daemon rather than trusted: an image
+        pruned since the last run would otherwise be handed to `docker run` as
+        a verdict-bearing environment, and the failure would surface as a
+        candidate rejection rather than as a missing image.
+        """
+        if self.stamp_path is None or not self.stamp_path.is_file():
+            return
+        try:
+            payload = json.loads(self.stamp_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        if payload.get("schema_version") != "0.1.0":
+            return
+        if (payload.get("head") or {}).get("image") != self.head.image:
+            # A different HEAD image means a different container stage; nothing
+            # resolved against the old one can be assumed to still apply.
+            return
+        for tag, record in (payload.get("images") or {}).items():
+            era_key = str(record.get("era") or "")
+            if not era_key or record.get("status") != "per_candidate_image":
+                continue
+            if not run(["docker", "image", "inspect", tag], timeout=120.0).ok:
+                continue
+            self.built[tag] = tag
+            self.records[tag] = record
+            self.resolved[era_key] = (tag, {**record, "reused_from_stamp": True})
 
     def runtime_for(
         self, tree: Path, *, era: Era | None = None
@@ -571,7 +770,7 @@ class RuntimeImages:
             # Another era may already have paid to learn this base does not
             # build. Spending a second build to rediscover it is the waste the
             # orchestrator exists to remove.
-            learned = self.known_bad.get(spec.base_image)
+            learned = self.known_bad.get(spec.fingerprint)
             if learned is not None:
                 attempts.append(
                     {
@@ -580,13 +779,14 @@ class RuntimeImages:
                         "install": list(spec.install),
                         "error": learned,
                         "from_another_era": True,
+                        "fingerprint": spec.fingerprint,
                     }
                 )
                 repaired = self._repropose(tree, era, proposal, learned)
                 if repaired is None or attempt == self.max_attempts:
                     return self.head.image, {
                         "status": "fallback",
-                        "reason": "known_bad_base_image",
+                        "reason": "known_bad_environment",
                         "image": self.head.image,
                         "attempts": attempts,
                     }
@@ -596,12 +796,46 @@ class RuntimeImages:
             image, record = self._build(spec, spec.tag(self.repository_name))
             record["attempt"] = attempt
             if record.get("status") == "per_candidate_image":
-                if attempts:
-                    record["repaired_after"] = attempts
-                return image, record
+                # The build succeeded. That is not the question — whether the
+                # suite can be collected under it is, and it is the only one a
+                # gate downstream cannot answer for us: an image that collects
+                # nothing reports no failures, which reads as success.
+                collected, detail = probe_collection(image, tree, spec)
+                record["collection_probe"] = detail
+                if collected:
+                    if attempts:
+                        record["repaired_after"] = attempts
+                    return image, record
+                attempts.append(
+                    {
+                        "attempt": attempt,
+                        "base_image": spec.base_image,
+                        "install": list(spec.install),
+                        "error": detail,
+                        "stage": "collection_probe",
+                    }
+                )
+                if attempt == self.max_attempts:
+                    return self.head.image, {
+                        "status": "fallback",
+                        "reason": "image_collected_nothing",
+                        "image": self.head.image,
+                        "attempts": attempts,
+                    }
+                repaired = self._repropose(tree, era, proposal, detail)
+                if repaired is None:
+                    return self.head.image, {
+                        "status": "fallback",
+                        "reason": "image_collected_nothing",
+                        "image": self.head.image,
+                        "attempts": attempts,
+                    }
+                spec, proposal = repaired
+                continue
             failure = str(record.get("build_log_tail", ""))[-400:]
             # Recorded for every other era, not just this one's next attempt.
-            self.known_bad.setdefault(spec.base_image, failure)
+            self.known_bad.setdefault(spec.fingerprint, failure)
+            save_known_bad({spec.fingerprint: failure})
             attempts.append(
                 {
                     "attempt": attempt,

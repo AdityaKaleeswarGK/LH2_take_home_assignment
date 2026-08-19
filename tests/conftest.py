@@ -61,3 +61,18 @@ def history_repository(tmp_path: Path) -> Path:
     )
     run_git(repository, "tag", "v0.1.0")
     return repository
+
+
+@pytest.fixture(autouse=True)
+def _isolate_the_known_bad_ledger(tmp_path_factory, monkeypatch):
+    """Keep the cross-run image ledger out of the developer's home directory.
+
+    `runtime_matrix` persists base images that failed to build so tomorrow's run
+    does not pay to rediscover them. It is global mutable state, and without
+    this the suite wrote fake failures into a real `~/.stress_stack` — which a
+    later test then read back, so whether it passed depended on what had run
+    before it.
+    """
+    monkeypatch.setenv(
+        "STRESS_STACK_HOME", str(tmp_path_factory.mktemp("stress-stack-home"))
+    )

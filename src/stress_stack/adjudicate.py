@@ -25,7 +25,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeout
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -99,6 +101,12 @@ def adjudicate(
     # the tail from setting the wall clock for the whole stage.
     max_turns: int = 8,
     max_workers: int = 10,
+    # Wall clock for the whole stage. Adjudication is optional by construction —
+    # a task keeps its *measured* tier when no model answers — so the slowest
+    # task setting the stage's duration buys nothing that a fallback does not
+    # already provide. Ten minutes is several times the observed full-set time
+    # on glom, so this only ever fires on a hang.
+    deadline_seconds: float = 600.0,
 ) -> dict[str, Any]:
     """Judge every selected task, then calibrate the labels across the set."""
     fallback = {
@@ -145,9 +153,34 @@ def adjudicate(
         return verdict
 
     # Each task is judged independently and each opens its own index handle, so
-    # the pool is safe and the wall clock is one task rather than ten.
-    with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(tasks)))) as pool:
-        verdicts = list(pool.map(judge, tasks))
+    # the pool is safe and the wall clock is one task rather than ten. Past the
+    # deadline the remaining tasks take their measured tier, which is exactly
+    # what they would have had with no model at all — a late verdict and a
+    # missing one are the same outcome, and one of them costs a stuck stage.
+    started = time.monotonic()
+    verdicts: list[Verdict] = []
+    timed_out = 0
+    # Not a `with` block, for the reason `workflow.resolve_workflow` gives:
+    # `shutdown(wait=True)` on exit blocks until every worker finishes, which
+    # makes a per-future deadline decorative. A task past the deadline keeps its
+    # measured tier — the same outcome as no model at all — and is abandoned
+    # rather than waited on.
+    pool = ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(tasks))))
+    try:
+        futures = [(task, pool.submit(judge, task)) for task in tasks]
+        for task, future in futures:
+            remaining = deadline_seconds - (time.monotonic() - started)
+            try:
+                verdicts.append(future.result(timeout=max(remaining, 0.0)))
+            except FuturesTimeout:
+                timed_out += 1
+                verdicts.append(fallback[task["task_id"]])
+            except Exception:  # noqa: BLE001 — one verdict is not the stage
+                verdicts.append(fallback[task["task_id"]])
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+    if timed_out:
+        live.note(f"{timed_out} task(s) kept the measured tier: adjudication deadline")
 
     live.step(f"calibrating {len(verdicts)} verdicts across the set")
     calibrated, note = _calibrate(verdicts, tasks, client)

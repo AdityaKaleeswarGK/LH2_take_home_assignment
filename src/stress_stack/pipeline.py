@@ -41,6 +41,17 @@ _OPTIONAL = frozenset({"enrich", "adjudicate"})
 # not install a Go module, which reads as a broken pipeline rather than an
 # inapplicable stage. A stage that cannot apply should say so, not fail for an
 # incidental reason.
+# How many times a failing stage may be retried after a repair. Two, for the
+# reason `RuntimeImages.max_attempts` gives: the first correction is where
+# nearly all the value is, and a stage still failing after being shown its own
+# error twice is not converging.
+_MAX_STAGE_ATTEMPTS = 2
+
+# Stages whose failure carries enough information to act on. The rest fail as
+# they always did — a repair with nothing to repair from is just a second
+# identical run, which is how a retry loop turns a clear failure into a slow one.
+_REPAIRABLE = frozenset({"workflow", "workflow_measured", "hygiene", "deps", "coverage"})
+
 _PYTHON_ONLY = frozenset(
     {
         # Enrichment and the SQLite projection both read the Python graph's
@@ -57,14 +68,21 @@ class StageResult:
     status: str
     seconds: float
     detail: str = ""
+    # Every failed attempt that preceded this verdict, with what it failed on.
+    # A stage that succeeded on its second try is not the same as one that
+    # succeeded outright, and a reader has no way to tell without this.
+    attempts: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        value: dict[str, Any] = {
             "stage": self.name,
             "status": self.status,
             "seconds": round(self.seconds, 2),
             "detail": self.detail[:400],
         }
+        if self.attempts:
+            value["attempts"] = self.attempts
+        return value
 
 
 @dataclass
@@ -116,8 +134,8 @@ def run_pipeline(
     source_value: str,
     *,
     cwd: Path | None = None,
-    history_limit: int = 30,
-    excision_limit: int = 12,
+    history_limit: int | None = None,
+    excision_limit: int | None = None,
     repeats: int = 2,
     workers: int = 4,
     skip: tuple[str, ...] = (),
@@ -172,9 +190,16 @@ def run_pipeline(
 
     stages: list[tuple[str, Callable[[], Any]]] = [
         ("ingest", lambda: ingest(here["source"], cwd=working)),
+        # The workflow is settled in two halves because the pipeline's own
+        # dependency order forces it: hygiene reformats the tree the graph
+        # parses, so its command has to be known first, while the coverage and
+        # stub probes need a graph to measure against. Each half writes into the
+        # same artifact.
+        ("workflow", lambda: _resolve_workflow(here, pre_graph=True)),
         ("hygiene", lambda: dispatch_hygiene(here["source"], here["profile"])),
         ("deps", lambda: lock_dependencies(here["source"], here["profile"])),
         ("graph", lambda: _build_graph(here, working)),
+        ("workflow_measured", lambda: _resolve_workflow(here, pre_graph=False)),
         ("coverage", lambda: _build_coverage(here, working)),
         # `testgen` used to run here. It generated tests for *uncovered*
         # symbols, but an excision candidate needs a symbol that is already
@@ -186,7 +211,14 @@ def run_pipeline(
         # It remains available as `stress-stack testgen`; it is simply not
         # on the path to the deliverable.
         ("container", lambda: run_container_verification(here["source"], here["profile"])),
-        ("enrich", lambda: build_enrichment_artifacts(here["source"], cwd=working)),
+        (
+            "enrich",
+            # `workers` was accepted by every layer and passed by none, so
+            # `MAX_WORKERS` was the only value enrichment ever ran at.
+            lambda: build_enrichment_artifacts(
+                here["source"], cwd=working, workers=workers
+            ),
+        ),
         ("index", lambda: build_index_artifacts(here["source"], cwd=working)),
         ("mine", lambda: _build_mining(here, working)),
         (
@@ -240,48 +272,50 @@ def run_pipeline(
             continue
         started = time.monotonic()
         live.stage_start(name, position, len(stages))
-        try:
-            produced = action()
-        except StressStackError as exc:
-            result.stages.append(
-                StageResult(name, "failed", time.monotonic() - started, str(exc))
-            )
-            if name in _OPTIONAL:
-                result.stages[-1].status = "degraded"
-                _announce(live, result.stages[-1])
-                _record(result)
-                continue
-            _announce(live, result.stages[-1])
-            _record(result)
-            break
-        except Exception as exc:  # noqa: BLE001 — a stage crash is a stage result
-            result.stages.append(
-                StageResult(
-                    name, "failed", time.monotonic() - started, f"{type(exc).__name__}: {exc}"
-                )
-            )
-            if name in _OPTIONAL:
-                result.stages[-1].status = "degraded"
-                _announce(live, result.stages[-1])
-                _record(result)
-                continue
-            _announce(live, result.stages[-1])
-            _record(result)
-            break
 
-        semantic_error = _semantic_failure(name, produced)
-        stage_status = "degraded" if semantic_error and name in _OPTIONAL else (
-            "failed" if semantic_error else "ok"
+        # A failing stage used to end the run. Several of them can be repaired
+        # from the failure itself — a workflow capability whose probe rejected
+        # its command can be asked again carrying the reason, and a container
+        # that would not build already hands its error back to the agent one
+        # level down. So a stage gets a bounded second chance, and every attempt
+        # is recorded: a run that succeeded on the retry must not read like one
+        # that succeeded outright.
+        attempts: list[dict[str, Any]] = []
+        produced: Any = None
+        failure: str | None = None
+        for attempt in range(1, _MAX_STAGE_ATTEMPTS + 1):
+            try:
+                produced = action()
+                failure = _semantic_failure(name, produced)
+            except StressStackError as exc:
+                produced, failure = None, str(exc)
+            except Exception as exc:  # noqa: BLE001 — a stage crash is a stage result
+                produced, failure = None, f"{type(exc).__name__}: {exc}"
+            if failure is None:
+                break
+            if attempt == _MAX_STAGE_ATTEMPTS or name not in _REPAIRABLE:
+                break
+            attempts.append({"attempt": attempt, "detail": failure[:400]})
+            live.note(f"{name} failed ({failure[:80]}); repairing and retrying")
+            if not _repair(name, here, failure):
+                break
+
+        stage_status = (
+            "ok"
+            if failure is None
+            else ("degraded" if name in _OPTIONAL else "failed")
         )
         result.stages.append(
             StageResult(
                 name,
                 stage_status,
                 time.monotonic() - started,
-                semantic_error or "",
+                failure or "",
+                attempts=attempts,
             )
         )
         _announce(live, result.stages[-1])
+        semantic_error = failure
         # Ingest may have cloned; every later stage must address the clone, not
         # the URL, or each one would try to clone again.
         if name == "ingest":
@@ -315,6 +349,51 @@ def run_pipeline(
     return result
 
 
+def _repair(stage: str, here: dict[str, Any], failure: str) -> bool:
+    """Act on a stage's own failure, and say whether anything changed.
+
+    Only one repair exists today and it is the one that matters: every stage in
+    ``_REPAIRABLE`` reads a resolved workflow capability, and a capability that
+    failed can be re-resolved with its probes forced to run again — which is
+    what routes a rejected default to the agent. Returning False means nothing
+    was done, and the caller stops rather than re-running the same failure.
+    """
+    from stress_stack.openrouter import OpenRouterClient
+    from stress_stack.workflow import POST_GRAPH, PRE_GRAPH, resolve_workflow
+
+    del failure  # recorded by the caller; the probes re-derive it themselves
+    root = Path(here["source"])
+    if not root.is_dir():
+        return False
+    client = OpenRouterClient(cache_dir=root / ".stress_stack" / "cache" / "llm")
+    if not client.configured:
+        # Without a model the only thing a repair could do is re-probe the same
+        # default, which already failed. Saying so beats retrying it.
+        return False
+
+    only = {
+        "workflow": PRE_GRAPH,
+        "hygiene": ("hygiene",),
+        "deps": ("lock",),
+        "workflow_measured": POST_GRAPH,
+        "coverage": ("coverage",),
+    }[stage]
+    graph = None
+    if stage in {"workflow_measured", "coverage"}:
+        from stress_stack.graph import load_graph
+
+        graph = load_graph(root, here["profile"])
+    resolve_workflow(
+        root,
+        language=getattr(here["profile"], "primary_language", "python"),
+        graph=graph,
+        client=client,
+        only=only,
+        refresh=True,
+    )
+    return True
+
+
 def _build_graph(here: dict[str, Any], working: Path) -> Any:
     """Symbol graph from `ast` for Python, from tree-sitter for anything else.
 
@@ -338,6 +417,51 @@ def _language(here: dict[str, Any]) -> str:
     return getattr(here["profile"], "primary_language", "python")
 
 
+def _resolve_workflow(here: dict[str, Any], *, pre_graph: bool) -> dict[str, Any]:
+    """Settle how this ecosystem is formatted, locked, run and measured.
+
+    Defaults are probed before any model is consulted, so a Python or Go
+    repository resolves its whole workflow offline and this stage costs nothing
+    but the probes. Where a default fails its probe, or the ecosystem has none,
+    an agent reads the tree — which is the only reason a C++ repository can get
+    past this stage at all.
+    """
+    from stress_stack.openrouter import OpenRouterClient
+    from stress_stack.workflow import POST_GRAPH, PRE_GRAPH, resolve_workflow
+
+    root = Path(here["source"])
+    language = _language(here)
+    graph = None
+    if not pre_graph:
+        from stress_stack.graph import load_graph
+
+        graph = load_graph(root, here["profile"])
+
+    client = OpenRouterClient(cache_dir=root / ".stress_stack" / "cache" / "llm")
+    workflow = resolve_workflow(
+        root,
+        language=language,
+        graph=graph,
+        client=client if client.configured else None,
+        only=PRE_GRAPH if pre_graph else POST_GRAPH,
+    )
+    here["workflow"] = workflow
+    wanted = PRE_GRAPH if pre_graph else POST_GRAPH
+    return {
+        "language": language,
+        "resolved": {
+            name: workflow.capabilities[name].source
+            for name in wanted
+            if name in workflow.capabilities
+        },
+        "unusable": sorted(
+            name
+            for name in wanted
+            if name not in workflow.capabilities or not workflow.capabilities[name].usable
+        ),
+    }
+
+
 def _build_coverage(here: dict[str, Any], working: Path) -> Any:
     """Per-test coverage: coverage.py contexts for Python, one run per test elsewhere."""
     if _language(here) == "python":
@@ -351,15 +475,12 @@ def _build_coverage(here: dict[str, Any], working: Path) -> Any:
 
 
 def _build_mining(here: dict[str, Any], working: Path) -> Any:
-    """Rank candidates. Only Python mines history today; see the multilang note."""
-    if _language(here) == "python":
-        from stress_stack.graph import build_mining_artifacts
+    """Rank candidates. One miner, told which ecosystem it is reading."""
+    from stress_stack.graph import build_mining_artifacts
 
-        return build_mining_artifacts(here["source"], cwd=working)
-
-    from stress_stack.graph_multilang import build_mining_artifacts as build_multilang
-
-    return build_multilang(here["source"], _language(here))
+    return build_mining_artifacts(
+        here["source"], cwd=working, profile=here["profile"]
+    )
 
 
 def _announce(live: Any, stage: StageResult) -> None:
@@ -399,6 +520,10 @@ def _semantic_failure(stage: str, produced: Any) -> str | None:
         validation = getattr(produced, "validation", {}) or {}
         if validation.get("status") != "verified":
             return f"graph validation status is {validation.get('status') or 'unknown'}"
+    if stage in {"workflow", "workflow_measured"} and isinstance(produced, dict):
+        unusable = produced.get("unusable") or []
+        if unusable:
+            return f"no usable workflow for: {', '.join(unusable)}"
     if stage == "coverage" and isinstance(produced, dict):
         if produced.get("coverage") != "available":
             return f"coverage is {produced.get('coverage') or 'unavailable'}"

@@ -27,6 +27,10 @@ from stress_stack.hygiene import HygieneResult, run_hygiene
 from stress_stack.pipeline import PipelineResult, run_pipeline
 from stress_stack.ingest import ingest
 
+_DEPTH_HELP = (
+    "How far down the ranked pool to read. Left unset, the depth is derived from the quota and the eligibility rate this repository actually shows — thirty is glom's number and ninety is pluggy's, and neither generalises."
+)
+
 _SOURCE_HELP = (
     "Public GitHub URL or path to an existing local Git repository "
     "(default: current directory)"
@@ -92,8 +96,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Stage ranked candidates as tasks and run every validation gate",
     )
     validate_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
-    validate_parser.add_argument("--history-limit", type=int, default=12)
-    validate_parser.add_argument("--excision-limit", type=int, default=8)
+    validate_parser.add_argument("--history-limit", type=int, default=None, help=_DEPTH_HELP)
+    validate_parser.add_argument("--excision-limit", type=int, default=None, help=_DEPTH_HELP)
     validate_parser.add_argument(
         "--repeats", type=int, default=2, help="Fresh repeats per side for the determinism gate"
     )
@@ -112,8 +116,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run every stage in dependency order and emit the task bundle",
     )
     run_parser.add_argument("source", nargs="?", default=".", help=_SOURCE_HELP)
-    run_parser.add_argument("--history-limit", type=int, default=30)
-    run_parser.add_argument("--excision-limit", type=int, default=12)
+    run_parser.add_argument("--history-limit", type=int, default=None, help=_DEPTH_HELP)
+    run_parser.add_argument("--excision-limit", type=int, default=None, help=_DEPTH_HELP)
     run_parser.add_argument("--repeats", type=int, default=2)
     run_parser.add_argument(
         "--workers", type=int, default=_DEFAULT_WORKERS,
@@ -183,8 +187,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Candidates validated concurrently (default: "
              f"{_DEFAULT_WORKERS}); see `run --workers`",
     )
-    orchestrate_parser.add_argument("--history-limit", type=int, default=30)
-    orchestrate_parser.add_argument("--excision-limit", type=int, default=12)
+    orchestrate_parser.add_argument("--history-limit", type=int, default=None, help=_DEPTH_HELP)
+    orchestrate_parser.add_argument("--excision-limit", type=int, default=None, help=_DEPTH_HELP)
     orchestrate_parser.add_argument("--repeats", type=int, default=2)
     orchestrate_parser.add_argument("--output", default="output")
     commands_parser = subparsers.add_parser(

@@ -411,25 +411,49 @@ def _generate_statements(
         for task_id, outcome in zip(task_ids, pool.map(generate, task_ids)):
             results[task_id] = outcome
 
-    # Second pass, serial and usually empty: only a task that duplicated an
-    # earlier title is asked again, and only that task pays for the extra call.
+    # Second pass, usually empty: only a task that duplicated an earlier title is
+    # asked again, and only that task pays for the extra call. The *decision*
+    # about who collided is sequential — first occurrence keeps its title, in
+    # task order, so two runs agree — but the regenerations that follow are
+    # independent of each other and went out one at a time for no reason.
     accepted: set[str] = set()
+    colliding: list[str] = []
     for task_id in task_ids:
         produced, _ = results[task_id]
         if produced is None:
             continue
         key = _title_key(produced.get("title", ""))
-        if key and key in accepted:
-            live.step(f"regenerating {task_id}: title collided")
-            context = "\n".join(f"- {title}" for title in sorted(accepted))
-            retry, retry_meta = generate(task_id, context)
-            if retry is not None:
-                results[task_id] = (
-                    retry,
-                    {**retry_meta, "regenerated_for": "title_collision"},
-                )
-                key = _title_key(retry.get("title", ""))
-        if key:
+        if not key:
+            continue
+        if key in accepted:
+            colliding.append(task_id)
+        else:
+            accepted.add(key)
+
+    if colliding:
+        live.step(f"regenerating {len(colliding)} colliding title(s)")
+        context = "\n".join(f"- {title}" for title in sorted(accepted))
+        with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(colliding)))) as pool:
+            retries = dict(
+                zip(colliding, pool.map(lambda t: generate(t, context), colliding))
+            )
+        # Applied in task order, not completion order: a retry that collides
+        # with *another retry* has to lose deterministically, or two runs of the
+        # same repository ship different titles.
+        for task_id in colliding:
+            retry, retry_meta = retries[task_id]
+            if retry is None:
+                continue
+            key = _title_key(retry.get("title", ""))
+            if not key or key in accepted:
+                # Still colliding. Keeping the original is what happened before
+                # and is no worse: the title is a duplicate either way, and the
+                # emit gate downstream is what refuses the set.
+                continue
+            results[task_id] = (
+                retry,
+                {**retry_meta, "regenerated_for": "title_collision"},
+            )
             accepted.add(key)
     return results
 

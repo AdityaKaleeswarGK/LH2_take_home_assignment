@@ -195,8 +195,24 @@ class _FakeResult:
         self.stderr = "" if ok else "build blew up"
 
 
-def make_images(monkeypatch, *, eras: int = 12, ok: bool = True, proposal=None) -> RuntimeImages:
+def make_images(
+    monkeypatch,
+    *,
+    eras: int = 12,
+    ok: bool = True,
+    proposal=None,
+    collects: bool = True,
+) -> RuntimeImages:
     monkeypatch.setattr(rm, "run", lambda *a, **k: _FakeResult(ok))
+    # A built image is only accepted once it collects something. These tests are
+    # about resolution and repair, not about the probe, so it answers directly;
+    # `collects=False` is how a test asks for the probe to reject an image that
+    # built cleanly.
+    monkeypatch.setattr(
+        rm,
+        "probe_collection",
+        lambda image, tree, spec: (collects, "collected 7" if collects else "collected nothing"),
+    )
     monkeypatch.setattr(
         "stress_stack.container.pin_image_by_digest",
         lambda tag: (f"{tag}@sha256:deadbeef", "digest_pinned"),
@@ -318,10 +334,50 @@ def test_a_base_another_era_already_failed_on_is_not_rebuilt(
     forget_source_roots()
     _, record = images.runtime_for(pluggy_tree(tmp_path / "b"), era=Era("0.7.0"))
 
-    assert images.known_bad["python:3.6-slim"]
-    assert len(builds) == after_first, "the second era rebuilt a known-bad base"
-    assert record["reason"] == "known_bad_base_image"
+    assert images.known_bad, "nothing was learned from the first failure"
+    assert len(builds) == after_first, "the second era rebuilt a known-bad environment"
+    assert record["reason"] == "known_bad_environment"
     assert record["attempts"][0]["from_another_era"] is True
+
+
+def test_a_different_install_on_the_same_base_is_still_tried(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """The ledger records what failed, which is a base *and* its install steps.
+
+    Keyed on the base image alone it reads as "python:3.10-slim will not build",
+    when the truth is that one install step failed under it. Measured on glom:
+    five sound Python base images were recorded bad because
+    `pip install -r requirements.txt` failed under each, and every later era
+    proposing any of them was refused before it could try anything different.
+    Persisted across runs, that wrong answer becomes permanent.
+    """
+    images = make_images(monkeypatch, ok=False)
+    # One attempt per era, so the repair loop does not consume both installs
+    # inside the first era and mask what this is measuring.
+    images.max_attempts = 1
+    builds: list[str] = []
+    monkeypatch.setattr(
+        rm, "run", lambda *a, **k: (builds.append("x"), _FakeResult(False))[1]
+    )
+    installs = iter(["pip install -r requirements.txt", "pip install -e ."])
+    monkeypatch.setattr(
+        "stress_stack.environment_agent.propose_environment",
+        lambda *a, **k: Proposal(
+            base_image="python:3.10-slim",
+            install=(next(installs, "pip install -e ."),),
+            test_command=("pytest",),
+        ),
+    )
+
+    images.runtime_for(pluggy_tree(tmp_path / "a"), era=Era("0.6.0"))
+    after_first = len(builds)
+    forget_source_roots()
+    images.runtime_for(pluggy_tree(tmp_path / "b"), era=Era("0.7.0"))
+
+    assert len(builds) > after_first, (
+        "a different install on the same base was refused a build"
+    )
 
 
 def test_an_unusable_proposal_stops_the_candidate_rather_than_guessing(
@@ -514,3 +570,48 @@ def test_a_broken_era_does_not_end_the_run(tmp_path: Path, monkeypatch) -> None:
     image, record = images.resolved["1.0.0"]
     assert image == HEAD_PY.image
     assert record["reason"].startswith("resolution_failed")
+
+
+def test_an_image_that_builds_but_collects_nothing_is_not_accepted(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """The oracle this whole design rests on.
+
+    A successful `docker build` says the toolchain installed. It says nothing
+    about whether the suite can be imported under it — and a suite that cannot
+    be collected reports no failures, which every gate downstream reads as
+    success.
+    """
+    images = make_images(monkeypatch, collects=False)
+
+    image, record = images.runtime_for(pluggy_tree(tmp_path), era=Era("0.6.0", "0.6.0"))
+
+    assert image == HEAD_PY.image
+    assert record["reason"] == "image_collected_nothing"
+    assert any(
+        attempt.get("stage") == "collection_probe" for attempt in record["attempts"]
+    )
+
+
+def test_a_failed_collection_is_handed_back_to_the_agent(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A repair that forgets the error is just a re-ask."""
+    seen: list[str] = []
+
+    def propose(*args, **kwargs):
+        if kwargs.get("failure"):
+            seen.append(str(kwargs["failure"]))
+        return Proposal(
+            base_image="python:3.9-slim",
+            install=('pip install "pluggy==0.6.0"',),
+            test_command=("pytest",),
+        )
+
+    images = make_images(monkeypatch, collects=False)
+    monkeypatch.setattr("stress_stack.environment_agent.propose_environment", propose)
+
+    images.runtime_for(pluggy_tree(tmp_path), era=Era("0.6.0", "0.6.0"))
+
+    assert seen, "the collection failure was never shown to the agent"
+    assert "collected nothing" in seen[0]

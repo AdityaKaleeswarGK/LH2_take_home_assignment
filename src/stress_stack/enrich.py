@@ -99,6 +99,33 @@ def import_waves(graph: RepositoryGraph) -> list[list[str]]:
     return waves
 
 
+# How wide a merged wave may get. A wave costs one round no matter how many
+# files are in it, so the only reason not to merge everything is that a merged
+# wave loses the dependency summaries its members would have had.
+_MERGE_WIDTH = 24
+
+
+def merge_waves(waves: list[list[str]], *, width: int = _MERGE_WIDTH) -> list[list[str]]:
+    """Combine adjacent waves that are too narrow to be worth a round of their own.
+
+    Six waves is six sequential round trips, and glom's third wave held one
+    file. The dependency ordering exists so a file is described knowing what it
+    is built on, and that is worth a round — but it is not worth a round for a
+    single file whose summary almost nothing downstream will read.
+
+    Merging is only ever forward, so a file still never appears before something
+    it imports *in an earlier wave*; what it loses is the summary of a file
+    merged alongside it. That is the trade, and it is bounded by `width`.
+    """
+    merged: list[list[str]] = []
+    for wave in waves:
+        if merged and len(merged[-1]) + len(wave) <= width:
+            merged[-1] = merged[-1] + wave
+        else:
+            merged.append(list(wave))
+    return merged
+
+
 def by_path_symbols(graph: RepositoryGraph, path: str) -> list:
     for parsed in graph.files:
         if parsed.path == path:
@@ -243,13 +270,16 @@ def enrich_repository(
     max_workers: int = MAX_WORKERS,
     role: str = "worker",
 ) -> list[CardResult]:
-    """Describe every file, wave by wave, with a bounded pool inside each wave."""
+    """Describe every file, wave by wave, with a bounded pool inside each wave.
+
+    Waves narrow enough to waste a round are merged first — see `merge_waves`.
+    """
     by_path = {parsed.path: parsed for parsed in graph.files}
     module_of = {parsed.path: parsed.module for parsed in graph.files}
     summaries: dict[str, str] = {}
     results: list[CardResult] = []
 
-    for wave in import_waves(graph):
+    for wave in merge_waves(import_waves(graph)):
         cards = [
             build_file_card(graph, coverage, by_path[path], summaries=summaries)
             for path in wave
