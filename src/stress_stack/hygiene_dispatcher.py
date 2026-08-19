@@ -187,102 +187,63 @@ def dispatch_hygiene(
     probe_image, probe_reason = build_probe_image(root, prof)
     before_snapshot = snapshot_suite(probe_image) if probe_image else None
 
-    if lang == "rust":
-        if not shutil.which("cargo"):
-            return _unsupported("rust", "cargo_not_installed")
-        result = run(["cargo", "fmt", "--all"], cwd=root, timeout=600.0)
-        if not result.ok:
-            return HygieneReport(
-                status=FAILED,
-                language="rust",
-                tool="cargo fmt",
-                files_reformatted=0,
-                violations_fixed=0,
-                before_tests_passing=None,
-                after_tests_passing=None,
-                regressions=None,
-                regressions_verified=False,
-                reason=result.failure_detail(),
-            )
-        changed = _changed_file_count(root, (".rs",))
-        tool = "cargo fmt"
+    # The command comes from the resolved workflow, whose record for this
+    # ecosystem was probed against this tree — it formatted it, twice, without
+    # changing anything the second time. Where a built-in default passed that
+    # probe the command is exactly the one the branch below used to hardcode;
+    # where the ecosystem had no branch at all, an agent read the tree and its
+    # answer was probed the same way. That is the whole difference between a
+    # sixth ecosystem costing a code change and costing nothing.
+    from stress_stack.workflow import HYGIENE, load_workflow, resolve_workflow
 
-    elif lang in {"typescript", "javascript"}:
-        if not shutil.which("npx"):
-            return _unsupported(lang, "npx_not_installed")
-        # `--no-install` keeps hygiene offline and deterministic: `--yes` would
-        # fetch and execute an unpinned package from the registry mid-run.
-        result = run(
-            [
-                "npx",
-                "--no-install",
-                "prettier",
-                "--write",
-                "--ignore-path",
-                ".gitignore",
-                "--ignore-pattern",
-                ".stress_stack/**",
-                ".",
-            ],
-            cwd=root,
-            timeout=900.0,
+    workflow = load_workflow(root / ".stress_stack" / "workflow.json")
+    record = workflow.get(HYGIENE) if workflow else None
+    if record is None:
+        # Called outside the pipeline, so nothing has settled this yet. Resolve
+        # it here rather than falling back to an unprobed command: an ecosystem
+        # gets one answer, arrived at one way, whichever entry point asked. Safe
+        # to run here and nowhere earlier — the before-snapshot above is already
+        # taken, so the probe's own formatting cannot contaminate it.
+        workflow = resolve_workflow(
+            root, language=lang, client=client, only=(HYGIENE,)
         )
-        if not result.ok:
-            return _unsupported(
-                lang,
-                "prettier_not_available_locally: add it to devDependencies",
-                tool="prettier",
-            )
-        changed = _changed_file_count(root, (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"))
-        tool = "prettier"
+        record = workflow.get(HYGIENE)
+    argv = record.command("format") if record else []
+    if not argv:
+        reason = "no_probed_format_command"
+        if record is not None and record.probe is not None:
+            reason = f"{reason}: {record.probe.reason}"
+        return _unsupported(lang, reason)
+    if not shutil.which(argv[0]):
+        return _unsupported(lang, f"{argv[0]}_not_installed", tool=argv[0])
 
-    elif lang == "go":
-        if not shutil.which("gofmt"):
-            return _unsupported("go", "gofmt_not_installed")
-        targets = _owned_sources(root, (".go",))
-        result = (
-            run(["gofmt", "-w", *[str(p) for p in targets]], cwd=root, timeout=600.0)
-            if targets
-            else run(["gofmt", "--help"], cwd=root, timeout=60.0)
+    result = run(argv, cwd=root, timeout=900.0)
+    if not result.ok:
+        return HygieneReport(
+            status=FAILED,
+            language=lang,
+            tool=" ".join(argv[:2]),
+            files_reformatted=0,
+            violations_fixed=0,
+            before_tests_passing=None,
+            after_tests_passing=None,
+            regressions=None,
+            regressions_verified=False,
+            reason=result.failure_detail(),
         )
-        if targets and not result.ok:
-            return HygieneReport(
-                status=FAILED,
-                language="go",
-                tool="gofmt",
-                files_reformatted=0,
-                violations_fixed=0,
-                before_tests_passing=None,
-                after_tests_passing=None,
-                regressions=None,
-                regressions_verified=False,
-                reason=result.failure_detail(),
-            )
-        changed = _changed_file_count(root, (".go",))
-        tool = "gofmt"
-
-    elif lang in {"c", "cpp"}:
-        if not shutil.which("clang-format"):
-            return _unsupported(lang, "clang_format_not_installed")
-        targets = _owned_sources(root, (".c", ".cc", ".cpp", ".h", ".hpp"))
-        if targets:
-            run(
-                ["clang-format", "-i", *[str(p) for p in targets]],
-                cwd=root,
-                timeout=900.0,
-            )
-        changed = _changed_file_count(root, (".c", ".cc", ".cpp", ".h", ".hpp"))
-        tool = "clang-format"
-
-    else:
-        return _unsupported(lang, f"no_formatter_for_{lang}")
+    changed = _changed_file_count(root, _SUFFIXES.get(lang, ()))
+    tool = " ".join(argv[:2])
 
     # Linting comes after formatting so the two cannot fight: a formatter that
     # rewrites what a linter just fixed would leave the tree neither clean nor
     # stable across runs.
     from stress_stack.linters import lint
 
-    lint_outcome = lint(root, lang)
+    # `linters.lint` carries the violation *counting* for each tool, which is
+    # parsing and therefore code. The workflow supplies the command; where it
+    # names a tool `linters` knows, that module reads the result properly, and
+    # where it does not the command still runs and is reported as unmeasured.
+    lint_outcome = lint(root, lang, command=record.command("lint") or None)
     if lint_outcome.status == "linted":
         changed = _changed_file_count(root, _SUFFIXES.get(lang, ()))
 

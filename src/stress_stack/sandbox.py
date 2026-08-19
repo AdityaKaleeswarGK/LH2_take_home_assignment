@@ -107,20 +107,29 @@ class SandboxResult:
     timed_out: bool
     out_of_memory: bool
     command: list[str] = field(default_factory=list)
+    # Exit codes that mean "the suite ran and reported", as opposed to "the
+    # harness broke". Defaults to pytest's.
+    result_exit_codes: frozenset[int] = frozenset({0, 1, 5})
 
     @property
     def infrastructure_failure(self) -> str | None:
         """Distinguish a broken run from a failing test suite.
 
         pytest exits 1 for test failures and 5 for no-tests-collected; both are
-        results. Anything else here is the harness failing, and must not be
-        recorded as a task verdict.
+        results. Anything else is the harness failing and must not be recorded
+        as a task verdict.
+
+        Which codes those are is the *runner's* fact, not a constant. Hardcoding
+        pytest's set rejected every Rust task ever validated: `cargo test` exits
+        101 when a test fails, so a correct fail-before — the excised body
+        panicking exactly as intended — was classified as `container_exit_101`
+        and thrown away as infrastructure.
         """
         if self.timed_out:
             return "timeout"
         if self.out_of_memory:
             return "out_of_memory"
-        if self.exit_code in {0, 1, 5}:
+        if self.exit_code in self.result_exit_codes:
             return None
         return f"container_exit_{self.exit_code}"
 
@@ -192,6 +201,7 @@ def run_sandboxed(
     evidence_dir: Path,
     policy: SandboxPolicy | None = None,
     environment: dict[str, str] | None = None,
+    result_exit_codes: frozenset[int] | None = None,
 ) -> SandboxResult:
     policy = policy or SandboxPolicy()
     evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -213,6 +223,7 @@ def run_sandboxed(
         timed_out=result.exit_code == 124,
         out_of_memory="Killed" in combined or result.exit_code == 137,
         command=arguments,
+        result_exit_codes=result_exit_codes or frozenset({0, 1, 5}),
     )
 
 

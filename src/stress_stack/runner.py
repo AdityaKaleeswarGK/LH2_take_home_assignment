@@ -94,6 +94,10 @@ class Runner(Protocol):
         self, tree: Path, evidence: Path, name: str, targets: list[str] | None = None
     ) -> RunOutcome: ...
 
+    def selection_id(self, test_id: str) -> str:
+        """The id a targeted re-run of this runner can select on."""
+        ...
+
 
 def pytest_argument(tree: Path, node_id: str) -> str:
     """Normalise any test id into the path form pytest accepts on its command line.
@@ -208,6 +212,10 @@ class DockerRunner:
     policy: SandboxPolicy = field(default_factory=SandboxPolicy)
     backend: str = DOCKER
 
+    def selection_id(self, test_id: str) -> str:
+        """pytest can select every id it reports, parametrised cases included."""
+        return test_id
+
     def execute(
         self, tree: Path, evidence: Path, name: str, targets: list[str] | None = None
     ) -> RunOutcome:
@@ -270,6 +278,41 @@ class LanguageRunner:
     policy: SandboxPolicy = field(default_factory=SandboxPolicy)
     backend: str = DOCKER
 
+    def selection_id(self, test_id: str) -> str:
+        return self.plan.selection_id(test_id)
+
+    def environment(self) -> dict[str, str]:
+        """Where this toolchain may write, given a read-only code mount.
+
+        The mount is read-only on purpose — a run must not mutate the snapshot
+        it is being judged against — and compiled ecosystems have to put build
+        output somewhere. Go already worked by accident: `GOCACHE` defaults
+        under `HOME`, which the sandbox sets to the writable `/tmp`. Cargo does
+        not, and insists on `<workspace>/target`, so every Rust run died before
+        a test with `failed to open: /work/target/debug/.cargo-lock: Read-only
+        file system`.
+
+        Redirecting to `/tmp` keeps the guarantee rather than relaxing it: the
+        code mount stays read-only, and the only writable space is the run's own
+        throwaway tmpfs. No PYTHONPATH is set for any of these — it is
+        meaningless in a Go or Rust image and is the shadowing vector that broke
+        the repositories pytest itself depends on.
+        """
+        if self.plan.language == "rust":
+            # Only the *target* directory. `CARGO_HOME` holds the registry the
+            # image build already populated, and the run has no network — so
+            # redirecting it to an empty tmpfs makes every dependency
+            # unresolvable. The rule this follows: redirect what a run must
+            # write, never what it must read.
+            return {"CARGO_TARGET_DIR": "/tmp/target"}
+        # Go needs nothing. `GOCACHE` and `GOMODCACHE` already default under
+        # `HOME`, which the sandbox sets to the writable `/tmp`, and the image
+        # build downloaded the module cache there. Overriding them looked
+        # symmetrical with Rust and broke every Go run with `dial tcp: lookup
+        # proxy.golang.org: network is unreachable` — the modules were fine, and
+        # pointing at a fresh tmpfs was the whole problem.
+        return {}
+
     def execute(
         self, tree: Path, evidence: Path, name: str, targets: list[str] | None = None
     ) -> RunOutcome:
@@ -283,9 +326,8 @@ class LanguageRunner:
             code_dir=tree,
             evidence_dir=evidence,
             policy=self.policy,
-            # No PYTHONPATH: setting it for a Go or Rust image is meaningless,
-            # and it is the shadowing vector that broke pytest-dependency repos.
-            environment={},
+            environment=self.environment(),
+            result_exit_codes=getattr(self.plan, "result_exit_codes", None),
         )
         seconds = time.monotonic() - started
         log_path.write_text(

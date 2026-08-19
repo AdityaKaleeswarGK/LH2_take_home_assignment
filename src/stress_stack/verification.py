@@ -19,6 +19,8 @@ attribute is empty in practice and is not relied upon.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import re
 import xml.etree.ElementTree as ElementTree
 from collections import Counter
@@ -222,6 +224,110 @@ def parse_report(path: Path) -> RunReport:
             break
         report.results[test_id] = CaseResult(test_id, status, failure_class, signature)
     return report
+
+
+def nearest_collected_ancestor(test_id: str, collected: set[str]) -> str | None:
+    """The closest enclosing test that a run actually reported, if any.
+
+    Test ids nest, and the separator differs by runner: Go writes
+    ``TestUintSlice/#06/Value/ToType``, pytest writes
+    ``module.py::TestClass::test_case``. Both are walked from the leaf
+    outwards, and the first ancestor present in the report wins. ``None`` means
+    nothing in the chain was collected, which is a real answer and must stay
+    distinguishable from "the leaf itself was fine".
+    """
+    for separator in ("/", "::"):
+        parts = test_id.split(separator)
+        for cut in range(len(parts) - 1, 0, -1):
+            ancestor = separator.join(parts[:cut])
+            if ancestor in collected:
+                return ancestor
+    return None
+
+
+def resolve_targets(
+    designated: list[str],
+    reports: list[RunReport],
+    *,
+    selection_id: Callable[[str], str] | None = None,
+) -> tuple[list[str], dict[str, Any]]:
+    """Turn designated tests into ids a targeted re-run can actually select.
+
+    A designated test is chosen from two *unfiltered* runs and then re-run with
+    the suite narrowed to it. Some tests do not exist in both runs, and Go's
+    table-driven subtests are the case that broke an ecosystem.
+
+    A subtest is generated at run time by the parent that spawns it. Excise a
+    function the table exercises and the first case panics, which aborts the
+    parent — so the remaining cases are never generated at all. Measured on a
+    four-level table: the excised tree collects 4 ids where the reference tree
+    collects 25. A target taken from the reference run therefore names something
+    that cannot exist in the run it has to fail in, and ``gate_fail_before``
+    reported ``targets_not_collected`` for twelve Go candidates out of thirteen.
+
+    So the requirement is presence in **every** run being compared, not in any
+    of them. A leaf missing from one side lifts to the closest ancestor both
+    sides reported — here ``TestUintSlice``, which is exactly the test that does
+    panic before and does pass after. Two properties keep this honest:
+
+    * **It is measured, not predicted.** No ecosystem rule decides what lifts;
+      the reports do. An id no run collected is left exactly as it was, so the
+      gate still fails and still names it.
+    * **It does not change pytest.** A parametrised case is collected under its
+      own id in both runs, so it is its own answer and nothing lifts. The
+      parametrised case stays the unit, which is what it should be.
+
+    Returns the resolved ids and a record of every lift, because a gate verdict
+    reached against a parent rather than the designated leaf is a weaker claim
+    and the artifact has to say so.
+    """
+    # Intersection, deliberately. The union would say a target "exists" on the
+    # strength of the run it passes in, which is the one run that was never in
+    # question.
+    collected: set[str] | None = None
+    for report in reports:
+        ids = set(report.results)
+        collected = ids if collected is None else (collected & ids)
+    collected = collected or set()
+
+    resolved: list[str] = []
+    lifted: dict[str, str] = {}
+    unresolved: list[str] = []
+    for target in designated:
+        selectable = selection_id(target) if selection_id else target
+        if selectable != target and selectable in collected:
+            lifted[target] = selectable
+            resolved.append(selectable)
+            continue
+        if target in collected:
+            resolved.append(target)
+            continue
+        ancestor = nearest_collected_ancestor(target, collected)
+        if ancestor is not None:
+            lifted[target] = ancestor
+            resolved.append(ancestor)
+            continue
+        # Nothing in this chain was collected. Keeping the original is the
+        # honest move: the gate will reject it and name it.
+        unresolved.append(target)
+        resolved.append(target)
+
+    ordered = sorted(dict.fromkeys(resolved))
+    return ordered, {
+        "designated": sorted(designated),
+        "resolved": ordered,
+        "lifted": dict(sorted(lifted.items())),
+        "unresolved": sorted(unresolved),
+        # More than one leaf collapsing onto the same ancestor means the gate
+        # can no longer tell which of them the change actually moved. It is not
+        # a rejection — the ancestor genuinely fails before and passes after —
+        # but it is weaker evidence, and it is recorded rather than smoothed.
+        "collapsed": sorted(
+            ancestor
+            for ancestor in set(lifted.values())
+            if sum(1 for value in lifted.values() if value == ancestor) > 1
+        ),
+    }
 
 
 def gate_fail_before(

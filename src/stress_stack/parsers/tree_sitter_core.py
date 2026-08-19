@@ -15,7 +15,7 @@ are not locally compiled.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -87,6 +87,16 @@ class ExtractedSymbol:
     # line, so replacing that line range deletes the declaration too.
     body_start_byte: int | None = None
     body_end_byte: int | None = None
+    # The file this symbol was extracted from. Carried on the symbol so it can
+    # answer `.id` the way the Python graph's ParsedSymbol does — every consumer
+    # that walks a graph keys on `path::name`, and a symbol that cannot say
+    # which file it came from forces each of them to reconstruct it.
+    path: str = ""
+
+    @property
+    def id(self) -> str:
+        """`path::name`, matching `symbols.ParsedSymbol.id`."""
+        return f"{self.path}::{self.name}" if self.path else self.name
 
 
 @dataclass
@@ -97,6 +107,12 @@ class ParsedSourceFile:
     symbols: list[ExtractedSymbol] = field(default_factory=list)
     tests: list[ExtractedSymbol] = field(default_factory=list)
     has_syntax_error: bool = False
+    # Which parser produced this. "regex" is a fallback that cannot find a
+    # function body's true extent, so a graph built from one must not be
+    # reported as verified — a C++ file parsed by regex yields no symbols and
+    # no syntax error, which reads identically to a file with nothing in it.
+    # Recording the parser is what lets `validate_graph` tell those apart.
+    parser: str = "regex"
 
     @property
     def test_count(self) -> int:
@@ -153,6 +169,7 @@ class ParsedSourceFile:
             ],
             "tests": [t.name for t in self.tests],
             "has_syntax_error": self.has_syntax_error,
+            "parser": self.parser,
         }
 
 
@@ -180,9 +197,10 @@ def parse_source_code(path: str, code: str, *, prefer_tree_sitter: bool = True) 
     if prefer_tree_sitter and lang != "python":
         parsed = _tree_sitter_parse(code, lang, result)
         if parsed:
-            return result
+            return _stamp_paths(result)
 
     if lang == "python":
+        result.parser = "ast"
         _parse_python_source(code, result)
     elif lang in {"typescript", "javascript"}:
         _parse_js_ts_source(code, result, lang)
@@ -195,6 +213,20 @@ def parse_source_code(path: str, code: str, *, prefer_tree_sitter: bool = True) 
     else:
         _parse_generic_source(code, result)
 
+    return _stamp_paths(result)
+
+
+def _stamp_paths(result: ParsedSourceFile) -> ParsedSourceFile:
+    """Give every extracted symbol the file it came from.
+
+    Done here rather than at each construction site: there are a dozen of those
+    across six extractors and the tree-sitter bridge, and one that forgot would
+    produce a symbol whose `.id` silently lost its path.
+    """
+    result.symbols = [replace(s, path=result.path) for s in result.symbols]
+    by_name = {(s.name, s.start_line): s for s in result.symbols}
+    result.tests = [by_name.get((t.name, t.start_line), replace(t, path=result.path))
+                    for t in result.tests]
     return result
 
 
@@ -235,6 +267,7 @@ def _tree_sitter_parse(code: str, lang: str, result: ParsedSourceFile) -> bool:
         )
 
     result.has_syntax_error = parsed["has_syntax_error"]
+    result.parser = "tree_sitter"
     return True
 
 
@@ -539,6 +572,12 @@ _CPP_FUNC_RE = re.compile(
     re.MULTILINE,
 )
 _CPP_TEST_RE = re.compile(r"""\bTEST(?:_F)?\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)""")
+# Control flow that matches the shape `type name(args) {` without being a
+# definition. The regex fallback cannot tell these apart structurally, which
+# is exactly why a graph built from it is not reported as verified.
+_CPP_NOT_A_FUNCTION = frozenset(
+    {"if", "for", "while", "switch", "catch", "return", "else", "do"}
+)
 
 
 def _parse_c_cpp_source(code: str, result: ParsedSourceFile, lang: str) -> None:
@@ -549,6 +588,35 @@ def _parse_c_cpp_source(code: str, result: ParsedSourceFile, lang: str) -> None:
         line_num = code[: match.start()].count("\n") + 1
         result.imports.append(
             ExtractedImport(raw=match.group(0), module=header, line=line_num)
+        )
+
+    # `_CPP_FUNC_RE` was written, and then never called. A translation unit full
+    # of functions therefore reported `symbols=0, has_syntax_error=False`, which
+    # is indistinguishable from an empty file — and `validate_graph` called that
+    # clean. It finds definitions, not declarations, because the trailing `{` is
+    # part of the pattern; a prototype ending in `;` is correctly ignored.
+    for match in _CPP_FUNC_RE.finditer(code):
+        name = match.group(1)
+        if name in _CPP_NOT_A_FUNCTION:
+            continue
+        # Anchored on the name, not on the match: the leading type pattern
+        # matches across newlines, so `match.start()` lands on whatever line the
+        # return type began — for `#include <vector>` above a definition that is
+        # the include line, and a symbol anchored to the wrong line is worse
+        # than no symbol at all.
+        line_num = code[: match.start(1)].count("\n") + 1
+        end_line = _find_closing_brace_line(lines, line_num - 1)
+        result.symbols.append(
+            ExtractedSymbol(
+                name=name,
+                qualified_name=name,
+                kind="function",
+                start_line=line_num,
+                end_line=end_line,
+                first_body_line=min(line_num + 1, end_line),
+                last_body_line=end_line,
+                is_test=False,
+            )
         )
 
     for match in _CPP_TEST_RE.finditer(code):

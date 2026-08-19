@@ -193,8 +193,33 @@ def numstat(repository: GitRepository, base_sha: str, head_sha: str) -> list[Fil
     return deltas
 
 
+# Extensions a solver could plausibly be asked to write, per ecosystem. Mining
+# needs this to answer one question — "is there any code in this change for a
+# golden answer to contain?" — which used to be spelled `path.endswith(".py")`
+# and was the first of three places history mining assumed Python.
+_SOURCE_SUFFIXES: dict[str, tuple[str, ...]] = {
+    "python": (".py",),
+    "go": (".go",),
+    "rust": (".rs",),
+    "typescript": (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"),
+    "javascript": (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"),
+    "c": (".c", ".h"),
+    "cpp": (".c", ".cc", ".cpp", ".cxx", ".h", ".hpp"),
+}
+
+
+def source_suffixes(language: str) -> tuple[str, ...]:
+    """What counts as source for this ecosystem, defaulting to Python's."""
+    return _SOURCE_SUFFIXES.get(language, (".py",))
+
+
 def is_python(path: str) -> bool:
+    """Retained for callers that mean Python specifically."""
     return path.endswith(".py")
+
+
+def is_source(path: str, language: str = "python") -> bool:
+    return path.endswith(source_suffixes(language))
 
 
 def percentile(values: list[int], fraction: float) -> int:
@@ -260,8 +285,18 @@ def mine_history(
     repository: GitRepository,
     graph: RepositoryGraph,
     history_root: Path,
+    *,
+    language: str = "python",
 ) -> tuple[list[Candidate], Funnel, dict[str, Any]]:
-    """Merged pull requests that changed both source and tests, ranked."""
+    """Merged pull requests that changed both source and tests, ranked.
+
+    ``language`` decides what counts as source and how a test file is read. It
+    defaults to Python because that is what every existing caller means; passing
+    anything else is what lets a Go or Rust repository produce history
+    candidates at all, and therefore what lets it satisfy the quota's
+    ``minimum: {history: 4}``. Without it those ecosystems could only ever mine
+    excision candidates, capped at four, and could never ship ten tasks.
+    """
     pull_requests = read_jsonl(history_root / "pull_requests.jsonl")
     links = read_jsonl(history_root / "commit_pr_links.jsonl")
     commits = {record["sha"]: record for record in read_jsonl(history_root / "commits.jsonl")}
@@ -300,16 +335,18 @@ def mine_history(
         base_sha = parents[1]
 
         deltas = numstat(repository, base_sha, head_sha)
-        python_changes = [d for d in deltas if is_python(d.path) and not d.binary]
+        source_changes = [
+            d for d in deltas if is_source(d.path, language) and not d.binary
+        ]
         # The only structural requirement: something a solver could write. A
-        # change touching no Python at all has no code for a golden answer to
-        # contain, whatever else it may be worth.
-        if not python_changes:
-            funnel.drop("no_python_change", identifier)
+        # change touching none of this ecosystem's source has no code for a
+        # golden answer to contain, whatever else it may be worth.
+        if not source_changes:
+            funnel.drop("no_source_change", identifier)
             continue
 
-        changed_tests = [d for d in python_changes if d.path in tests or _looks_like_test(d.path)]
-        changed_source = [d for d in python_changes if d not in changed_tests]
+        changed_tests = [d for d in source_changes if d.path in tests or _looks_like_test(d.path)]
+        changed_source = [d for d in source_changes if d not in changed_tests]
 
         added, modified, unparsed = _test_function_delta(
             repository, base_sha, head_sha, [d.path for d in changed_tests]
@@ -325,7 +362,7 @@ def mine_history(
                 "added_tests": added,
                 "modified_tests": modified,
                 "unparsed_tests": unparsed,
-                "churn": sum(d.churn for d in python_changes),
+                "churn": sum(d.churn for d in source_changes),
             }
         )
 
@@ -388,26 +425,60 @@ def _test_function_delta(
 def _test_functions_at(
     repository: GitRepository, sha: str, path: str
 ) -> tuple[dict[str, str], str | None]:
-    from stress_stack.tasks import collected_tests_with_status
+    """The test units a file defined at a revision, and whether it parsed.
 
+    Python keeps going through `ast`, which is what `collected_tests` uses to
+    produce the same names pytest will collect — including class-scoped ones
+    (`TestX.test_y`) that a grammar-agnostic reader would not compose the same
+    way. Every other ecosystem goes through tree-sitter, which is what makes a
+    Go or Rust pull request rankable at all: `added_test_functions` carries the
+    largest weight in `_rank`, and before this it was structurally zero for
+    every non-Python repository.
+
+    The body text is what decides "added" from "modified", so it is taken from
+    the symbol's own line span rather than re-serialised.
+    """
     try:
         source = repository.run(["show", f"{sha}:{path}"], record=False)
     except GitError:
         # The file did not exist at this revision. That is an answer, not a
         # failure, and must not be counted as one.
         return {}, None
-    return collected_tests_with_status(source)
+
+    if path.endswith(".py"):
+        from stress_stack.tasks import collected_tests_with_status
+
+        return collected_tests_with_status(source)
+
+    from stress_stack.parsers.tree_sitter_core import detect_language, parse_source_code
+
+    if detect_language(path) is None:
+        return {}, "unknown_language"
+    parsed = parse_source_code(path, source)
+    if parsed.has_syntax_error:
+        return {}, "syntax_error"
+    lines = source.splitlines()
+    found: dict[str, str] = {}
+    for test in parsed.tests:
+        body = "\n".join(lines[test.start_line - 1 : test.end_line])
+        found[test.name] = body
+    return found, None
 
 
 def _looks_like_test(path: str) -> bool:
-    """A test file the graph never parsed still disqualifies a source change.
+    """A test file the graph never parsed still classifies a changed path.
 
     ``is_test`` comes from the parsed graph, which only contains files that
     parse. A test added by the very commit under consideration is present in the
     diff but absent from HEAD's graph, so a name check backs it up.
+
+    Shared with the tree-sitter graph rather than re-spelled: the Python-only
+    version here recognised `test_*.py`, `*_test.py` and `tests/`, and therefore
+    filed every `calc_test.go`, `*.spec.ts` and `#[cfg(test)]` module as source.
     """
-    name = Path(path).name
-    return name.startswith("test_") or name.endswith("_test.py") or "/tests/" in f"/{path}"
+    from stress_stack.graph_multilang import _is_test_path
+
+    return _is_test_path(path)
 
 
 def _resolve_head(

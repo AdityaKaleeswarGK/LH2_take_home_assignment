@@ -430,6 +430,14 @@ def blast_radius(
     """
     owner: dict[str, str] = {}
     for parsed in graph.files:
+        # A file owns itself. The Python graph names both ends of an edge with a
+        # symbol id; the tree-sitter graph names the *file* on the source side,
+        # because a Go reference is resolved to the file that mentions it rather
+        # than to an enclosing symbol. Resolving a path to itself is what lets
+        # one function answer for both graphs instead of two implementations
+        # drifting apart. Python symbol ids are `path::qualified`, so a bare
+        # path cannot collide with one.
+        owner[parsed.path] = parsed.path
         for symbol in parsed.symbols:
             owner[symbol.id] = parsed.path
 
@@ -466,6 +474,32 @@ def blast_radius(
         "impacted_file_count": len(impacted),
         "truncated": any(len(entries) > max_callers for entries in impacted.values()),
     }
+
+
+def load_graph(root: Path | str, profile: Any | None = None) -> Any:
+    """The symbol graph for this repository, from whichever parser fits it.
+
+    ``pipeline._build_graph`` has dispatched on the profile since the
+    tree-sitter layer landed; the stages *after* it never learned to. Validation
+    and selection both called ``build_graph`` unconditionally, which on a Go
+    repository builds a Python graph — an empty one — and then feeds it to
+    ``scope_files`` and ``run_selection``. Neither failed. Selection scored
+    diversity across modules the graph had never heard of, and every task
+    shipped with an empty scope.
+
+    Both graph types now answer the same questions (``.files``, ``.edges`` with
+    ``.kind``/``.anchor``, symbols with ``.id``), so callers do not branch.
+    """
+    from stress_stack.project_detector import detect_project_profile
+
+    path = Path(root)
+    resolved = profile if profile is not None else detect_project_profile(path)
+    if getattr(resolved, "primary_language", "python") == "python":
+        return build_graph(path)
+
+    from stress_stack.graph_multilang import build_graph as build_multilang
+
+    return build_multilang(path)
 
 
 def validate_graph(graph: RepositoryGraph, root: Path) -> dict[str, Any]:
@@ -760,8 +794,19 @@ def build_index_artifacts(source_value: str, *, cwd: Path | None = None) -> dict
     return {"repository_root": str(repository.root), **payload}
 
 
-def build_mining_artifacts(source_value: str, *, cwd: Path | None = None) -> dict[str, Any]:
-    """Rank the pool of things that could become tasks, and record why the rest could not."""
+def build_mining_artifacts(
+    source_value: str, *, cwd: Path | None = None, profile: Any | None = None
+) -> dict[str, Any]:
+    """Rank the pool of things that could become tasks, and record why the rest could not.
+
+    One implementation for every ecosystem. There used to be a second, stripped
+    copy in ``graph_multilang`` that mined excision candidates and wrote
+    ``"history mining is not implemented"`` into the artifact — which capped a
+    Go or Rust repository at four tasks, because ``maximum: {excision: 4}`` is
+    the only source it could fill. With ``mine_history`` reading source and test
+    files through the profile rather than through ``.py``, the two paths do the
+    same thing and only one of them needs to exist.
+    """
     from stress_stack import coverage_map as cm
     from stress_stack.candidates import (
         mine_excision,
@@ -777,10 +822,15 @@ def build_mining_artifacts(source_value: str, *, cwd: Path | None = None) -> dic
     knowledge_root = metadata_root / "knowledge"
     knowledge_root.mkdir(parents=True, exist_ok=True)
 
-    graph = build_graph(repository.root)
+    from stress_stack.project_detector import detect_project_profile
+
+    resolved = profile if profile is not None else detect_project_profile(repository.root)
+    language = getattr(resolved, "primary_language", "python")
+
+    graph = load_graph(repository.root, resolved)
     coverage = cm.load(knowledge_root / "coverage_map.json")
     history, history_funnel, thresholds = mine_history(
-        repository, graph, metadata_root / "history"
+        repository, graph, metadata_root / "history", language=language
     )
     excision, excision_funnel = mine_excision(coverage, graph)
 
@@ -795,6 +845,7 @@ def build_mining_artifacts(source_value: str, *, cwd: Path | None = None) -> dic
 
     payload = {
         "schema_version": "0.1.0",
+        "language": language,
         "coverage_status": coverage.status,
         "thresholds": thresholds,
         "runner_shadow": list(runner_shadow),
@@ -827,12 +878,77 @@ def build_mining_artifacts(source_value: str, *, cwd: Path | None = None) -> dic
     }
 
 
+def plan_pool_depth(
+    pool: dict[str, list[Any]],
+    *,
+    requested: dict[str, int | None],
+    observed: dict[str, tuple[int, int]] | None = None,
+    targets: dict[str, int] | None = None,
+) -> dict[str, int]:
+    """How deep to read each ranked pool to have a chance at the quota.
+
+    ``--history-limit 30`` was a constant standing in for a measurement, and on
+    pluggy it was the wrong one: thirty gives five eligible history candidates
+    against a floor of four and an excision cap of four, so the best possible
+    outcome is nine tasks of ten. Depth ninety works. Nothing about ninety is
+    general either — it is pluggy's number the way thirty was glom's.
+
+    The quota states what is actually needed: ten in total, at most four by
+    excision, so at least six must come from history. Divide that by the rate at
+    which history candidates have been surviving validation *in this repository*
+    and the depth follows. With no observation yet, the first wave is sized on a
+    deliberately pessimistic rate rather than on optimism, because reading too
+    deep costs a `git describe` per extra commit and reading too shallow costs
+    the whole deliverable.
+
+    An explicit ``requested`` limit always wins. The flag stays; it stops being
+    the thing that decides.
+    """
+    from stress_stack.selection import EXCISION as SELECT_EXCISION
+    from stress_stack.selection import HISTORY as SELECT_HISTORY
+    from stress_stack.selection import Quota
+
+    quota = Quota()
+    needed = {
+        SELECT_HISTORY: max(
+            quota.floor(SELECT_HISTORY), quota.total - quota.cap(SELECT_EXCISION)
+        ),
+        SELECT_EXCISION: quota.cap(SELECT_EXCISION),
+    }
+    # Before anything has been measured. One in three is roughly what glom and
+    # pluggy both showed once the run finished, and being wrong here only costs
+    # a wider first wave.
+    assumed_rate = 0.34
+    depths: dict[str, int] = {}
+    for source, available in ((SELECT_HISTORY, pool.get(SELECT_HISTORY) or []),
+                              (SELECT_EXCISION, pool.get(SELECT_EXCISION) or [])):
+        explicit = requested.get(source)
+        if explicit is not None:
+            depths[source] = min(explicit, len(available))
+            continue
+        attempted, eligible = (observed or {}).get(source, (0, 0))
+        rate = (eligible / attempted) if attempted >= 4 and eligible else assumed_rate
+        # The surplus the caller is actually trying to reach, not just the
+        # quota floor. These two numbers disagreeing is what let the extension
+        # loop stop one wave short of its own target and call it converged.
+        want = (targets or {}).get(source, needed[source] + 2)
+        computed = int(want / max(rate, 0.05))
+        # Always advance while the pool has more to give. A rate measured over
+        # one wave is noisy, and treating it as final is how a repository whose
+        # candidates get better further down gets abandoned at the first flat
+        # estimate. The pool itself is the bound, which is the only honest one.
+        if observed:
+            computed = max(computed, int(attempted * 1.75) + 1)
+        depths[source] = min(len(available), max(needed[source], computed))
+    return depths
+
+
 def build_validation_artifacts(
     source_value: str,
     *,
     cwd: Path | None = None,
-    history_limit: int = 12,
-    excision_limit: int = 8,
+    history_limit: int | None = None,
+    excision_limit: int | None = None,
     repeats: int = 2,
     only: str | None = None,
     policy: str = "strict",
@@ -874,7 +990,8 @@ def build_validation_artifacts(
     # deterministic.
     from stress_stack.project_detector import detect_project_profile
 
-    language = detect_project_profile(repository.root).primary_language
+    profile = detect_project_profile(repository.root)
+    language = profile.primary_language
     head_image = f"stress-stack/{repository.root.name.lower()}:verify"
     runner = select_runner(image=head_image, language=language)
 
@@ -895,11 +1012,14 @@ def build_validation_artifacts(
     # per distinct base commit says how many environments this pool needs, over
     # exactly the slice validate_pool will take — planning over the whole ranked
     # pool counted eras for candidates the limits mean we never reach.
+    depths = plan_pool_depth(
+        pool, requested={HISTORY: history_limit, EXCISION: excision_limit}
+    )
     planned = []
-    for name, limit in ((HISTORY, history_limit), (EXCISION, excision_limit)):
+    for name in (HISTORY, EXCISION):
         if only and only != name:
             continue
-        planned.extend(pool.get(name, [])[:limit])
+        planned.extend(pool.get(name, [])[: depths[name]])
     eras = plan_eras(repository, planned)
     runtime = RuntimeImages(
         repository_name=repository.root.name,
@@ -918,7 +1038,7 @@ def build_validation_artifacts(
     # same broken base image.
     runtime.resolve_all(repository, eras, workers=max_workers)
 
-    graph = build_graph(repository.root)
+    graph = load_graph(repository.root, profile)
     built: list[Any] = []
     summaries: dict[str, Any] = {}
     eligible_modules: set[str] = set()
@@ -927,9 +1047,11 @@ def build_validation_artifacts(
     # early run of same-module candidates from making the later selection
     # diversity floor impossible.
     source_targets = {HISTORY: max(6, surplus - 4), EXCISION: min(4, surplus)}
-    for name, limit in ((HISTORY, history_limit), (EXCISION, excision_limit)):
+    depth_log: dict[str, Any] = {"planned": dict(depths), "extended": {}}
+    for name in (HISTORY, EXCISION):
         if only and only != name:
             continue
+        limit = depths[name]
         results, summary = validate_pool(
             repository,
             graph,
@@ -959,6 +1081,60 @@ def build_validation_artifacts(
                 if task.candidate.primary_module:
                     eligible_modules.add(task.candidate.primary_module)
 
+        # The slice ran out before enough survived. Now the eligibility rate is
+        # measured rather than assumed, so re-plan on it and take the next
+        # candidates down the same ranked pool. This is the loop that removes
+        # `--history-limit`: pluggy needs ninety and glom needs thirty, and
+        # neither number has to be known in advance.
+        while (
+            summary.eligible < source_targets[name]
+            and limit < len(pool.get(name, []))
+            and history_limit is None
+            and excision_limit is None
+        ):
+            deeper = plan_pool_depth(
+                pool,
+                requested={HISTORY: history_limit, EXCISION: excision_limit},
+                observed={name: (summary.attempted, summary.eligible)},
+                targets=source_targets,
+            )[name]
+            if deeper <= limit:
+                # The measured rate says no reachable depth would help. Stopping
+                # here is the honest end of the pool, not a budget.
+                depth_log["extended"].setdefault(name, []).append(
+                    {"from": limit, "to": deeper, "stopped": "rate_says_no_depth_helps"}
+                )
+                break
+            live_slice = pool[name][limit:deeper]
+            depth_log["extended"].setdefault(name, []).append(
+                {"from": limit, "to": deeper, "eligible_so_far": summary.eligible}
+            )
+            more_eras = plan_eras(repository, live_slice)
+            runtime.expected_eras = max(runtime.expected_eras, era_count({**eras, **more_eras}))
+            runtime.resolve_all(repository, more_eras, workers=max_workers)
+            eras.update(more_eras)
+            extra, extra_summary = validate_pool(
+                repository, graph, live_slice, tasks_root, work_root, runner,
+                limit=len(live_slice), repeats=repeats, policy=policy,
+                stop_after=source_targets[name] - summary.eligible,
+                minimum_modules=4, existing_modules=eligible_modules,
+                max_workers=max_workers, runtime=runtime, eras=eras,
+            )
+            built.extend(extra)
+            for task in extra:
+                if task.eligible:
+                    eligible_modules.update(task.candidate.modules)
+                    if task.candidate.primary_module:
+                        eligible_modules.add(task.candidate.primary_module)
+            summary.attempted += extra_summary.attempted
+            summary.eligible += extra_summary.eligible
+            summary.overrun += extra_summary.overrun
+            summary.seconds += extra_summary.seconds
+            for reason_code, ids in extra_summary.rejected.items():
+                summary.rejected.setdefault(reason_code, []).extend(ids)
+            summaries[name] = summary.to_dict()
+            limit = deeper
+
     from stress_stack.validate import ValidationSummary
 
     combined = ValidationSummary(
@@ -980,6 +1156,7 @@ def build_validation_artifacts(
         "image": runner.image,
         "runtime": runtime.summary() if runtime is not None else None,
         "policy": policy,
+        "pool_depth": depth_log,
         "by_source": summaries,
         "summary": combined.to_dict(),
         "eligible": [task.task_id for task in built if task.eligible],
@@ -1029,7 +1206,7 @@ def build_selection_artifacts(source_value: str, *, cwd: Path | None = None) -> 
         raise MetadataError(
             "No validated tasks found. Run `stress-stack validate` before selecting."
         )
-    selection = run_selection(eligible, build_graph(repository.root))
+    selection = run_selection(eligible, load_graph(repository.root))
     atomic_write_json(knowledge_root / "selection_report.json", selection)
     return {"repository_root": str(repository.root), "knowledge_root": str(knowledge_root),
             **selection}
@@ -1056,7 +1233,7 @@ def build_adjudication_artifacts(
     # Recomputed rather than read, for the same reason `emit` recomputes it:
     # selection is deterministic and cheap, and judging a stale set of ten would
     # attach reasoning to tasks that are not the ones being shipped.
-    selection = run_selection(eligible, build_graph(repository.root))
+    selection = run_selection(eligible, load_graph(repository.root))
     chosen = {entry["task_id"] for entry in (selection.get("ledger") or {}).get("entries", [])}
     tasks = [task for task in eligible if task["task_id"] in chosen]
 

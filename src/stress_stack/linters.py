@@ -362,9 +362,37 @@ _DISPATCH = {
 }
 
 
-def lint(root: Path | str, language: str) -> LintOutcome:
-    """Lint with the ecosystem's standard tool, or say why that was not possible."""
+def lint(
+    root: Path | str, language: str, *, command: list[str] | None = None
+) -> LintOutcome:
+    """Lint with the ecosystem's standard tool, or say why that was not possible.
+
+    The handlers below do two things at once: they invoke a tool and they *count*
+    what it reported, which needs that tool's output format and is therefore
+    code rather than configuration. So a workflow-supplied ``command`` is only
+    used where this module has no handler for the ecosystem — otherwise the
+    command would run and its violations would go uncounted, and a linted tree
+    would report zero violations for the same reason an unlinted one does.
+    """
     handler = _DISPATCH.get(language)
-    if handler is None:
+    if handler is not None:
+        return handler(Path(root))
+    if not command:
         return _unsupported("none", f"no_linter_for_{language}")
-    return handler(Path(root))
+
+    # No handler, so no counting. The tool runs and the result says plainly that
+    # nothing was measured, rather than reporting a zero it did not observe.
+    result = run(command, cwd=Path(root), timeout=900.0)
+    return LintOutcome(
+        status="linted" if result.ok else "failed",
+        tool=command[0],
+        violations_before=0,
+        violations_after=0,
+        fixed=0,
+        measured=False,
+        reason=(
+            "linted_by_workflow_command_without_a_violation_reader"
+            if result.ok
+            else result.failure_detail()[:200]
+        ),
+    )

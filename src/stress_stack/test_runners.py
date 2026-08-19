@@ -46,6 +46,14 @@ class LanguageTestPlan(Protocol):
         """Turn the runner's output into per-test results."""
         ...
 
+    def selection_id(self, test_id: str) -> str:
+        """The id this runner can actually select on a command line.
+
+        Usually the id itself. It is not, wherever a runner reports a test
+        under a name it cannot take back as a filter — see ``GoTestPlan``.
+        """
+        ...
+
 
 # ------------------------------------------------------------------------- go
 
@@ -60,13 +68,33 @@ _GO_BUILD_FAILURE = re.compile(
 @dataclass
 class GoTestPlan:
     language: str = "go"
+    # 0 all passed, 1 some failed. 2 is a build or vet error, which is the
+    # harness failing to run the suite rather than the suite reporting.
+    result_exit_codes: frozenset[int] = frozenset({0, 1})
+
+    def selection_id(self, test_id: str) -> str:
+        """Every id `go test` reports, it can also select.
+
+        An auto-generated subtest segment like `#06` looked unselectable and is
+        not: `-run` takes it back fine once each path element is anchored
+        separately. What actually breaks a Go excision task is that the subtest
+        does not *exist* in the excised run — the parent panics on the first
+        case and never spawns the rest — and that is settled against the reports
+        in `verification.resolve_targets` rather than guessed at here.
+        """
+        return test_id
 
     def suite_command(self, targets: list[str] | None) -> list[str]:
         command = ["go", "test", "-json", "-count=1"]
         if targets:
             # Go selects by regex over test names, anchored so `TestAdd` does not
-            # also run `TestAddMany`.
-            names = "|".join(f"^{re.escape(_test_name(t))}$" for t in targets)
+            # also run `TestAddMany`. A subtest id is a path, and `-run` matches
+            # it element by element, so each element is anchored separately —
+            # anchoring the whole string makes `TestX/sub` match nothing.
+            names = "|".join(
+                "/".join(f"^{re.escape(part)}$" for part in _test_name(t).split("/"))
+                for t in targets
+            )
             command += ["-run", names]
         return command + ["./..."]
 
@@ -149,6 +177,14 @@ _RUST_BUILD_FAILURE = re.compile(r"^error(\[E\d+\])?:", re.MULTILINE)
 @dataclass
 class RustTestPlan:
     language: str = "rust"
+    # 101 is what `cargo test` exits when a test fails or panics — which is
+    # exactly what a correct fail-before looks like. Reading it as pytest's
+    # "anything but 0, 1, 5 is broken" threw away every Rust task.
+    result_exit_codes: frozenset[int] = frozenset({0, 101})
+
+    def selection_id(self, test_id: str) -> str:
+        """libtest reports every test under a name `--exact` accepts back."""
+        return test_id
 
     def suite_command(self, targets: list[str] | None) -> list[str]:
         command = ["cargo", "test", "--no-fail-fast"]
@@ -221,6 +257,25 @@ _PLANS: dict[str, Any] = {
 def _test_name(target: str) -> str:
     """The runner-visible test name from a fully qualified target id."""
     return target.rsplit("::", 1)[-1]
+
+
+# Report formats, named so a workflow record can select one without being able
+# to invent it. The keys are the vocabulary `workflow.REPORT_FORMATS` offers an
+# agent; the values are parsers that already exist and are already tested.
+_PARSERS: dict[str, Any] = {
+    "go_json": lambda out, err, code: GoTestPlan().parse(out, err, code),
+    "libtest": lambda out, err, code: RustTestPlan().parse(out, err, code),
+}
+
+
+def parser_for(report_format: str) -> Any | None:
+    """The parser for a named report format, or None when there is not one.
+
+    ``junit_xml`` is absent on purpose: it is read from a file the run writes,
+    not from stdout, so it has a different signature and
+    :func:`stress_stack.verification.parse_report` is its reader.
+    """
+    return _PARSERS.get(report_format)
 
 
 def plan_for(language: str) -> Any | None:

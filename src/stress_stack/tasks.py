@@ -62,6 +62,7 @@ from stress_stack.verification import (
     gate_determinism,
     gate_fail_before,
     gate_pass_after,
+    resolve_targets,
     gate_verifier_integrity,
     summarize,
 )
@@ -325,8 +326,17 @@ def stage_excision_task(
         # exact extent. There is no strategy choice: each language has one
         # idiomatic unimplemented marker (`todo!()`, `panic`, `throw`).
         from stress_stack.excision_multilang import excise_symbol
+        from stress_stack.workflow import STUB, load_workflow
 
-        result = excise_symbol(path, original, name)
+        # The marker comes from the resolved workflow when there is one. It only
+        # gets there by being excised into a real symbol in this repository and
+        # re-parsed, so it is a measured answer rather than a table entry — and
+        # for an ecosystem the table has no row for, it is the only answer.
+        workflow = load_workflow(repository.root / ".stress_stack" / "workflow.json")
+        stub = workflow.get(STUB) if workflow else None
+        result = excise_symbol(
+            path, original, name, marker=stub.settings.get("marker") if stub else None
+        )
         if result is None:
             raise TaskBuildError(f"could not excise {name} from {path}")
 
@@ -341,9 +351,27 @@ def stage_excision_task(
     verifier_root = task_root / "verifier"
     _reset(verifier_root)
     for test_path in designated:
+        # Which tree the verifier copy comes from decides whether the excision
+        # survives. Normally `solution/`: the tests are in their own file, and
+        # the reference copy of that file is what should decide the verdict.
+        #
+        # Not when the tests live in the file the excision just cut. Rust puts
+        # them there by convention — `#[cfg(test)] mod tests` sits at the bottom
+        # of the module it exercises — and `build_evaluation_tree` lays the
+        # verifier over `input/`, so taking that file from `solution/` puts the
+        # implementation straight back on top of the stub. Every Rust candidate
+        # then ran its fail-before against complete code and was rejected as
+        # `no_test_changed_verdict`: the excision was real, and undone one step
+        # later by the thing meant to test it.
+        #
+        # `input/` is the right source there. It holds the same file with the
+        # tests intact and the body removed, so the verifier carries exactly the
+        # tests that decide the verdict, contains no answer to read, and the
+        # overlay becomes a no-op instead of a restoration.
+        source_tree = input_dir if test_path == path else solution_dir
         target = verifier_root / test_path
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(solution_dir / test_path, target)
+        shutil.copy2(source_tree / test_path, target)
 
     return transition, designated, result.to_dict()
 
@@ -501,7 +529,23 @@ def validate_task(
     # below costs nothing further.
     screen = screen_transition(before_full, after_full, policy=policy)
     built.detail.update(screen.to_dict())
-    resolved = screen.designated(policy)
+    designated = screen.designated(policy)
+    if not designated:
+        built.rejected = screen.rejection(policy)
+        return built
+
+    # Designation comes from two *unfiltered* runs. Everything below re-runs the
+    # suite narrowed to those ids, and not every id a runner reports is one it
+    # can take back as a filter — `go test -run` cannot select an auto-generated
+    # `#06` subtest segment, so the narrowed run collected nothing and twelve of
+    # thirteen Go candidates were rejected as `targets_not_collected`. Resolve
+    # against what the two full runs actually collected, before spending them.
+    resolved, resolution = resolve_targets(
+        designated,
+        [before_full.report, after_full.report],
+        selection_id=getattr(runner, "selection_id", None),
+    )
+    built.detail["designated_resolved"] = resolution
     built.targets = resolved
     if not resolved:
         built.rejected = screen.rejection(policy)
@@ -685,8 +729,16 @@ def _ensure_target_verifier_files(built: BuiltTask, targets: list[str]) -> None:
     solution = built.task_root / "solution"
     verifier = built.task_root / "verifier"
     verifier.mkdir(parents=True, exist_ok=True)
+    # Never the file the excision cut. Copying it from `solution/` would put the
+    # implementation back over the stub — see `stage_excision_task`, which
+    # refuses it for the same reason. This is the second door into the same
+    # mistake, and a Rust module holding both the code and its `#[cfg(test)]`
+    # tests walks into whichever one is left open.
+    excised = str((built.detail.get("excision") or {}).get("path") or "")
     for test_id in targets:
         relative = pytest_argument(solution, test_id).split("::", 1)[0]
+        if relative == excised:
+            continue
         source = solution / relative
         destination = verifier / relative
         if source.is_file() and not destination.is_file():

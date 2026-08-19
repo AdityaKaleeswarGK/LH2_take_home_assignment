@@ -12,6 +12,7 @@ contracts, and docstrings across:
 from __future__ import annotations
 
 import difflib
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -62,9 +63,24 @@ def _indent_of(code: str, byte_offset: int) -> str:
 
 
 def excise_symbol(
-    file_path: str, code: str, symbol_name: str
+    file_path: str, code: str, symbol_name: str, marker: str | None = None
 ) -> MultiLangExcision | None:
-    """Excise a target function's body in the given source code."""
+    """Excise a target function's body in the given source code.
+
+    ``marker`` overrides the built-in "not implemented" statement for the
+    tree-sitter languages. It comes from the resolved workflow, which probes it
+    by excising a real symbol and re-parsing the result — so an ecosystem with
+    no entry in the table below can still be excised, and one whose idiom the
+    table has wrong can be corrected without editing it.
+
+    Python ignores it, and that is not an oversight. Its excision has two
+    strategies rather than one statement: a *neutral* body, which is the
+    stronger stub because a test failing on an assertion against it pins
+    behaviour rather than the shape of an exception, and an explicit raise as
+    the fallback. `validate.build_and_validate` chooses between them per
+    candidate on measured evidence. A single marker cannot express that, so
+    substituting one would be a downgrade dressed as a generalisation.
+    """
     lang = detect_language(file_path) or "python"
 
     if lang == "python":
@@ -97,7 +113,7 @@ def excise_symbol(
         return None
 
     # The idiomatic "not implemented" marker for each ecosystem.
-    statement = {
+    statement = marker or {
         "rust": "todo!()",
         "typescript": 'throw new Error("Not implemented");',
         "javascript": 'throw new Error("Not implemented");',
@@ -128,6 +144,7 @@ def excise_symbol(
         + replacement
         + raw[end:].decode("utf-8", errors="replace")
     )
+    stubbed_code = _prune_orphaned_imports(stubbed_code, file_path, lang)
 
     return MultiLangExcision(
         path=file_path,
@@ -138,3 +155,66 @@ def excise_symbol(
         first_line=target_sym.first_body_line,
         last_line=target_sym.last_body_line,
     )
+
+
+# Languages where an import nothing uses is a compile error rather than a
+# warning. Everywhere else the orphan is harmless and removing it would be an
+# edit the task did not ask for.
+_IMPORTS_MUST_BE_USED = frozenset({"go"})
+
+
+def _prune_orphaned_imports(code: str, file_path: str, lang: str) -> str:
+    """Drop imports the excision just orphaned, where that is a build error.
+
+    Removing a function body removes its references, and in Go an import nothing
+    uses stops the package compiling: `./conv.go:3:8: "fmt" imported and not
+    used`. The task then fails its fail-before gate as a *build* failure, which
+    the brief says does not count — so the candidate is correctly rejected and
+    the repository yields nothing. Measured on a table-driven Go fixture, this
+    was the difference between one eligible excision task and none.
+
+    Go-only and written against Go's import syntax on purpose. A grammar-neutral
+    line-drop looked general and was wrong: tree-sitter reports every spec in a
+    grouped `import ( ... )` block against the block's own line, so dropping
+    "the import's line" deleted the `import (` and left the specs orphaned. Go
+    is currently the only ecosystem here where an unused import is fatal, and a
+    second one should get its own clause rather than a shared guess.
+
+    The prune is narrow. A name still used anywhere outside the import block
+    survives, so a solver restoring the body must restore the import too —
+    which is part of the work, and is in the golden diff either way.
+    """
+    del file_path
+    if lang not in _IMPORTS_MUST_BE_USED:
+        return code
+
+    body = _GO_IMPORT_BLOCK.sub("", _GO_IMPORT_LINE.sub("", code))
+
+    def _used(spec: str) -> bool:
+        """Whether this import's local name is still referenced."""
+        match = _GO_IMPORT_SPEC.match(spec.strip())
+        if match is None:
+            return True
+        alias, path = match.group("alias"), match.group("path")
+        if alias in {"_", "."}:
+            # A blank import is for its side effects and a dot import injects
+            # names directly; neither can be judged by looking for a qualifier.
+            return True
+        local = alias or path.rstrip("/").rsplit("/", 1)[-1]
+        return bool(re.search(rf"\b{re.escape(local)}\s*\.", body))
+
+    def _rewrite_block(match: re.Match[str]) -> str:
+        kept = [line for line in match.group("specs").splitlines() if _used(line)]
+        if not any(line.strip() for line in kept):
+            return ""
+        return "import (\n" + "\n".join(kept) + "\n)\n"
+
+    code = _GO_IMPORT_BLOCK.sub(_rewrite_block, code)
+    return _GO_IMPORT_LINE.sub(lambda m: m.group(0) if _used(m.group("spec")) else "", code)
+
+
+# Go's two import forms. Simple and regular enough to read directly, which is
+# what the grouped case needs — see `_prune_orphaned_imports`.
+_GO_IMPORT_BLOCK = re.compile(r"^import\s*\(\n(?P<specs>.*?)^\)\n", re.MULTILINE | re.DOTALL)
+_GO_IMPORT_LINE = re.compile(r"^import\s+(?P<spec>[^\n(]+)\n", re.MULTILINE)
+_GO_IMPORT_SPEC = re.compile(r'^(?:(?P<alias>[\w.]+)\s+)?"(?P<path>[^"]+)"')

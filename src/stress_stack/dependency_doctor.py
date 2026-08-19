@@ -164,10 +164,41 @@ def _count_npm_packages(root: Path, lock_file: str) -> int | None:
     return None
 
 
+# How to count what a lockfile pins, keyed by the file's own name. This is the
+# half that has to stay code: a count comes from parsing a format, and a number
+# nobody parsed is worth less than an honest "not measured". The half that is
+# now data — which command produces the file, and what it is called — lives in
+# the resolved workflow, which is why a sixth ecosystem no longer needs a branch.
+_COUNTERS: dict[str, Any] = {
+    "Cargo.lock": lambda root, name: _count_cargo_packages(
+        (root / name).read_text(encoding="utf-8", errors="replace")
+    ),
+    "go.sum": lambda root, name: _count_go_modules(
+        (root / name).read_text(encoding="utf-8", errors="replace")
+    ),
+    "package-lock.json": _count_npm_packages,
+    "pnpm-lock.yaml": _count_npm_packages,
+    "yarn.lock": _count_npm_packages,
+}
+
+# Lockfiles that carry a cryptographic digest per entry.
+_HASHED = frozenset({"go.sum", "package-lock.json", "pnpm-lock.yaml"})
+
+
 def lock_dependencies(
-    repo_root: Path | str, profile: ProjectProfile | None = None
+    repo_root: Path | str,
+    profile: ProjectProfile | None = None,
+    *,
+    client: Any = None,
 ) -> DependencyLockReport:
-    """Produce an exact lockfile where the ecosystem's tooling allows it."""
+    """Produce an exact lockfile where the ecosystem's tooling allows it.
+
+    Python delegates to the verified `uv` path, which does more than lock: it
+    provisions and probes a test environment, and the pipeline gates on that.
+    Every other ecosystem runs the command the workflow probed — the probe being
+    that the command produces a lockfile and produces the *same* one twice, so
+    a file nobody can reproduce never reaches this report as a pin.
+    """
     root = Path(repo_root)
     prof = profile or detect_project_profile(root)
     lang = prof.primary_language
@@ -175,103 +206,62 @@ def lock_dependencies(
     if lang == "python":
         return _lock_python(root)
 
-    if lang == "rust":
-        lock_path = root / "Cargo.lock"
-        if not lock_path.exists():
-            if not shutil.which("cargo"):
-                return _unsupported("rust", "cargo_not_installed")
-            generated = run(["cargo", "generate-lockfile"], cwd=root, timeout=900.0)
-            if not generated.ok and not lock_path.exists():
-                return DependencyLockReport(
-                    status=FAILED,
-                    ecosystem="rust",
-                    lock_file=None,
-                    pinned_count=0,
-                    measured=True,
-                    reason="cargo_generate_lockfile_failed",
-                )
-        text = lock_path.read_text(encoding="utf-8", errors="replace")
-        return DependencyLockReport(
-            status=LOCKED,
-            ecosystem="rust",
-            lock_file="Cargo.lock",
-            pinned_count=_count_cargo_packages(text),
-            measured=True,
-            # Cargo.lock carries a checksum per package.
-            hashed="checksum" in text,
-        )
+    from stress_stack.workflow import LOCK, load_workflow, resolve_workflow
 
-    if lang in {"typescript", "javascript"}:
-        for candidate in ("pnpm-lock.yaml", "package-lock.json", "yarn.lock"):
-            if (root / candidate).exists():
-                counted = _count_npm_packages(root, candidate)
-                if counted is None:
-                    return DependencyLockReport(
-                        status=LOCKED,
-                        ecosystem=lang,
-                        lock_file=candidate,
-                        pinned_count=0,
-                        measured=False,
-                        reason="lockfile_present_but_unparsed",
-                    )
-                return DependencyLockReport(
-                    status=LOCKED,
-                    ecosystem=lang,
-                    lock_file=candidate,
-                    pinned_count=counted,
-                    measured=True,
-                    hashed=True,  # npm-ecosystem lockfiles carry integrity hashes
-                )
-        if not (root / "package.json").exists():
-            return _unsupported(lang, "no_package_json")
-        if not shutil.which("npm"):
-            return _unsupported(lang, "npm_not_installed")
-        generated = run(
-            ["npm", "install", "--package-lock-only"], cwd=root, timeout=900.0
+    workflow = load_workflow(root / ".stress_stack" / "workflow.json")
+    record = workflow.get(LOCK) if workflow else None
+    if record is None:
+        workflow = resolve_workflow(root, language=lang, client=client, only=(LOCK,))
+        record = workflow.get(LOCK)
+    if record is None:
+        return _unsupported(lang, f"no_probed_lock_command_for_{lang}")
+
+    lock_file = str(record.settings.get("lockfile") or "")
+    argv = record.command("lock")
+    path = root / lock_file if lock_file else None
+
+    if path is not None and not path.exists() and argv:
+        if not shutil.which(argv[0]):
+            return _unsupported(lang, f"{argv[0]}_not_installed")
+        run(argv, cwd=root, timeout=1800.0)
+
+    if path is None or not path.exists():
+        # The probe already established that this command succeeds. A command
+        # that succeeds and writes no lockfile has pinned nothing, which for a
+        # module with no external dependencies is the correct answer and not a
+        # failure — `go mod download` says exactly that and exits zero.
+        manifest_present = any(
+            (root / name).exists()
+            for name in ("go.mod", "Cargo.toml", "package.json", "CMakeLists.txt")
         )
-        if (root / "package-lock.json").exists():
-            counted = _count_npm_packages(root, "package-lock.json")
-            return DependencyLockReport(
-                status=LOCKED,
-                ecosystem=lang,
-                lock_file="package-lock.json",
-                pinned_count=counted or 0,
-                measured=counted is not None,
-                hashed=True,
-            )
         return DependencyLockReport(
-            status=FAILED,
+            status=LOCKED if manifest_present else UNSUPPORTED,
             ecosystem=lang,
             lock_file=None,
             pinned_count=0,
             measured=True,
-            reason=f"npm_install_failed: {generated.stderr.strip()[:200]}",
+            reason="lock_command_succeeded_with_nothing_to_pin",
         )
 
-    if lang == "go":
-        sum_path = root / "go.sum"
-        if not sum_path.exists():
-            if not shutil.which("go"):
-                return _unsupported("go", "go_not_installed")
-            run(["go", "mod", "download"], cwd=root, timeout=900.0)
-        if not sum_path.exists():
-            # A module with no external dependencies legitimately has no go.sum.
-            return DependencyLockReport(
-                status=LOCKED if (root / "go.mod").exists() else UNSUPPORTED,
-                ecosystem="go",
-                lock_file="go.mod" if (root / "go.mod").exists() else None,
-                pinned_count=0,
-                measured=True,
-                reason="no_go_sum_no_external_dependencies",
-            )
-        text = sum_path.read_text(encoding="utf-8", errors="replace")
-        return DependencyLockReport(
-            status=LOCKED,
-            ecosystem="go",
-            lock_file="go.sum",
-            pinned_count=_count_go_modules(text),
-            measured=True,
-            hashed=True,  # go.sum is entirely cryptographic checksums
-        )
+    counter = _COUNTERS.get(Path(lock_file).name)
+    counted = None
+    if counter is not None:
+        try:
+            counted = counter(root, lock_file)
+        except (OSError, ValueError):
+            counted = None
 
-    return _unsupported(lang, f"no_lock_strategy_for_{lang}")
+    return DependencyLockReport(
+        status=LOCKED,
+        ecosystem=lang,
+        lock_file=lock_file,
+        pinned_count=counted or 0,
+        # False where this process has no reader for the format. The lockfile is
+        # real and reproducible either way; what is unmeasured is how much is in
+        # it, and saying so beats reporting a zero nobody counted.
+        measured=counted is not None,
+        hashed=Path(lock_file).name in _HASHED
+        or (Path(lock_file).name == "Cargo.lock"
+            and "checksum" in path.read_text(encoding="utf-8", errors="replace")),
+        reason="" if counted is not None else "lockfile_present_but_unparsed",
+    )

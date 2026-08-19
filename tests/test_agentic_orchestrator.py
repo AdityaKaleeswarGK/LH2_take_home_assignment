@@ -437,6 +437,9 @@ def test_regression_reverts_the_formatting(monkeypatch, tmp_path) -> None:
         ]
     )
 
+    # The stage runs the command the workflow probed, so the test has to say what
+    # that is rather than relying on a per-language branch that no longer exists.
+    _write_workflow(tmp_path, "go", {"format": ["gofmt", "-l", "-w", "."]})
     monkeypatch.setattr(hd, "_changed_file_count", lambda *a, **k: 3)
     monkeypatch.setattr("stress_stack.hygiene_verify.build_probe_image", lambda *a: ("img", ""))
     monkeypatch.setattr("stress_stack.hygiene_verify.snapshot_suite", lambda *a: next(snapshots))
@@ -448,7 +451,7 @@ def test_regression_reverts_the_formatting(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(hd, "run", lambda *a, **k: type("R", (), {"ok": True, "stdout": "", "stderr": "", "failure_detail": lambda s: ""})())
     monkeypatch.setattr(
         "stress_stack.linters.lint",
-        lambda root, lang: __import__(
+        lambda root, lang, command=None: __import__(
             "stress_stack.linters", fromlist=["LintOutcome"]
         ).LintOutcome(
             status="linted", tool="go vet", violations_before=0,
@@ -1086,3 +1089,22 @@ def test_a_container_run_that_starts_failing_is_still_caught() -> None:
     failing = "--- PASS: TestA (0.01s)\n--- FAIL: TestB (0.01s)\nFAIL"
 
     assert _normalize(passing) != _normalize(failing)
+
+
+def _write_workflow(root, language: str, commands: dict) -> None:
+    """A resolved workflow, as the workflow stage would have left it."""
+    import json
+
+    from stress_stack.workflow import HYGIENE, CapabilityRecord, Probe, Workflow
+
+    stamp = root / ".stress_stack" / "workflow.json"
+    stamp.parent.mkdir(parents=True, exist_ok=True)
+    workflow = Workflow(
+        language=language,
+        capabilities={
+            HYGIENE: CapabilityRecord(
+                name=HYGIENE, source="default", commands=commands, probe=Probe(True)
+            )
+        },
+    )
+    stamp.write_text(json.dumps(workflow.to_dict()), encoding="utf-8")

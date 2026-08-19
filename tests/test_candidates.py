@@ -202,7 +202,7 @@ def test_mining_keeps_a_pull_request_that_changed_source_and_tests(
     assert thresholds["churn_distribution"]["max"] >= candidate.signals["churn"]
 
 
-def test_a_change_touching_no_python_is_dropped_with_a_reason(
+def test_a_change_touching_no_source_is_dropped_with_a_reason(
     src_layout_repository: Path,
 ) -> None:
     """The one content-based rejection left: no code for a golden answer."""
@@ -215,7 +215,7 @@ def test_a_change_touching_no_python_is_dropped_with_a_reason(
     candidates, funnel, _ = mine_history(repository, build_graph(src_layout_repository), history_root)
 
     assert candidates == []
-    assert funnel.dropped["no_python_change"] == ["PR#8"]
+    assert funnel.dropped["no_source_change"] == ["PR#8"]
 
 
 def test_unmerged_pull_requests_are_never_considered(src_layout_repository: Path) -> None:

@@ -89,10 +89,11 @@ def test_nothing_is_dropped_for_a_reason_that_is_only_an_opinion(adversarial: Pa
     """
     _, funnel, _ = mined(adversarial)
 
-    # No commit to materialise, no parent to diff against, and no Python for a
+    # No commit to materialise, no parent to diff against, and no source for a
     # golden answer to contain. Each is a fact about the change, checkable
-    # without predicting anything about its quality.
-    structural = {"no_commit_in_repository", "no_parent_commit", "no_python_change"}
+    # without predicting anything about its quality. The last is named for
+    # the ecosystem's own source now, not for Python's.
+    structural = {"no_commit_in_repository", "no_parent_commit", "no_source_change"}
     opinions = set(funnel.dropped) - structural
 
     assert not opinions, f"mining rejected candidates on judgement, not fact: {sorted(opinions)}"
