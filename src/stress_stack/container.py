@@ -45,6 +45,14 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+# Never the host's installed dependencies. They are built for the host's
+# platform, and copying them into a Linux image shadows the copy the image
+# installed for itself — on unjs/destr from a macOS host, rollup found its
+# darwin binary at /work/node_modules and failed looking for
+# @rollup/rollup-linux-arm64-gnu, which the image had correctly installed at
+# /deps. The image installs its own; the context must not carry a second set.
+node_modules/
+target/
 """
 
 

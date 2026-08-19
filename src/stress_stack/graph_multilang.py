@@ -469,6 +469,9 @@ def build_coverage_artifacts(repo_root: Path | str, language: str) -> dict[str, 
         "coverage": coverage.status,
         "symbols": len(coverage.symbols),
         "covered_symbols": sum(1 for s in coverage.symbols.values() if s.covering_tests),
+        "excisable_symbols": sum(
+            1 for s in coverage.symbols.values() if s.covering_tests and not s.is_test
+        ),
         "reason": coverage.reason or "",
         "attribution_source": record.source if record else "built_in",
         "knowledge_root": str(knowledge_root),

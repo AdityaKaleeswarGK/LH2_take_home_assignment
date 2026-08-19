@@ -761,6 +761,18 @@ def build_coverage_artifacts(source_value: str, *, cwd: Path | None = None) -> d
     return {
         "repository_root": str(repository.root),
         "coverage": note,
+        # How many symbols excision could actually draw from. `available` alone
+        # said nothing: a map can be available and attribute every covered line
+        # to a test function, which means the suite measured something other
+        # than this tree. See the coverage gate in `pipeline._semantic_failure`.
+        "covered_symbols": sum(
+            1 for s in (coverage.symbols.values() if coverage else []) if s.covering_tests
+        ),
+        "excisable_symbols": sum(
+            1
+            for s in (coverage.symbols.values() if coverage else [])
+            if s.covering_tests and not s.is_test
+        ),
         "statistics": coverage.statistics() if coverage else {},
         "knowledge_root": str(knowledge_root),
     }

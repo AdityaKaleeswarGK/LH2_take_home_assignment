@@ -144,6 +144,14 @@ def synthesize_dockerfile(profile: ProjectProfile, base_reference: str) -> str:
         # makes the second lookup succeed, and .bin on PATH is what lets the
         # suite command name its runner directly instead of going through npx,
         # which would try the network the sandbox does not have.
+        if tool in {"pnpm", "yarn"}:
+            # The node images ship npm, yarn and corepack — but not pnpm, which
+            # most of the modern JavaScript ecosystem now uses. corepack installs
+            # the exact version `packageManager` in package.json names, and it
+            # runs here because image build still has network; the test run does
+            # not, so a missing package manager surfaces there as a suite that
+            # cannot start.
+            lines.append("RUN corepack enable")
         lines += [
             "COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* /deps/",
             f"RUN cd /deps && if [ -f package.json ]; then {install}; fi",

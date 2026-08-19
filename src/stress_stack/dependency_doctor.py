@@ -243,6 +243,14 @@ def lock_dependencies(
             reason="lock_command_succeeded_with_nothing_to_pin",
         )
 
+    # Provision, not just count. Python's path does both — `_lock_python`
+    # creates a virtualenv and reports whether the suite can run in it, and the
+    # pipeline gates on that — while the Node path only ever read the lockfile.
+    # So `node_modules` never existed on the host, and every host-side probe that
+    # needs the test runner failed with npx trying to reach the registry. A
+    # lockfile nobody installed is not an environment.
+    installed = _provision_node_modules(root, lang, record)
+
     counter = _COUNTERS.get(Path(lock_file).name)
     counted = None
     if counter is not None:
@@ -263,5 +271,32 @@ def lock_dependencies(
         hashed=Path(lock_file).name in _HASHED
         or (Path(lock_file).name == "Cargo.lock"
             and "checksum" in path.read_text(encoding="utf-8", errors="replace")),
+        # Reported for the ecosystems where this module provisions one, so
+        # "not checked" stays distinct from "checked and absent".
+        test_environment_available=installed,
         reason="" if counted is not None else "lockfile_present_but_unparsed",
     )
+
+
+def _provision_node_modules(root: Path, language: str, record: Any) -> bool | None:
+    """Install a Node project's dependencies, so a probe has a runner to find.
+
+    ``None`` for ecosystems this does not apply to — Go and Rust resolve their
+    dependencies as part of building, so there is nothing to lay down first.
+
+    The install is the lock command itself: `npm ci` and
+    `pnpm install --frozen-lockfile` both install *and* respect the lockfile, so
+    provisioning cannot drift from what was pinned.
+    """
+    if language not in {"typescript", "javascript"}:
+        return None
+    if (root / "node_modules").is_dir():
+        return True
+    argv = record.command("lock")
+    if not argv:
+        return False
+    if not shutil.which(argv[0]):
+        # corepack ships with the node images but not necessarily on the host.
+        return False
+    result = run(argv, cwd=root, timeout=1800.0)
+    return result.ok and (root / "node_modules").is_dir()

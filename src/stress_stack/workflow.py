@@ -96,6 +96,11 @@ _PROGRAMS: dict[str, frozenset[str]] = {
             "python", "python3", "coverage", "pytest",
             "go", "cargo", "npx", "npm", "yarn", "pnpm", "c8", "nyc", "grcov",
             "lcov", "make",
+            # The runners themselves. A coverage command names the test runner —
+            # `vitest run --coverage` — and leaving them out of this list while
+            # they were in TEST_REPORT's rejected every answer an agent gave for
+            # a JavaScript repository with `program_not_allowed: vitest`.
+            "vitest", "jest", "mocha",
         }
     ),
     STUB: frozenset(
@@ -361,11 +366,35 @@ _DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
 }
 
 
-def default_for(capability: str, language: str) -> CapabilityRecord | None:
-    """Today's table entry, as a record that must still pass its probe."""
+# Which package manager a JavaScript repository actually uses, by the lockfile
+# it committed. The npm entry in the table below is only right for npm projects,
+# and most of the modern ecosystem is not one: on unjs/destr the npm default
+# "passed" its probe by generating a package-lock.json that installs nothing, so
+# node_modules never appeared and every later probe failed looking for a runner.
+_NODE_MANAGERS: tuple[tuple[str, str, str], ...] = (
+    ("pnpm-lock.yaml", "pnpm install --frozen-lockfile", "pnpm-lock.yaml"),
+    ("yarn.lock", "yarn install --frozen-lockfile", "yarn.lock"),
+    ("package-lock.json", "npm ci", "package-lock.json"),
+)
+
+
+def default_for(
+    capability: str, language: str, root: Path | None = None
+) -> CapabilityRecord | None:
+    """Today's table entry, as a record that must still pass its probe.
+
+    ``root`` lets an entry adapt to what the repository committed rather than to
+    what its ecosystem usually does. Only locking needs it so far, and it needs
+    it badly — see ``_NODE_MANAGERS``.
+    """
     entry = _DEFAULTS.get(capability, {}).get(language)
     if entry is None:
         return None
+    if capability == LOCK and language in {"typescript", "javascript"} and root is not None:
+        for lockfile, command, name in _NODE_MANAGERS:
+            if (root / lockfile).is_file():
+                entry = {"commands": {"lock": command}, "settings": {"lockfile": name}}
+                break
     return check_record(
         capability,
         source=DEFAULT,
@@ -866,10 +895,19 @@ def schema_for(capability: str) -> dict[str, Any]:
             "type": "string",
             "description": "One statement meaning 'not implemented' in this language.",
         }
+    # `format` decides which reader parses the output, so an answer without one
+    # cannot be used. Requiring it in the schema is better than rejecting it
+    # afterwards: the agent is told, rather than discovering it through a
+    # rejection it has to spend an attempt on.
+    required = ["commands", "evidence"]
+    if capability in {TEST_REPORT, COVERAGE}:
+        required.append("format")
+    if capability == STUB:
+        required.append("marker")
     return {
         "type": "object",
         "additionalProperties": False,
-        "required": ["commands", "evidence"],
+        "required": required,
         "properties": properties,
     }
 
@@ -1008,7 +1046,7 @@ def resolve_capability(
         return CapabilityRecord(name=capability, source=UNAVAILABLE, rejections=["no_probe"])
 
     attempts: list[dict[str, Any]] = []
-    record = default_for(capability, language)
+    record = default_for(capability, language, root)
     if record is not None:
         record.settings.setdefault("language", language)
         if record.rejections:

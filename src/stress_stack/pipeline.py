@@ -543,6 +543,24 @@ def _semantic_failure(stage: str, produced: Any) -> str | None:
     if stage == "coverage" and isinstance(produced, dict):
         if produced.get("coverage") != "available":
             return f"coverage is {produced.get('coverage') or 'unavailable'}"
+        # `available` was not enough. On pallets/itsdangerous the map came back
+        # available with 56 covered symbols, every one of them a *test* — the
+        # suite had measured an installed copy of the library rather than the
+        # src/ tree, so no library symbol was attributed to anything. Excision
+        # then mined zero candidates from a green stage, and the run was capped
+        # at seven tasks for a reason nothing reported.
+        #
+        # A map that only covers the tests describes the tests. The number that
+        # matters is how many symbols excision could actually draw from.
+        attributed = produced.get("covered_symbols")
+        if isinstance(attributed, int) and attributed <= 0:
+            return "coverage attributed no symbol to any test"
+        excisable = produced.get("excisable_symbols")
+        if isinstance(excisable, int) and excisable <= 0:
+            return (
+                "coverage attributed no non-test symbol to any test — the suite "
+                "measured something other than this tree"
+            )
     if stage == "validate" and isinstance(produced, dict):
         if int((produced.get("summary") or {}).get("eligible") or 0) < 10:
             return "fewer than 10 tasks passed validation"
