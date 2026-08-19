@@ -132,7 +132,26 @@ def synthesize_dockerfile(profile: ProjectProfile, base_reference: str) -> str:
         # `npm ci` installs strictly from the lockfile; `install` may resolve
         # differently between runs, which is the opposite of what we need.
         install = "npm ci" if tool == "npm" else f"{tool} install --frozen-lockfile"
-        lines += ["COPY . /work", f"RUN if [ -f package.json ]; then {install}; fi"]
+        # Installed *outside* the mount, which is the whole point. Validation
+        # mounts a task tree read-only over /work, so dependencies installed to
+        # /work/node_modules — where every Node tool puts them by default — are
+        # hidden the moment a task runs, and the suite cannot even find its
+        # runner. Python never hits this because pip installs to site-packages;
+        # Node's convention places them exactly where the mount lands.
+        #
+        # /deps works because Node resolution walks up from the working
+        # directory: /work/node_modules, then /node_modules. The symlink is what
+        # makes the second lookup succeed, and .bin on PATH is what lets the
+        # suite command name its runner directly instead of going through npx,
+        # which would try the network the sandbox does not have.
+        lines += [
+            "COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* /deps/",
+            f"RUN cd /deps && if [ -f package.json ]; then {install}; fi",
+            "RUN ln -s /deps/node_modules /node_modules",
+            "ENV PATH=/deps/node_modules/.bin:$PATH",
+            "ENV NODE_PATH=/deps/node_modules",
+            "COPY . /work",
+        ]
         if profile.pre_build_command:
             lines.append(f"RUN {profile.pre_build_command}")
     elif lang == "go":
@@ -144,14 +163,6 @@ def synthesize_dockerfile(profile: ProjectProfile, base_reference: str) -> str:
             "COPY . /work",
             "RUN if [ -f go.mod ]; then go mod download; fi",
         ]
-    elif lang == "cpp":
-        lines += [
-            "RUN apt-get update && apt-get install -y --no-install-recommends "
-            "build-essential cmake ninja-build && rm -rf /var/lib/apt/lists/*",
-            "COPY . /work",
-        ]
-        if profile.pre_build_command:
-            lines.append(f"RUN {profile.pre_build_command}")
     else:
         lines.append("COPY . /work")
 

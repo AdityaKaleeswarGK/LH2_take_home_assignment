@@ -43,7 +43,7 @@ from typing import Any
 # interpolated into a Dockerfile, so it is validated the same way any other
 # untrusted string reaching a build would be.
 _BASE_IMAGE_RE = re.compile(
-    r"^(python|golang|rust|node|gcc|openjdk|ruby|php|eclipse-temurin)"
+    r"^(python|golang|rust|node|openjdk|ruby|php|eclipse-temurin)"
     r":[A-Za-z0-9][A-Za-z0-9._-]{0,40}$"
 )
 
@@ -57,7 +57,7 @@ _INSTALL_PROGRAMS = frozenset(
         "go",
         "bundle", "gem", "composer",
         "mvn", "gradle",
-        "make", "cmake", "apt-get",
+        "make", "apt-get",
     }
 )
 
@@ -66,7 +66,7 @@ _TEST_PROGRAMS = frozenset(
     {
         "python", "python3", "pytest", "py.test", "tox", "nox", "unittest",
         "npm", "yarn", "pnpm", "jest", "vitest", "mocha",
-        "cargo", "go", "ctest", "make", "bundle", "rake", "mvn", "gradle",
+        "cargo", "go", "make", "bundle", "rake", "mvn", "gradle",
     }
 )
 

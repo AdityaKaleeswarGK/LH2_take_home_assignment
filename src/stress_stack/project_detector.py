@@ -2,7 +2,7 @@
 
 Scans the repository to identify:
 1. Primary ecosystem (Python, Rust, TypeScript, Go, C++, Polyglot)
-2. Build toolchain (cargo, pnpm, npm, yarn, uv, poetry, go, cmake)
+2. Build toolchain (cargo, pnpm, npm, yarn, uv, poetry, go)
 3. Workspace layout (monorepo, multi-package, flat, src/)
 4. Grounded test command & base container recipe (derived from project files + CI facts)
 """
@@ -46,6 +46,18 @@ class ProjectProfile:
         }
 
 
+# Ecosystems this pipeline can recognise but deliberately does not process.
+# Keeping the detection and refusing explicitly is the difference between "we
+# do not support this yet" and silently analysing a C++ repository as Python,
+# which is what dropping the detection would do.
+#
+# C and C++ are here because supporting them honestly needs a lock strategy, a
+# test plan and a coverage attributor, and none of the three existed. The
+# half-built versions — an unused function regex, a clang-tidy pass that could
+# not count, a stub marker nothing compiled — have been removed.
+SHELVED_LANGUAGES = frozenset({"c", "cpp"})
+
+
 def detect_project_profile(repo_root: Path | str) -> ProjectProfile:
     """Analyze repository files and CI workflows to construct a ProjectProfile."""
     root = Path(repo_root)
@@ -69,13 +81,24 @@ def detect_project_profile(repo_root: Path | str) -> ProjectProfile:
     if has_go_mod:
         languages.append("go")
     if has_cmake:
+        # Recognised, deliberately not supported — see SHELVED_LANGUAGES. The
+        # detection has to stay: without it `primary` falls through to the
+        # "python" default and a C++ repository gets processed as a Python one,
+        # which is a wrong answer where this is merely an absent one.
         languages.append("cpp")
     if has_pyproject or has_setup_py or has_requirements:
         languages.append("python")
 
     # Count source files if no manifest found
     if not languages:
-        for ext, lang in ((".py", "python"), (".rs", "rust"), (".ts", "typescript"), (".go", "go"), (".cpp", "cpp")):
+        for ext, lang in (
+            (".py", "python"),
+            (".rs", "rust"),
+            (".ts", "typescript"),
+            (".js", "javascript"),
+            (".go", "go"),
+            (".cpp", "cpp"),
+        ):
             if any(root.glob(f"*{ext}")) or any((root / "src").glob(f"*{ext}")):
                 languages.append(lang)
 
@@ -129,11 +152,10 @@ def detect_project_profile(repo_root: Path | str) -> ProjectProfile:
         # start without it. spf13/cast failed exactly there.
         base_image = "golang:1.22-bookworm"
 
-    elif primary == "cpp":
-        toolchain = "cmake"
-        default_test = "ctest --output-on-failure"
-        pre_build = "cmake -B build && cmake --build build"
-        base_image = "debian:bookworm-slim"
+    elif primary in SHELVED_LANGUAGES:
+        # Enough to describe the repository in a report and no more. Everything
+        # that would act on it has been removed rather than left half-built.
+        toolchain = "unsupported"
 
     else:  # python
         if (root / "poetry.lock").exists():

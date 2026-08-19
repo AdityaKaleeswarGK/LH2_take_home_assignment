@@ -105,8 +105,6 @@ def _violation_files(root: Path, residual: dict[str, int], language: str) -> lis
         "go": (".go",),
         "typescript": (".ts", ".tsx"),
         "javascript": (".js", ".jsx", ".mjs"),
-        "c": (".c", ".h"),
-        "cpp": (".cpp", ".cc", ".hpp", ".h"),
     }.get(language, ())
     if not suffixes:
         return []

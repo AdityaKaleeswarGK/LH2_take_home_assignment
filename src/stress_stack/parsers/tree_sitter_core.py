@@ -45,17 +45,11 @@ LANGUAGE_EXTENSIONS: dict[str, str] = {
     ".tsx": "tsx",
     ".rs": "rust",
     ".go": "go",
-    ".c": "c",
     # `.h` is ambiguous — C and C++ share it, and the majority of real `.h`
     # files in a mixed tree are C++ headers. The C++ grammar parses the C
     # constructs this layer extracts, so choosing it fails on strictly fewer
     # files than choosing C does; parsing json.hpp-style headers as C produced
     # a syntax error on almost every one.
-    ".h": "cpp",
-    ".cpp": "cpp",
-    ".hpp": "cpp",
-    ".cc": "cpp",
-    ".cxx": "cpp",
 }
 
 
@@ -208,8 +202,6 @@ def parse_source_code(path: str, code: str, *, prefer_tree_sitter: bool = True) 
         _parse_rust_source(code, result)
     elif lang == "go":
         _parse_go_source(code, result)
-    elif lang in {"c", "cpp"}:
-        _parse_c_cpp_source(code, result, lang)
     else:
         _parse_generic_source(code, result)
 
@@ -278,8 +270,6 @@ def _import_module(raw: str, lang: str) -> str:
         return text.removeprefix("use ").strip()
     if lang == "go":
         return text.removeprefix("import ").strip().strip('"')
-    if lang in {"c", "cpp"}:
-        return text.removeprefix("#include").strip().strip('<>"')
     if lang in {"javascript", "typescript"}:
         # `import x from 'mod'` — the module is the quoted tail.
         for quote in ("'", '"'):
@@ -564,76 +554,6 @@ def _parse_go_source(code: str, result: ParsedSourceFile) -> None:
 # ---------------------------------------------------------------------------
 # C / C++ Parser
 # ---------------------------------------------------------------------------
-
-
-_C_INCLUDE_RE = re.compile(r"""#include\s+([<"][^>"]+[>"])""")
-_CPP_FUNC_RE = re.compile(
-    r"""(?:[a-zA-Z0-9_:<>&*]+\s+)+([a-zA-Z0-9_]+)\s*\(([^)]*)\)\s*\{""",
-    re.MULTILINE,
-)
-_CPP_TEST_RE = re.compile(r"""\bTEST(?:_F)?\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)""")
-# Control flow that matches the shape `type name(args) {` without being a
-# definition. The regex fallback cannot tell these apart structurally, which
-# is exactly why a graph built from it is not reported as verified.
-_CPP_NOT_A_FUNCTION = frozenset(
-    {"if", "for", "while", "switch", "catch", "return", "else", "do"}
-)
-
-
-def _parse_c_cpp_source(code: str, result: ParsedSourceFile, lang: str) -> None:
-    lines = code.splitlines()
-
-    for match in _C_INCLUDE_RE.finditer(code):
-        header = match.group(1)
-        line_num = code[: match.start()].count("\n") + 1
-        result.imports.append(
-            ExtractedImport(raw=match.group(0), module=header, line=line_num)
-        )
-
-    # `_CPP_FUNC_RE` was written, and then never called. A translation unit full
-    # of functions therefore reported `symbols=0, has_syntax_error=False`, which
-    # is indistinguishable from an empty file — and `validate_graph` called that
-    # clean. It finds definitions, not declarations, because the trailing `{` is
-    # part of the pattern; a prototype ending in `;` is correctly ignored.
-    for match in _CPP_FUNC_RE.finditer(code):
-        name = match.group(1)
-        if name in _CPP_NOT_A_FUNCTION:
-            continue
-        # Anchored on the name, not on the match: the leading type pattern
-        # matches across newlines, so `match.start()` lands on whatever line the
-        # return type began — for `#include <vector>` above a definition that is
-        # the include line, and a symbol anchored to the wrong line is worse
-        # than no symbol at all.
-        line_num = code[: match.start(1)].count("\n") + 1
-        end_line = _find_closing_brace_line(lines, line_num - 1)
-        result.symbols.append(
-            ExtractedSymbol(
-                name=name,
-                qualified_name=name,
-                kind="function",
-                start_line=line_num,
-                end_line=end_line,
-                first_body_line=min(line_num + 1, end_line),
-                last_body_line=end_line,
-                is_test=False,
-            )
-        )
-
-    for match in _CPP_TEST_RE.finditer(code):
-        suite, case = match.group(1), match.group(2)
-        line_num = code[: match.start()].count("\n") + 1
-        end_line = _find_closing_brace_line(lines, line_num - 1)
-        sym = ExtractedSymbol(
-            name=f"{suite}.{case}",
-            qualified_name=f"{suite}.{case}",
-            kind="test",
-            start_line=line_num,
-            end_line=end_line,
-            first_body_line=line_num + 1,
-            last_body_line=end_line,
-            is_test=True,
-        )
-        result.tests.append(sym)
 
 
 def _parse_generic_source(code: str, result: ParsedSourceFile) -> None:

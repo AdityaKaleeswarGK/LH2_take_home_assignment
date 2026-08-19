@@ -232,7 +232,7 @@ def lock_dependencies(
         # failure — `go mod download` says exactly that and exits zero.
         manifest_present = any(
             (root / name).exists()
-            for name in ("go.mod", "Cargo.toml", "package.json", "CMakeLists.txt")
+            for name in ("go.mod", "Cargo.toml", "package.json")
         )
         return DependencyLockReport(
             status=LOCKED if manifest_present else UNSUPPORTED,

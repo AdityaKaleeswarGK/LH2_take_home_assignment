@@ -158,7 +158,7 @@ def run_pipeline(
     from stress_stack.container_doctor import run_container_verification
     from stress_stack.dependency_doctor import lock_dependencies
     from stress_stack.hygiene_dispatcher import dispatch_hygiene
-    from stress_stack.project_detector import detect_project_profile
+    from stress_stack.project_detector import SHELVED_LANGUAGES, detect_project_profile
 
     # `build_container_artifacts` and `build_dependency_artifacts` are no longer
     # imported here: the container and dependency doctors call them for Python.
@@ -329,6 +329,22 @@ def run_pipeline(
                 if here["profile"] is None:
                     here["profile"] = detect_project_profile(Path(root))
                 result.profile = here["profile"].to_dict()
+                # Refuse a shelved ecosystem here, once, with the reason —
+                # rather than letting each stage discover separately that it has
+                # nothing to do. A run that cannot produce a deliverable should
+                # say so at the top.
+                shelved = getattr(here["profile"], "primary_language", "") in SHELVED_LANGUAGES
+                if shelved:
+                    detail = (
+                        f"{here['profile'].primary_language} is recognised but not "
+                        "supported: it needs a lock strategy, a test plan and a "
+                        "coverage attributor, and shipping half of those produces "
+                        "verdicts nobody measured"
+                    )
+                    result.stages.append(StageResult("detect", "failed", 0.0, detail))
+                    _announce(live, result.stages[-1])
+                    _record(result)
+                    break
         if name == "emit" and isinstance(produced, dict):
             result.manifest = produced
         # Persisted after every stage, not once at the end. bundle runs inside
