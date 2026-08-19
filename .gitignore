@@ -21,3 +21,7 @@ build/
 # are the same thing from a `--output` override during verification runs.
 /output/
 /output-*/
+
+# The project's own lockfile, left untracked as it was before this work. Track it
+# deliberately if you want it pinned; it should not arrive via `git add -A`.
+uv.lock
