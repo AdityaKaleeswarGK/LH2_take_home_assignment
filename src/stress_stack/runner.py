@@ -305,6 +305,13 @@ class LanguageRunner:
             # unresolvable. The rule this follows: redirect what a run must
             # write, never what it must read.
             return {"CARGO_TARGET_DIR": "/tmp/target"}
+        if self.plan.language in {"typescript", "javascript"}:
+            # The image installs dependencies outside the mount, at /deps, so
+            # they survive a task tree being mounted over /work. Node resolution
+            # would find them via the /node_modules symlink anyway; naming it
+            # explicitly means a tree that happens to contain its own empty
+            # node_modules cannot shadow them.
+            return {"NODE_PATH": "/deps/node_modules"}
         # Go needs nothing. `GOCACHE` and `GOMODCACHE` already default under
         # `HOME`, which the sandbox sets to the writable `/tmp`, and the image
         # build downloaded the module cache there. Overriding them looked
@@ -313,10 +320,28 @@ class LanguageRunner:
         # pointing at a fresh tmpfs was the whole problem.
         return {}
 
+    def prepare(self, tree: Path) -> None:
+        """Make the mountpoints this ecosystem's toolchain needs to write to.
+
+        An empty directory, created in the tree before it is mounted, because
+        Docker cannot create a mountpoint underneath a read-only bind. The
+        contents come from the tmpfs layered over it, not from here — and the
+        runner still resolves its own code from `NODE_PATH`, which the image
+        points outside the mount.
+        """
+        for subpath in self.policy.writable_subpaths:
+            try:
+                (tree / subpath.strip("/")).mkdir(parents=True, exist_ok=True)
+            except OSError:
+                # A tree that cannot take the directory will fail the run with
+                # the toolchain's own error, which says more than this would.
+                pass
+
     def execute(
         self, tree: Path, evidence: Path, name: str, targets: list[str] | None = None
     ) -> RunOutcome:
         evidence.mkdir(parents=True, exist_ok=True)
+        self.prepare(tree)
         log_path = evidence / f"{name}.log"
         log_path.unlink(missing_ok=True)
         started = time.monotonic()
@@ -349,12 +374,28 @@ class LanguageRunner:
         )
 
 
-def select_runner(*, image: str, language: str = "python") -> Any:
-    """The runner for this ecosystem, or an error explaining why there is none."""
+def select_runner(
+    *, image: str, language: str = "python", suite_command: tuple[str, ...] | None = None
+) -> Any:
+    """The runner for this ecosystem, or an error explaining why there is none.
+
+    ``suite_command`` is the command the workflow *probed* — it ran it against
+    this repository and parsed per-test results out of it. Where a plan accepts
+    one it wins over the plan's own default, which is what makes the probe worth
+    running: coverage and the stub marker already read the resolved workflow, and
+    the test command was the one that did not.
+
+    Go and Rust have one canonical invocation each and their plans build the
+    target flags around it, so they keep theirs.
+    """
     if language != "python":
         from stress_stack.test_runners import plan_for, supported_languages
 
         plan = plan_for(language)
+        if plan is not None and suite_command and hasattr(plan, "command"):
+            from dataclasses import replace as _replace
+
+            plan = _replace(plan, command=tuple(suite_command))
         if plan is None:
             raise ToolingError(
                 f"Validation has no test plan for {language!r}. Supported: "
@@ -365,9 +406,14 @@ def select_runner(*, image: str, language: str = "python") -> Any:
         _require_container(image)
         # Go, Rust and C++ compile a test binary and exec it; the default
         # `noexec` tmpfs blocks that before any test runs.
-        compiled = language in {"go", "rust", "c", "cpp"}
+        compiled = language in {"go", "rust"}
+        # See `SandboxPolicy.writable_subpaths`: vitest cannot be told to put its
+        # cache anywhere other than under node_modules.
+        writable = ("node_modules",) if language in {"typescript", "javascript"} else ()
         return LanguageRunner(
-            image=image, plan=plan, policy=SandboxPolicy(allow_tmp_exec=compiled)
+            image=image,
+            plan=plan,
+            policy=SandboxPolicy(allow_tmp_exec=compiled, writable_subpaths=writable),
         )
     _require_container(image)
     return DockerRunner(image=image)

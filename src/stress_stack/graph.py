@@ -993,7 +993,20 @@ def build_validation_artifacts(
     profile = detect_project_profile(repository.root)
     language = profile.primary_language
     head_image = f"stress-stack/{repository.root.name.lower()}:verify"
-    runner = select_runner(image=head_image, language=language)
+    # The suite command comes from the resolved workflow, whose probe ran it
+    # against this repository and parsed per-test results out of it. Falling back
+    # to the plan's default is right where no workflow exists, and wrong where
+    # one does — a repository whose runner is jest, or whose script differs from
+    # the convention, is exactly what the probe is for.
+    from stress_stack.workflow import TEST_REPORT, load_workflow
+
+    stored = load_workflow(repository.root / ".stress_stack" / "workflow.json")
+    probed = stored.get(TEST_REPORT) if stored else None
+    runner = select_runner(
+        image=head_image,
+        language=language,
+        suite_command=tuple(probed.command("suite")) if probed else None,
+    )
 
     # Every era's environment is worked out by an agent reading that era's own
     # tree, so validation cannot start without a model. There is deliberately no

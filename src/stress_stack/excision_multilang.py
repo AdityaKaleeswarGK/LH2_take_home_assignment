@@ -6,7 +6,6 @@ contracts, and docstrings across:
 - Rust (todo!() / Default::default())
 - TypeScript / JavaScript (throw new Error("Not implemented") / return undefined)
 - Go (panic("not implemented") / return)
-- C++ (throw std::runtime_error("Not implemented"))
 """
 
 from __future__ import annotations
@@ -119,8 +118,6 @@ def excise_symbol(
         "javascript": 'throw new Error("Not implemented");',
         "tsx": 'throw new Error("Not implemented");',
         "go": 'panic("not implemented")',
-        "c": 'throw std::runtime_error("Not implemented");',
-        "cpp": 'throw std::runtime_error("Not implemented");',
     }.get(lang, 'raise NotImplementedError("Not implemented")')
 
     start, end = target_sym.body_start_byte, target_sym.body_end_byte

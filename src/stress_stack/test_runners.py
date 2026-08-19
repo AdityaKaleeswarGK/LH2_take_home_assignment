@@ -29,6 +29,7 @@ from stress_stack.verification import (
     BEHAVIORAL_EXCEPTION,
     INFRASTRUCTURE,
     PASSED,
+    SKIPPED,
     CaseResult,
     RunReport,
     normalize_signature,
@@ -246,11 +247,161 @@ def _rust_failure_class(text: str) -> str:
     return BEHAVIORAL_EXCEPTION if text.strip() else INFRASTRUCTURE
 
 
+# ------------------------------------------------------- javascript / typescript
+
+# Both jest and vitest emit the same report shape — vitest's JSON reporter is
+# deliberately jest-compatible — so one parser serves both and the *command* is
+# what differs. That command comes from the resolved workflow, which probes it.
+_JS_INFRASTRUCTURE = re.compile(
+    r"Cannot find module|Failed to resolve import|Failed to load url"
+    r"|SyntaxError|Transform failed|ERR_MODULE_NOT_FOUND|Cannot find package"
+)
+# `expect(...)` failures. vitest and jest both phrase them as "expected X to be Y"
+# and set an AssertionError-shaped name.
+_JS_ASSERTION = re.compile(r"AssertionError|expected .* to |toBe|toEqual|toMatch")
+
+
+@dataclass
+class JavaScriptTestPlan:
+    """jest/vitest, read from their JSON report rather than their console output.
+
+    The report names each test file by *absolute* path, which inside the sandbox
+    is under the read-only mount. Ids are made relative to that mount so they
+    mean the same thing as every other id in the pipeline — a task's evidence has
+    to be re-checkable against a tree the grader lays out themselves, and an
+    absolute container path is not.
+    """
+
+    language: str = "typescript"
+    # The runner is named directly rather than through `npx`, because the sandbox
+    # has no network and `npx` without a local install tries to fetch from the
+    # registry — `EAI_AGAIN registry.npmjs.org`, which reads as a broken suite.
+    # The image puts /deps/node_modules/.bin on PATH so this resolves offline.
+    # Overridden from the resolved workflow record when there is one.
+    command: tuple[str, ...] = ("vitest", "run", "--reporter=json")
+    # 0 all passed, 1 some failed — the same convention pytest uses.
+    result_exit_codes: frozenset[int] = frozenset({0, 1})
+    mount: str = "/work"
+
+    def selection_id(self, test_id: str) -> str:
+        """Every id the report names, `-t` can select back."""
+        return test_id
+
+    def suite_command(self, targets: list[str] | None) -> list[str]:
+        command = list(self.command)
+        if targets:
+            # `-t` is a regex over the full test name, which is the half of the
+            # id after `::`. Alternated and escaped so one pattern selects the
+            # whole set without also matching a name that merely contains one.
+            names = "|".join(re.escape(_js_name(target)) for target in targets)
+            command += ["-t", f"^({names})$"]
+        return command
+
+    def parse(self, stdout: str, stderr: str, exit_code: int) -> RunReport:
+        report = RunReport(exit_code=exit_code)
+        payload = _first_json_object(stdout)
+        if payload is None:
+            # No report at all. That is a runner that never started, not a
+            # suite where nothing failed.
+            report.collected = False
+            return report
+
+        for suite in payload.get("testResults") or []:
+            path = _relative_to_mount(str(suite.get("name") or ""), self.mount)
+            assertions = suite.get("assertionResults") or []
+            if not assertions and suite.get("status") == "failed":
+                # A file that failed to load reports no assertions and a
+                # message. Nothing in it was collected.
+                if _JS_INFRASTRUCTURE.search(str(suite.get("message") or "")):
+                    report.collected = False
+                continue
+            for case in assertions:
+                name = str(case.get("fullName") or case.get("title") or "")
+                test_id = f"{path}::{name}" if path else name
+                raw_status = str(case.get("status") or "")
+                status = {
+                    "passed": PASSED,
+                    "failed": "failed",
+                    "pending": SKIPPED,
+                    "skipped": SKIPPED,
+                    "todo": SKIPPED,
+                }.get(raw_status, "failed")
+                text = "\n".join(str(m) for m in (case.get("failureMessages") or []))
+                report.results[test_id] = CaseResult(
+                    test_id=test_id,
+                    status=status,
+                    failure_class="" if status == PASSED else _js_failure_class(text),
+                    signature="" if status == PASSED else normalize_signature(text),
+                )
+
+        if not report.results:
+            report.collected = False
+        return report
+
+
+def _js_name(test_id: str) -> str:
+    """The runner-visible full name: the half of the id after the file path."""
+    return test_id.split("::", 1)[1] if "::" in test_id else test_id
+
+
+def _relative_to_mount(path: str, mount: str) -> str:
+    """Turn the report's absolute test-file path into a repository-relative one.
+
+    Every gate run is containerised — `runner._require_container` removed the
+    host fallback deliberately — so the tree is always at `/work` and the marker
+    is always present. The exception is a workflow probe, which runs on the host
+    to answer "does this command produce a readable report" and cares only about
+    the count. There the path is returned as it came rather than mangled into a
+    relative-looking string that names nothing.
+    """
+    if not path:
+        return ""
+    normalized = path.replace("\\", "/")
+    marker = mount.rstrip("/") + "/"
+    if marker in normalized:
+        return normalized.rsplit(marker, 1)[-1]
+    return normalized
+
+
+def _first_json_object(stdout: str) -> dict[str, Any] | None:
+    """The report, from output that may carry banners and warnings around it."""
+    start = stdout.find("{")
+    while start != -1:
+        try:
+            value = json.loads(stdout[start:])
+        except json.JSONDecodeError:
+            # The report is usually the last thing printed, but not always the
+            # only JSON: step forward and try the next candidate object.
+            start = stdout.find("{", start + 1)
+            continue
+        return value if isinstance(value, dict) else None
+    for line in reversed(stdout.splitlines()):
+        stripped = line.strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            try:
+                value = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict):
+                return value
+    return None
+
+
+def _js_failure_class(text: str) -> str:
+    if _JS_INFRASTRUCTURE.search(text):
+        return INFRASTRUCTURE
+    if _JS_ASSERTION.search(text):
+        return ASSERTION
+    return BEHAVIORAL_EXCEPTION if text.strip() else INFRASTRUCTURE
+
+
 # --------------------------------------------------------------------- lookup
 
 _PLANS: dict[str, Any] = {
     "go": GoTestPlan(),
     "rust": RustTestPlan(),
+    "typescript": JavaScriptTestPlan(language="typescript"),
+    "javascript": JavaScriptTestPlan(language="javascript"),
 }
 
 
@@ -265,6 +416,8 @@ def _test_name(target: str) -> str:
 _PARSERS: dict[str, Any] = {
     "go_json": lambda out, err, code: GoTestPlan().parse(out, err, code),
     "libtest": lambda out, err, code: RustTestPlan().parse(out, err, code),
+    # jest and vitest share a report shape, so they share a reader.
+    "jest_json": lambda out, err, code: JavaScriptTestPlan().parse(out, err, code),
 }
 
 
@@ -281,11 +434,10 @@ def parser_for(report_format: str) -> Any | None:
 def plan_for(language: str) -> Any | None:
     """The test plan for a language, or None when the gates cannot run there.
 
-    JavaScript, TypeScript and C++ are absent deliberately rather than
-    half-supported: each needs a reporter or harness that the repository has to
-    already provide (`vitest --reporter=json`, `jest --json`, a CTest build
-    directory). Returning None makes the validate stage report the ecosystem as
-    unsupported instead of producing gate verdicts from unparsed output.
+An ecosystem with no plan makes the validate stage report it as unsupported
+    rather than producing gate verdicts from output nobody parsed. JavaScript and
+    TypeScript now have one, because both jest and vitest can be asked for a
+    machine-readable report the repository does not have to provide itself.
     """
     return _PLANS.get(language)
 

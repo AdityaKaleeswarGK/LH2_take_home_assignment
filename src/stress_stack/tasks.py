@@ -846,7 +846,11 @@ def _designate_tests(node_ids: list[str], tree: Path, subject_path: str) -> dict
     defining file is found by looking for the declaration. Without this the
     verifier directory came out empty and every excision task failed staging.
     """
-    if subject_path.endswith(".py"):
+    # An id that already names its file needs no search. pytest ids always do,
+    # and so do jest/vitest ids — `src/calc.test.ts::calc adds` — because the
+    # report names the file each test came from. Only Go and Rust report a
+    # package or module, which names a directory rather than a file.
+    if subject_path.endswith(".py") or _ids_carry_their_file(node_ids, tree):
         return _group_by_file(node_ids, tree)
 
     grouped: dict[str, list[str]] = {}
@@ -868,6 +872,18 @@ def _designate_tests(node_ids: list[str], tree: Path, subject_path: str) -> dict
                 grouped.setdefault(candidate.relative_to(tree).as_posix(), []).append(name)
                 break
     return {path: sorted(set(names)) for path, names in sorted(grouped.items())}
+
+
+def _ids_carry_their_file(node_ids: list[str], tree: Path) -> bool:
+    """Whether these ids already name the file that defines them.
+
+    Checked against the tree rather than by pattern: an id's head either is a
+    file on disk or it is not, and guessing from the shape would have to
+    distinguish `src/calc.test.ts` from a Go package path like
+    `example.com/m` — which look alike and are not.
+    """
+    heads = {node_id.split("::", 1)[0] for node_id in node_ids if "::" in node_id}
+    return bool(heads) and all((tree / head).is_file() for head in heads)
 
 
 def _module_prefix(qualified: str, path: str) -> str:

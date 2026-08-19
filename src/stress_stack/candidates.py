@@ -203,8 +203,6 @@ _SOURCE_SUFFIXES: dict[str, tuple[str, ...]] = {
     "rust": (".rs",),
     "typescript": (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"),
     "javascript": (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"),
-    "c": (".c", ".h"),
-    "cpp": (".c", ".cc", ".cpp", ".cxx", ".h", ".hpp"),
 }
 
 

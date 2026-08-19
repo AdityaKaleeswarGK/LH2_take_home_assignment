@@ -91,12 +91,18 @@ degrade and you still get ten validated tasks.
 
 The per-language box expands to this:
 
-| Stage | Python | Go | Rust | TS / JS | C / C++ |
-|---|---|---|---|---|---|
-| hygiene | ruff | gofmt, go vet | cargo fmt, clippy | prettier, eslint | clang-format, clang-tidy |
-| deps | uv | go mod | cargo | npm / pnpm | — |
-| graph | `ast` | tree-sitter | tree-sitter | tree-sitter | tree-sitter |
-| validate | pytest | `go test -json` | libtest | — | — |
+| Stage | Python | Go | Rust | TS / JS |
+|---|---|---|---|---|
+| hygiene | ruff | gofmt, go vet | cargo fmt, clippy | prettier, eslint |
+| deps | uv | go mod | cargo | npm / pnpm / yarn |
+| graph | `ast` | tree-sitter | tree-sitter | tree-sitter |
+| coverage | coverage.py contexts | `go test -coverprofile` | `cargo llvm-cov` (lcov) | v8 (lcov), per file |
+| validate | pytest | `go test -json` | libtest | jest / vitest JSON |
+
+Each row is a *default*, not the only path: it is probed against the repository
+before it is used, and where a probe fails — or where the ecosystem has no row —
+an agent reads the tree and its answer is probed the same way. See
+`workflow.py`.
 
 Working state lives in `.stress_stack/` inside the target repository; the deliverable
 is written to `output/`.
@@ -259,10 +265,21 @@ docker run --rm --network=none --cap-drop=ALL stress-stack/glom:verify
 | Ecosystem | Environment | Knowledge layer | Task generation |
 |---|---|---|---|
 | Python | ruff, uv | `ast` | full — history + excision |
-| Go | gofmt, go vet, go mod | tree-sitter | excision |
-| Rust | cargo fmt, clippy, cargo | tree-sitter | excision |
-| TypeScript / JavaScript | prettier, eslint, npm/pnpm | tree-sitter | not yet |
-| C / C++ | clang-format, clang-tidy | tree-sitter | not yet |
+| Go | gofmt, go vet, go mod | tree-sitter | full — history + excision |
+| Rust | cargo fmt, clippy, cargo | tree-sitter | full — history + excision |
+| TypeScript / JavaScript | prettier, eslint, npm/pnpm | tree-sitter | full — history + excision |
+| C / C++ | — | — | recognised and refused |
+
+History mining is no longer Python-only: source classification comes from the
+detected profile and the test-unit delta from tree-sitter, so every ecosystem
+above can satisfy the quota's `minimum: {history: 4}` rather than being capped at
+the four tasks excision allows.
+
+C and C++ are recognised and then refused with a reason, which is deliberate —
+supporting them honestly needs a lock strategy, a test plan and a coverage
+attributor, and half of those produce verdicts nobody measured. Dropping the
+detection instead would make a C++ repository fall through to the Python default
+and be analysed as Python, which is a wrong answer rather than an absent one.
 
 Anything without a parser or test plan is reported as `unsupported` with a reason,
 never as a silent zero. See `REPORT.md` for the full account of what is missing.

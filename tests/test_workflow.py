@@ -123,9 +123,14 @@ def test_every_shipped_default_survives_its_own_checking(language: str) -> None:
         assert not record.rejections, f"{language}/{capability}: {record.rejections}"
 
 
-def test_c_and_cpp_have_no_defaults_to_fall_back_on() -> None:
-    """The case the agent exists for: no table row anywhere."""
-    for language in ("c", "cpp"):
+def test_an_unknown_ecosystem_has_no_defaults_to_fall_back_on() -> None:
+    """The case the agent exists for: no table row anywhere.
+
+    Ruby stands in for it because C and C++ are now shelved outright — see
+    `project_detector.SHELVED_LANGUAGES`. The point is unchanged: an ecosystem
+    the tables have never heard of must reach the agent, not a default.
+    """
+    for language in ("ruby", "java", "elixir"):
         for capability in (HYGIENE, LOCK, TEST_REPORT, COVERAGE, STUB):
             assert default_for(capability, language) is None
 
@@ -157,7 +162,7 @@ def test_a_clean_default_wins_without_asking_a_model(tmp_path: Path) -> None:
 
 
 def test_no_default_and_no_model_is_reported_not_guessed(tmp_path: Path) -> None:
-    record = resolve_capability(TEST_REPORT, tmp_path, language="cpp", client=None)
+    record = resolve_capability(TEST_REPORT, tmp_path, language="ruby", client=None)
 
     assert record.source == UNAVAILABLE
     assert not record.usable
@@ -179,13 +184,13 @@ def test_an_agent_answer_that_fails_its_probe_is_not_used(tmp_path: Path) -> Non
                 {
                     "commands": {"suite": "go test -json ./..."},
                     "format": "go_json",
-                    "evidence": [{"file": "CMakeLists.txt", "says": "it is a project"}],
+                    "evidence": [{"file": "Gemfile", "says": "it is a project"}],
                 },
                 None,
             )
 
     record = resolve_capability(
-        TEST_REPORT, tmp_path, language="cpp", client=ConfidentlyWrongClient()
+        TEST_REPORT, tmp_path, language="ruby", client=ConfidentlyWrongClient()
     )
 
     # There is no Go module here, so the command collects nothing and the probe
@@ -350,7 +355,7 @@ def test_a_deferral_is_a_property_of_the_default_not_of_a_format_name(
     proposed = check_record(
         TEST_REPORT,
         source=AGENT,
-        commands={"suite": "ctest"},
+        commands={"suite": "make test"},
         settings={"format": "junit_xml"},
     )
     probe = probe_test_report(proposed, tmp_path)

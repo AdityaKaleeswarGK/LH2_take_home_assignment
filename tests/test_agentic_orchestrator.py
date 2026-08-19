@@ -630,11 +630,18 @@ def test_rust_libtest_output_becomes_a_run_report() -> None:
 
 
 def test_unsupported_ecosystems_have_no_plan() -> None:
-    """Absent beats half-supported: validate must report them, not guess."""
-    from stress_stack.test_runners import plan_for
+    """Absent beats half-supported: validate must report them, not guess.
 
-    assert plan_for("typescript") is None
+    TypeScript and JavaScript have a plan now — jest and vitest both emit the
+    same machine-readable report, so gate verdicts come from parsed per-test
+    results rather than from an exit code. C and C++ are shelved outright, so
+    they have no plan and the pipeline refuses them before this is consulted.
+    """
+    from stress_stack.test_runners import plan_for, supported_languages
+
     assert plan_for("cpp") is None
+    assert plan_for("ruby") is None
+    assert sorted(supported_languages()) == ["go", "javascript", "rust", "typescript"]
 
 
 # --- pipeline 3: per-test coverage attribution -------------------------------

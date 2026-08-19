@@ -36,6 +36,14 @@ from __future__ import annotations
 
 import re
 
+# Terminal control sequences. Stripped before anything else, because they do not
+# only add noise — they *split the values underneath them*. vitest writes a
+# duration as `\x1b[90m 12\x1b[2mms\x1b[22m`, so `12` and `ms` are separated by
+# an escape and no `\d+ ?ms` pattern can match it. The duration then survived
+# normalisation, differed between two runs of an unchanged image, and the
+# determinism gate called a passing suite nondeterministic.
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
+
 # Volatile between two runs of the same thing, in every ecosystem. Normalising
 # more than this would start hiding real disagreement.
 _COMMON: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -44,6 +52,11 @@ _COMMON: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"0x[0-9a-fA-F]+"), "<addr>"),
     (re.compile(r"/tmp/[^\s\"']+"), "<tmp>"),
     (re.compile(r"\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}\S*"), "<timestamp>"),
+    # A bare wall-clock time, with no date in front of it. vitest ends every run
+    # with `Start at  13:39:04`, which differs between any two runs — so an
+    # unchanged suite read as a regression and hygiene reverted its own
+    # formatting over it. The date-qualified pattern above cannot match this.
+    (re.compile(r"\b\d{1,2}:\d{2}:\d{2}(?:\.\d+)?\b"), "<clock>"),
 )
 
 # `path/file.go:12:34:` and `path/file.go:12:` -> `path/file.go:<line>`
@@ -62,7 +75,8 @@ def normalize(text: str, *, source_locations: bool = False) -> str:
     to move lines — that is, hygiene. Leave it off when the two sides are meant
     to be byte-identical trees, which is what the determinism gate checks.
     """
+    text = _ANSI.sub("", text)
     patterns = (*_COMMON, _SOURCE_LOCATION) if source_locations else _COMMON
     for pattern, replacement in patterns:
         text = pattern.sub(replacement, text)
-    return "\n".join(sorted(text.strip().splitlines()))
+    return "\n".join(sorted(line.rstrip() for line in text.strip().splitlines()))

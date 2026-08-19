@@ -409,7 +409,7 @@ def probe_collection(image: str, tree: Path, spec: "RuntimeSpec") -> tuple[bool,
             # Compiled ecosystems build a listing binary into /tmp and run it.
             policy=SandboxPolicy(
                 timeout_seconds=600.0,
-                allow_tmp_exec=spec.language in {"go", "rust", "c", "cpp"},
+                allow_tmp_exec=spec.language in {"go", "rust"},
             ),
             environment={} if spec.language != "python" else None,
         )

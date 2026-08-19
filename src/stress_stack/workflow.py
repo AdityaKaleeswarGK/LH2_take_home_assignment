@@ -74,7 +74,6 @@ _PROGRAMS: dict[str, frozenset[str]] = {
             "gofmt", "gofumpt", "goimports", "go", "golangci-lint",
             "cargo", "rustfmt",
             "npx", "npm", "yarn", "pnpm", "prettier", "eslint", "biome",
-            "clang-format", "clang-tidy",
             "python", "python3",
         }
     ),
@@ -89,30 +88,29 @@ _PROGRAMS: dict[str, frozenset[str]] = {
         {
             "python", "python3", "pytest", "py.test", "tox", "nox",
             "go", "cargo", "npm", "yarn", "pnpm", "npx", "jest", "vitest",
-            "mocha", "ctest", "make", "bundle", "rake", "mvn", "gradle",
+            "mocha", "make", "bundle", "rake", "mvn", "gradle",
         }
     ),
     COVERAGE: frozenset(
         {
             "python", "python3", "coverage", "pytest",
-            "go", "cargo", "npx", "npm", "yarn", "pnpm", "grcov", "lcov",
-            "gcov", "gcovr", "ctest", "cmake", "make",
+            "go", "cargo", "npx", "npm", "yarn", "pnpm", "c8", "nyc", "grcov",
+            "lcov", "make",
         }
     ),
     STUB: frozenset(
         {
-            "python", "python3", "go", "cargo", "rustc", "npx", "tsc",
-            "gcc", "g++", "clang", "clang++", "cmake", "make",
+            "python", "python3", "go", "cargo", "rustc", "npx", "tsc", "make",
         }
     ),
 }
 
 # How a test report is read back. The name selects a parser that already exists
 # rather than describing a format, so an agent cannot invent one.
-REPORT_FORMATS = ("junit_xml", "go_json", "libtest")
+REPORT_FORMATS = ("junit_xml", "go_json", "libtest", "jest_json")
 
 # How a coverage report is read back, same rule.
-COVERAGE_FORMATS = ("coverage_py_contexts", "go_profile", "lcov")
+COVERAGE_FORMATS = ("coverage_py_contexts", "go_profile", "lcov", "lcov_v8")
 
 
 # How long any one probe may run. A probe is a smoke test — "does this command
@@ -125,6 +123,10 @@ _PROBE_TIMEOUT = 300.0
 # Fetching dependencies and running a suite once are legitimately slower than
 # formatting, so those two get more.
 _PROBE_TIMEOUT_SLOW = 600.0
+
+# Directories a probe needs to *see* but must not duplicate: they hold the
+# tools the probed command invokes, and they are large.
+_LINKED_DIRECTORIES = ("node_modules",)
 
 @dataclass
 class Probe:
@@ -298,6 +300,17 @@ _DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
             "commands": {"suite": "cargo test --no-fail-fast"},
             "settings": {"format": "libtest"},
         },
+        # vitest's JSON reporter is jest-compatible, so one reader serves both;
+        # the probe decides which command this repository actually has. `--run`
+        # matters: without it vitest watches and never exits.
+        "typescript": {
+            "commands": {"suite": "npx --no-install vitest run --reporter=json"},
+            "settings": {"format": "jest_json"},
+        },
+        "javascript": {
+            "commands": {"suite": "npx --no-install vitest run --reporter=json"},
+            "settings": {"format": "jest_json"},
+        },
     },
     COVERAGE: {
         "python": {
@@ -314,6 +327,25 @@ _DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
                 "measure": "cargo llvm-cov --lcov test",
             },
             "settings": {"format": "lcov", "per_test": True},
+        },
+        # Attribution is per test *file* rather than per test. v8 coverage is
+        # collected for a whole vitest process, and there is no equivalent of
+        # coverage.py's dynamic contexts to split it finer. The map records how
+        # many units it measured, so a coarser attribution is reported as what
+        # it is rather than passed off as per-test.
+        "typescript": {
+            "commands": {
+                "list": "npx --no-install vitest list",
+                "measure": "npx --no-install vitest run --coverage",
+            },
+            "settings": {"format": "lcov_v8", "per_test": False, "granularity": "file"},
+        },
+        "javascript": {
+            "commands": {
+                "list": "npx --no-install vitest list",
+                "measure": "npx --no-install vitest run --coverage",
+            },
+            "settings": {"format": "lcov_v8", "per_test": False, "granularity": "file"},
         },
     },
     STUB: {
@@ -425,10 +457,20 @@ def probe_hygiene(record: CapabilityRecord, root: Path, **_: Any) -> Probe:
                 copy,
                 symlinks=True,
                 ignore=shutil.ignore_patterns(
-                    ".git", ".stress_stack", ".venv", "node_modules", "target",
-                    "__pycache__", ".tox", ".mypy_cache", ".pytest_cache",
+                    ".git", ".stress_stack", ".venv", *_LINKED_DIRECTORIES,
+                    "target", "__pycache__", ".tox", ".mypy_cache", ".pytest_cache",
                 ),
             )
+            # Linked rather than copied, and not as an optimisation: a Node
+            # formatter *lives* in node_modules, so a copy without it makes
+            # `npx --no-install prettier` fail with "missing packages" and the
+            # probe blames the answer for the tree it was handed. Copying it
+            # would be correct and can be gigabytes; a link is neither read-only
+            # nor written to by a formatter.
+            for name in _LINKED_DIRECTORIES:
+                source = root / name
+                if source.is_dir():
+                    (copy / name).symlink_to(source.resolve(), target_is_directory=True)
         except OSError as exc:
             return Probe(False, f"could_not_copy_tree_to_probe_on: {exc}")
 

@@ -83,7 +83,14 @@ def parse_ci_facts(root: Path) -> CIParsedFacts:
             data = json.loads(pkg_json.read_text(encoding="utf-8"))
             scripts = data.get("scripts", {})
             if "test" in scripts:
-                facts.test_commands.append(f"npm run test -- {scripts['test']}")
+                # `npm run test`, not `npm run test -- <body>`. The `--` form
+                # passes the script's own body back to itself as arguments, so a
+                # `"test": "vitest run"` script became `vitest run vitest run`
+                # and the two extra words were read as filename filters —
+                # matching nothing, exiting non-zero, and failing the container
+                # stage for a suite that passes. Only visible once TypeScript
+                # got far enough to reach that stage.
+                facts.test_commands.append("npm run test")
             if "build" in scripts:
                 facts.build_commands.append("npm run build")
             facts.source_files.append("package.json")

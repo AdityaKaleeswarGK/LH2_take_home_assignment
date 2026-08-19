@@ -262,32 +262,106 @@ def attribute_rust(root: Path, *, max_tests: int = 60) -> AttributionResult:
 
 _ATTRIBUTORS = {"go": attribute_go, "rust": attribute_rust}
 
-# Report formats this module can read back, keyed by the name a workflow record
-# carries. The commands come from the record; only the reading is fixed here,
-# because a format is a parser and a parser is code.
-_READERS = {"go_profile": _parse_go_profile, "lcov": _parse_lcov}
+# How each report format is produced and read back. The commands come from the
+# workflow record; this is the part that has to be code, because a format is a
+# parser and because the flag that names an output path differs per tool.
+#
+# `units` is what the attribution is *per*. Go and Rust list individual tests, so
+# a unit is a test. v8 collects coverage for a whole vitest process with no
+# equivalent of coverage.py's dynamic contexts, so a unit is a test *file* — and
+# the map records how many units it measured, so a coarser attribution is
+# reported as what it is rather than passed off as per-test.
+@dataclass(frozen=True)
+class _Format:
+    reader: Any
+    report: Any
+    report_args: Any
+    filter_args: Any
+    units: Any
+
+
+def _go_test_names(stdout: str) -> list[str]:
+    names: list[str] = []
+    for line in stdout.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("Test", "Benchmark", "Fuzz", "Example")):
+            names.append(stripped)
+    return names
+
+
+def _libtest_names(stdout: str) -> list[str]:
+    return [
+        line.strip()[: -len(": test")].strip()
+        for line in stdout.splitlines()
+        if line.strip().endswith(": test")
+    ]
+
+
+def _vitest_files(stdout: str) -> list[str]:
+    """Unique test files from `vitest list`, whose lines are `file > suite > test`."""
+    files: list[str] = []
+    for line in stdout.splitlines():
+        head = line.strip().split(" > ", 1)[0].strip()
+        if head and (head.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"))
+                     and head not in files):
+            files.append(head)
+    return files
+
+
+def _safe(name: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", name)
+
+
+_FORMATS: dict[str, _Format] = {
+    "go_profile": _Format(
+        reader=_parse_go_profile,
+        report=lambda workspace, unit: workspace / f"{_safe(unit)}.out",
+        report_args=lambda report: [f"-coverprofile={report}"],
+        filter_args=lambda unit: [f"-run=^{re.escape(unit)}$", "-count=1", "./..."],
+        units=_go_test_names,
+    ),
+    "lcov": _Format(
+        reader=_parse_lcov,
+        report=lambda workspace, unit: workspace / f"{_safe(unit)}.lcov",
+        report_args=lambda report: [f"--output-path={report}"],
+        filter_args=lambda unit: ["--", "--exact", unit],
+        units=_libtest_names,
+    ),
+    # vitest writes lcov.info *inside* a directory it is given, so the path the
+    # reader gets is not the path the tool is told.
+    "lcov_v8": _Format(
+        reader=lambda root, report: _parse_lcov(root, report / "lcov.info"),
+        report=lambda workspace, unit: workspace / _safe(unit),
+        report_args=lambda report: [
+            "--coverage.reporter=lcov",
+            f"--coverage.reportsDirectory={report}",
+        ],
+        filter_args=lambda unit: [unit],
+        units=_vitest_files,
+    ),
+}
 
 
 def attribute_by_workflow(root: Path, record: Any, *, max_tests: int = 60) -> AttributionResult:
-    """Per-test attribution driven by a resolved workflow record.
+    """Per-unit attribution driven by a resolved workflow record.
 
     Same shape as the two hand-written attributors above and the same honest
-    cost — one process per test — but the commands come from the workflow
-    instead of from a branch. That is what makes a third ecosystem free: an
+    cost — one process per unit — but the commands come from the workflow instead
+    of from a branch. That is what makes a third ecosystem free: an
     lcov-emitting toolchain needs a record, not a function.
 
     The two built-ins stay as the defaults a workflow probes first, so Go and
     Rust behave identically whether or not a model was ever consulted.
     """
-    reader = _READERS.get(str(record.settings.get("format") or ""))
+    spec = _FORMATS.get(str(record.settings.get("format") or ""))
     listing = record.command("list")
     measure_argv = record.command("measure")
-    if reader is None or not listing or not measure_argv:
+    if spec is None or not listing or not measure_argv:
         return AttributionResult("unavailable", reason="workflow_record_incomplete")
 
     listed = run(listing, cwd=root, timeout=900.0)
-    names = _listed_test_names(listed.stdout)
-    if not names:
+    units = spec.units(listed.stdout)
+    if not units:
         return AttributionResult("unavailable", reason="no_tests_listed")
 
     workspace = root / ".stress_stack" / "coverage"
@@ -295,69 +369,35 @@ def attribute_by_workflow(root: Path, record: Any, *, max_tests: int = 60) -> At
     lines: dict[str, dict[int, list[str]]] = {}
     measured = 0
 
-    for name in names[:max_tests]:
-        report = workspace / f"{re.sub(r'[^A-Za-z0-9_.-]', '_', name)}.report"
-        report.unlink(missing_ok=True)
-        # The test name and the report path are appended rather than
-        # interpolated: the record's command was checked for shell
-        # metacharacters, and keeping the arguments as a vector means a test
-        # name out of the repository cannot become one.
+    for unit in units[:max_tests]:
+        report = spec.report(workspace, unit)
+        if report.is_file():
+            report.unlink()
+        # Arguments are appended as a vector rather than interpolated: the
+        # record's command was checked for shell metacharacters, and keeping
+        # them separate means a test name out of the repository cannot become
+        # one.
         outcome = run(
-            [*measure_argv, *_report_arguments(record, report), *_filter_arguments(record, name)],
+            [*measure_argv, *spec.report_args(report), *spec.filter_args(unit)],
             cwd=root,
             timeout=600.0,
         )
-        if not outcome.ok and not report.is_file():
+        covered = spec.reader(root, report)
+        if not outcome.ok and not covered:
             continue
         measured += 1
-        for path, rows in reader(root, report).items():
+        for path, rows in covered.items():
             per_file = lines.setdefault(path, {})
             for row in rows:
-                per_file.setdefault(row, []).append(name)
+                per_file.setdefault(row, []).append(unit)
 
     if measured == 0:
         return AttributionResult(
-            "unavailable", tests_total=len(names), reason="no_test_produced_a_report"
+            "unavailable", tests_total=len(units), reason="no_test_produced_a_report"
         )
     return AttributionResult(
-        "available", lines=lines, tests_measured=measured, tests_total=len(names)
+        "available", lines=lines, tests_measured=measured, tests_total=len(units)
     )
-
-
-def _listed_test_names(stdout: str) -> list[str]:
-    """Test names from a `--list` style output, in either shape we have seen.
-
-    libtest prints `name: test`; `go test -list` prints bare names followed by a
-    package summary line. Anything else is skipped rather than guessed at.
-    """
-    names: list[str] = []
-    for line in stdout.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith(("ok ", "?", "FAIL", "---", "=== ")):
-            continue
-        if stripped.endswith(": test"):
-            names.append(stripped[: -len(": test")].strip())
-        elif stripped.startswith(("Test", "Benchmark", "Fuzz", "Example")):
-            names.append(stripped)
-    return [name for name in names if name]
-
-
-def _report_arguments(record: Any, report: Path) -> list[str]:
-    fmt = str(record.settings.get("format") or "")
-    if fmt == "go_profile":
-        return [f"-coverprofile={report}"]
-    if fmt == "lcov":
-        return [f"--output-path={report}"]
-    return []
-
-
-def _filter_arguments(record: Any, name: str) -> list[str]:
-    fmt = str(record.settings.get("format") or "")
-    if fmt == "go_profile":
-        return [f"-run=^{re.escape(name)}$", "-count=1", "./..."]
-    if fmt == "lcov":
-        return ["--", "--exact", name]
-    return []
 
 
 def build_coverage_map(graph: Any, attribution: AttributionResult) -> CoverageMap:

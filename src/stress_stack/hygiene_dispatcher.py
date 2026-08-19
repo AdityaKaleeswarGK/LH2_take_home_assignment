@@ -45,8 +45,6 @@ _SUFFIXES: dict[str, tuple[str, ...]] = {
     "go": (".go",),
     "typescript": (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"),
     "javascript": (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"),
-    "c": (".c", ".cc", ".cpp", ".h", ".hpp"),
-    "cpp": (".c", ".cc", ".cpp", ".h", ".hpp"),
 }
 
 

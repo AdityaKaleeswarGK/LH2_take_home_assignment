@@ -84,6 +84,19 @@ class SandboxPolicy:
     # capability is still dropped. The only new power is executing a file the
     # run itself just compiled inside its own throwaway tmpfs.
     allow_tmp_exec: bool = False
+    # Paths inside the code mount that need to be writable. The mount itself
+    # stays read-only; each of these gets its own throwaway tmpfs layered over
+    # it, so a run can write where its toolchain insists on writing without
+    # being able to touch the snapshot it is judged against.
+    #
+    # Node needs exactly one: vitest derives its cache directory from Vite's,
+    # which is `node_modules/.vite` and not redirectable — `--cache.dir` is
+    # deprecated — so a read-only `node_modules` fails the run with an unhandled
+    # ENOENT after every test has already passed.
+    #
+    # The directory has to exist in the tree for Docker to have a mountpoint:
+    # creating one under a read-only bind fails with `read-only file system`.
+    writable_subpaths: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -96,6 +109,7 @@ class SandboxPolicy:
             "read_only_root": self.read_only_root,
             "drop_capabilities": self.drop_capabilities,
             "allow_tmp_exec": self.allow_tmp_exec,
+            "writable_subpaths": list(self.writable_subpaths),
         }
 
 
@@ -169,6 +183,8 @@ def build_arguments(
         f"--volume={_resolve(evidence_dir)}:/evidence:rw",
         "--workdir=/work",
     ]
+    for subpath in policy.writable_subpaths:
+        arguments.append(f"--tmpfs=/work/{subpath.strip('/')}:rw,size=256m,mode=1777")
     if policy.read_only_root:
         arguments.append("--read-only")
     if policy.drop_capabilities:
