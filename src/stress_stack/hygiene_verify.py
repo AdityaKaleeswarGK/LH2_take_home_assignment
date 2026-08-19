@@ -17,39 +17,16 @@ change, so the safe outcome is the unformatted tree plus a recorded reason.
 
 from __future__ import annotations
 
-import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from stress_stack.normalize import normalize
 from stress_stack.atomic import atomic_write_text
 from stress_stack.tooling import run
 
 # What legitimately differs between two runs, so the comparison is about
-# behaviour rather than incidentals.
-#
-# Source locations are normalised here and *not* in the container doctor's
-# determinism check, and the difference is deliberate. Two runs of the same tree
-# must produce identical line numbers, so a change there is real. But hygiene's
-# whole job is to move lines: reformatting `if x { t.Fatal() }` onto three lines
-# renames `calc_test.go:10` to `calc_test.go:11` in every failure message. Left
-# unnormalised, a successful format reads as a regression and reverts itself.
-_VOLATILE: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"\b\d+\.\d+s\b"), "<time>"),
-    (re.compile(r"\b\d+(\.\d+)? ?ms\b"), "<time>"),
-    (re.compile(r"0x[0-9a-fA-F]+"), "<addr>"),
-    (re.compile(r"/tmp/[^\s\"']+"), "<tmp>"),
-    (re.compile(r"\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}\S*"), "<timestamp>"),
-    # `path/file.go:12:34:` and `path/file.go:12:` -> `path/file.go:<line>`
-    (
-        re.compile(
-            r"([\w./\\-]+\.(?:go|rs|py|ts|tsx|js|jsx|mjs|cjs|c|cc|cpp|h|hpp)):\d+(?::\d+)?"
-        ),
-        r"\1:<line>",
-    ),
-)
-
 AVAILABLE = "available"
 UNAVAILABLE = "unavailable"
 
@@ -69,21 +46,12 @@ class SuiteSnapshot:
 def _normalize(text: str) -> str:
     """Strip what varies between two runs of an unchanged suite.
 
-    Order is one of those things. A suite using parallel tests emits its lines
-    in scheduling order — Go's `-v` output interleaves `=== RUN` / `=== PAUSE` /
-    `=== CONT` differently every time — so an ordered comparison reports a
-    regression for a tree nobody touched. Measured on spf13/cast: two runs of
-    the same image produced 32233 identical lines in a different sequence, and
-    hygiene reverted its own formatting over it.
-
-    Comparing the multiset of lines still catches every change that matters —
-    a test that starts failing, an assertion message that moves, a line that
-    appears or disappears. It only stops catching pure reordering, which is
-    exactly the thing that is not evidence.
+    Source locations are normalised here and deliberately *not* in the
+    determinism gate: hygiene's whole job is to move lines, so a comparison
+    that kept them would read a successful format as a regression. See
+    :mod:`stress_stack.normalize`, which both comparisons now share.
     """
-    for pattern, replacement in _VOLATILE:
-        text = pattern.sub(replacement, text)
-    return "\n".join(sorted(text.strip().splitlines()))
+    return normalize(text, source_locations=True)
 
 
 def build_probe_image(root: Path, profile: Any) -> tuple[str | None, str]:

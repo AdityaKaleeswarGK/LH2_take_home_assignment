@@ -14,7 +14,6 @@ measured, and the evidence for a verdict outlives the process that produced it.
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import time
 from dataclasses import dataclass, field
@@ -22,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from stress_stack.atomic import atomic_write_json, atomic_write_text
+from stress_stack.normalize import normalize
 from stress_stack.project_detector import ProjectProfile, detect_project_profile
 from stress_stack.tooling import run
 
@@ -30,18 +30,6 @@ UNSUPPORTED = "unsupported"
 BUILD_FAILED = "build_failed"
 TESTS_FAILED = "tests_failed"
 NONDETERMINISTIC = "nondeterministic"
-
-# Volatile substrings that differ between two identical runs and say nothing
-# about correctness. Normalising these is what makes a comparison meaningful;
-# normalising anything more would start hiding real disagreement.
-_VOLATILE = (
-    re.compile(r"\b\d+\.\d+s\b"),  # durations: "1.23s"
-    re.compile(r"\b\d+(\.\d+)? ?ms\b"),  # durations: "12ms"
-    re.compile(r"0x[0-9a-fA-F]+"),  # memory addresses
-    re.compile(r"/tmp/[^\s\"']+"),  # per-run temporary paths
-    re.compile(r"\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}\S*"),  # timestamps
-)
-
 
 @dataclass
 class ContainerDoctorResult:
@@ -174,20 +162,11 @@ def synthesize_dockerfile(profile: ProjectProfile, base_reference: str) -> str:
 def _normalize(text: str) -> str:
     """Strip what differs between two runs of an unchanged image.
 
-    Order is one of those things, and it is the one that is easy to miss. A
-    suite using parallel tests emits its lines in scheduling order — Go's `-v`
-    interleaves `=== RUN` / `=== PAUSE` / `=== CONT` differently every time — so
-    an ordered comparison calls two identical runs nondeterministic. Measured on
-    spf13/cast, where hygiene hit the same thing one stage earlier.
-
-    Comparing the multiset still answers the question this stage exists to ask:
-    a test that flips, an assertion that moves, a line that appears or vanishes
-    all change it. Only pure reordering does not, and pure reordering is the
-    scheduler rather than the code.
+    Source locations are *not* normalised here. Two runs of the same tree must
+    produce identical line numbers, so a change in one is real — which is the
+    opposite of hygiene's situation. See :mod:`stress_stack.normalize`.
     """
-    for pattern in _VOLATILE:
-        text = pattern.sub("<volatile>", text)
-    return "\n".join(sorted(text.strip().splitlines()))
+    return normalize(text)
 
 
 def _run_suite(image: str, name: str) -> dict[str, Any]:
